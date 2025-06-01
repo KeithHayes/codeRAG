@@ -50,8 +50,8 @@ def create_report():
     ]
 
     js_files = [
-        #os.path.join(base_path, 'assets', 'js', 'rag.js'),
-        #os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
+        os.path.join(base_path, 'assets', 'js', 'rag.js'),
+        os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
         os.path.join(base_path, 'assets', 'js', 'build_modal.js')
     ]
 
