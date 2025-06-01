@@ -49,7 +49,7 @@
   display: none;
 }
   
-.dynamo-menu {
+.coderag-menu {
   list-style: none;
   width: 100%;
   height: 48px;
@@ -57,7 +57,7 @@
   padding: 0 0 0 2px;
 }
   
-.dynamo-menu a {
+.coderag-menu a {
   display: block;
   height: 30px;
   overflow: hidden;
@@ -66,17 +66,17 @@
   text-decoration: none;
 }
   
-.dynamo-menu a:active {
+.coderag-menu a:active {
   margin-top: 2px;
   margin-left: 2px;
   background-position: 0 -60px;
 }
   
-.dynamo-menu a:hover {
+.coderag-menu a:hover {
   background-position: 0 -30px;
 }
   
-.dynamo-menu li {
+.coderag-menu li {
   float: left;
   min-width: 32px;
   height: 32px;
@@ -85,17 +85,17 @@
   line-height: 2em;
 }
   
-.dynamo-menu li.on a, .dogAdminBar li.on a:hover {
+.coderag-menu li.on a, .dogAdminBar li.on a:hover {
   background-position: 0 -60px;
 }
   
-.dynamo-menu li.dogEditButton {
+.coderag-menu li.dogEditButton {
   background-image: url(../img/ed/button_shadow.gif);
   background-repeat: no-repeat;
   background-position: bottom right;
 }
   
-#dynamo_menu_buttons {
+#coderag_menu_buttons {
   background: #ffedd4;
   border: 8px solid #523A28;
   border-bottom: 4px;
@@ -105,7 +105,7 @@
   text-overflow: ellipsis;
 }
   
-#dynamo_menu_buttons li {
+#coderag_menu_buttons li {
   float: left;
   min-width: 32px;
   height: 32px;

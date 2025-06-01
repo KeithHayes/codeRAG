@@ -4,10 +4,10 @@
    * @description Initializes the application toolbar.
    */
   function loadtoolbar() {
-    const bar = document.getElementById("dynamotoolbar");
+    const bar = document.getElementById("coderagtoolbar");
     const buttonlist = document.createElement('ul');
-    buttonlist.id = 'dynamo_menu_buttons';
-    buttonlist.classList.add('dynamo-menu');
+    buttonlist.id = 'coderag_menu_buttons';
+    buttonlist.classList.add('coderag-menu');
 
     buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['Default']));
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true));
@@ -132,8 +132,8 @@
    * @description Adds a directional arrow button.
    */
   function addtablearrow(id, className, text) {
-    const bar = document.getElementById("dynamotoolbar");
-    const list = bar.querySelector('.dynamo-menu');
+    const bar = document.getElementById("coderagtoolbar");
+    const list = bar.querySelector('.coderag-menu');
     const ref = list.querySelector('#button_book');
 
     const li = document.createElement('li');
@@ -153,7 +153,7 @@
   }
 
   function addpagescroll() {
-    const list = document.getElementById("dynamotoolbar").querySelector('.dynamo-menu')
+    const list = document.getElementById("coderagtoolbar").querySelector('.coderag-menu')
     if (!list.querySelector('#button_up')) {
       const ref = list.querySelector('#button_book')
       ['down', 'up'].forEach(dir => {

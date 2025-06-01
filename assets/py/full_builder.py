@@ -15,16 +15,13 @@ from chromadb.config import Settings
 from langchain.schema import Document
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# Fix numpy compatibility before any imports
-import numpy as np
+import numpy as np # Fix numpy compatibility before any imports
 np.float_ = np.float64  # Fix for NumPy 2.0
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 LOG_DIR = Path("/var/www/html/doomsteadRAG/assets/logs")
 LOG_FILE = LOG_DIR / "vector_build.log"
 DB_FILE = Path("/var/www/html/doomsteadRAG/assets/data/file_metadata.db")
-FALLBACK_VECTOR_DB = Path("/var/www/html/doomsteadRAG/assets/data/vector_db")
 
 def setup_logging():
     """Configure logging with proper file permissions"""
@@ -92,14 +89,7 @@ class DoomsteadRAG:
             os.system(f"chown -R www-data:www-data {vector_db_path}")
             os.system(f"chmod -R 777 {vector_db_path}")
         except Exception as e:
-            logger.warning(f"Primary vector store path not accessible: {e}")
-            self.config['vector_db_path'] = str(FALLBACK_VECTOR_DB)
-            vector_db_path = FALLBACK_VECTOR_DB
-            vector_db_path.mkdir(parents=True, exist_ok=True)
-            os.chmod(vector_db_path, 0o777)
-            os.system(f"chown -R www-data:www-data {vector_db_path}")
-            os.system(f"chmod -R 777 {vector_db_path}")
-            logger.info(f"Using fallback vector store path: {vector_db_path}")
+            logger.error(f"Primary vector store path not accessible: {e}")
         
         required_dirs = [LOG_DIR, DB_FILE.parent, vector_db_path]
         for dir_path in required_dirs:
@@ -156,10 +146,11 @@ class DoomsteadRAG:
 
     def _get_extensions(self, file_type: str) -> List[str]:
         extension_map = {
+            'py': ['.py'],
             'php': ['.php', '.php3', '.php4', '.php5', '.phtml'],
             'js': ['.js', '.jsx', '.mjs', '.cjs'],
             'css': ['.css', '.scss', '.less'],
-            'html': ['.html', '.htm', '.xhtml']
+            'html': ['.html', '.htm', '.xhtml'],
         }
         return extension_map.get(file_type.lower(), [])
 
@@ -209,26 +200,43 @@ class DoomsteadRAG:
 
     def _load_documents(self) -> List[Document]:
         documents = []
-        logger.info("Loading documents:")
+        skip_dirs = {"venv", "__pycache__", ".venv"}  # Add other dirs to exclude
         for file_type, dirs in self.config['code_dirs'].items():
             logger.info(f"Processing {file_type.upper()} files...")
             for path in dirs:
                 abs_path = Path(path) if Path(path).is_absolute() else SCRIPT_DIR / path
                 for ext in self._get_extensions(file_type):
                     for file in abs_path.rglob(f"*{ext}"):
-                        file_path = str(file)
-                        if self._should_skip_file(file_path):
-                            logger.info(f"Skipping minified file: {file_path}")
+                        # Skip conditions
+                        if any(skip_dir in file.parts for skip_dir in skip_dirs):
+                            logger.debug(f"Skipping directory: {file}")
                             continue
-                            
+                        if self._should_skip_file(str(file)):
+                            logger.debug(f"Skipping minified file: {file}")
+                            continue
+                        
+                        # File processing
                         try:
+                            file_path_str = str(file)
                             with open(file, 'r', encoding='utf-8') as f:
                                 text = f.read()
-                            self._update_file_metadata(file_path)
+                            self._update_file_metadata(file_path_str)
                             documents.append(Document(
                                 page_content=text,
-                                metadata={'source': file_path}
+                                metadata={'source': file_path_str}
                             ))
+                        except UnicodeDecodeError:
+                            try:
+                                # Fallback to latin-1 if utf-8 fails
+                                with open(file, 'r', encoding='latin-1') as f:
+                                    text = f.read()
+                                self._update_file_metadata(file_path_str)
+                                documents.append(Document(
+                                    page_content=text,
+                                    metadata={'source': file_path_str}
+                                ))
+                            except Exception as e:
+                                logger.error(f"Failed to read {file} with fallback encoding: {e}")
                         except Exception as e:
                             logger.error(f"Error reading {file}: {str(e)}")
         return documents

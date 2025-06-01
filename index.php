@@ -9,7 +9,7 @@
 <body>
 <div id="main_content" class="w3-twothird w3-panel">
     <h1>Doomstead Code RAG</h1>
-    <div id="dynamotoolbar"></div>
+    <div id="coderagtoolbar"></div>
     <div id="chatbox"></div>
     <div id="inputContainer">
         <input type="text" id="userInput" placeholder="Type your question..." autocomplete="off" disabled>
