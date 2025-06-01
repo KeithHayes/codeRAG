@@ -115,36 +115,53 @@
 }
 
 .dropdown {
-  position: relative;
-}
-  
-.dropdown ul {
-  display: none;
-  position: absolute;
+  position: absolute; /* Changed from relative to absolute */
+  display: none; /* Start hidden */
   background-color: #f1e8dc;
+  border: 2px solid #964b00;
+  border-radius: 8px;
+  padding: 0;
+  margin: 0;
+  z-index: 200; /* Ensure it appears above other content */
+  box-shadow: 0 2px 2px rgba(0,0,0,0.2); /* Optional: add shadow for better visibility */
+}
+
+.dropdown ul {
   list-style-type: none;
   padding: 0;
   margin: 0;
-  border: 2px solid #964b00;
-  border-radius: 8px;
-  left: 0;
+  width: 100%; /* Ensure full width of parent */
 }
-  
-#button_fileload:hover .dropdown ul {
-  display: block;
+
+.dropdown li {
+  padding: 8px 12px;
+  white-space: nowrap;
 }
-  
+
 .dropdown a {
   display: block;
-  margin-top: -2px;
-  padding-right: 1ch;
+  padding: 2px 2px;
   text-decoration: none;
-  text-indent: 0;
   color: #523a28;
+  width: 100%;
 }
-  
+
 .dropdown a:hover {
-  background-color: #f1e8dc;
+  background-color: #d4c9b8;
+}
+
+.dropdown li:hover {
+  background-color: #e6d9c5;
+}
+
+.dropdown li:first-child {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.dropdown li:last-child {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
   
 #dynamoapplication {

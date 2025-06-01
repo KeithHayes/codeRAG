@@ -9,3 +9,9 @@ LLM (gpt-3.5-turbo): ``` #info_center { background: #E4D2BA none repeat scroll 0
 
 You: Which php file does toolbar.js use in a fetch as an argument.
 LLM (gpt-3.5-turbo): The toolbar.js file is using the 'assets/php/test_query.php' file in the fetch method as an argument.
+
+You: What is the preparedisplay function used for.
+LLM (gpt-3.5-turbo): The `preparedisplay` function is used to prepare and display a message based on the provided `$id_msg`. It does 
+this by ensuring that `$id_msg` is an integer and then using it to fetch and display the relevant message from the database. The 
+function also uses global variables such as `$smcFunc`, `$memberContext`, `$settings`, `$user_info`, `$modSettings`, and `$txt`, 
+which are likely to be used for accessing and manipulating the message data.

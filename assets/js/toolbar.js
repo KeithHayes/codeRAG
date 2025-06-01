@@ -100,7 +100,10 @@
     li.appendChild(a);
 
     const content = document.createElement('div');
+    content.id = `dropdown_${id}`;  // Add ID for easy reference
     content.classList.add('dropdown');
+    content.style.display = 'none'; // Start hidden
+    content.style.position = 'absolute';
 
     const ul = document.createElement('ul');
     ul.id = `ul_${id}`;
@@ -123,7 +126,29 @@
     });
 
     content.appendChild(ul);
-    li.appendChild(content);
+    document.body.appendChild(content);
+    a.addEventListener('mouseenter', () => {
+        const rect = a.getBoundingClientRect();
+        content.style.left = `${rect.left}px`;
+        content.style.top = `${rect.bottom}px`;
+        content.style.display = 'block';
+    });
+
+    a.addEventListener('mouseleave', () => {
+        setTimeout(() => {
+            if (!content.matches(':hover')) {
+                content.style.display = 'none';
+            }
+        }, 100);
+    });
+    
+    content.addEventListener('mouseleave', () => {
+        content.style.display = 'none';
+    });
+    
+    content.addEventListener('mouseenter', () => {
+        content.style.display = 'block';
+    });
     return li;
   }
 

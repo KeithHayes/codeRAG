@@ -51,14 +51,13 @@ class BuildModal {
         this.progressContainer = document.createElement('div');
         this.progressContainer.style.backgroundColor = '#e4d2ba';
         this.progressContainer.style.borderRadius = '4px';
+        this.progressContainer.style.borderColor = '#523A28';
         this.progressContainer.style.padding = '10px';
         this.progressContainer.style.marginBottom = '20px';
 
         this.progressBar = document.createElement('div');
         this.progressBar.style.height = '20px';
         this.progressBar.style.backgroundColor = '#523A28';
-        this.progressBar.style.borderColor = '#523A28';
-        this.progressBar.style.borderRadius = '4px';
         this.progressBar.style.width = '0%';
         this.progressBar.style.transition = 'width 0.3s ease';
 
