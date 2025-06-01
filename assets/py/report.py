@@ -39,28 +39,28 @@ def create_report():
     ]
 
     css_files = [
-        #os.path.join(base_path, 'assets', 'css', 'rag.css'),
-        #os.path.join(base_path, 'assets', 'css', 'toolbar.css')
+        os.path.join(base_path, 'assets', 'css', 'rag.css'),
+        os.path.join(base_path, 'assets', 'css', 'toolbar.css')
     ]
 
     log_files = [
         os.path.join(base_path, 'assets', 'logs', 'vector_build.log'),
-        os.path.join(base_path, 'assets', 'logs', 'test_query.log'),
-        os.path.join(base_path, 'assets', 'logs', 'query_doomstead.log')
+        #os.path.join(base_path, 'assets', 'logs', 'test_query.log'),
+        #os.path.join(base_path, 'assets', 'logs', 'query_doomstead.log')
     ]
 
     js_files = [
         #os.path.join(base_path, 'assets', 'js', 'rag.js'),
         #os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
-        #os.path.join(base_path, 'assets', 'js', 'build_modal.js')
+        os.path.join(base_path, 'assets', 'js', 'build_modal.js')
     ]
 
     php_files = [
-        #os.path.join(base_path, 'assets', 'php', 'rag.php'),
+        os.path.join(base_path, 'assets', 'php', 'rag.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
         #os.path.join(base_path, 'assets', 'php', 'incremental_builder.php'),
-        os.path.join(base_path, 'assets', 'php', 'test_query.php')
+        #os.path.join(base_path, 'assets', 'php', 'test_query.php')
     ]
 
     py_files = [
