@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="200px" height="600px" viewBox="0 0 36 108" version="1.1" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<rect x="15" y="8" width="9" height="2" fill="#964b00" id="rect1" />
+<rect x="15" y="12" width="9" height="2" fill="#964b00" id="rect2" />
+<rect x="15" y="16" width="9" height="2" fill="#964b00" id="rect3" />
+<rect x="15" y="20" width="9" height="2" fill="#964b00" id="rect4" />
+<rect x="15" y="24" width="9" height="2" fill="#964b00" id="rect5" />
+<rect x="11" y="8" width="2" height="2" fill="#964b00" id="rect6" />
+<rect x="11" y="12" width="2" height="2" fill="#964b00" id="rect7" />
+<rect x="11" y="16" width="2" height="2" fill="#964b00" id="rect8" />
+<rect x="11" y="20" width="2" height="2" fill="#964b00" id="rect9" />
+<rect x="11" y="24" width="2" height="2" fill="#964b00" id="rect10" />
+<path d="M28,2H8A2,2,0,0,0,6,4V32a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V4A2,2,0,0,0,28,2Zm0,30H8V4H28Z" fill="#964b00" />
+<rect x="15" y="44" width="9" height="2" fill="#b39700" id="rect1-7" />
+<rect x="15" y="48" width="9" height="2" fill="#b39700" id="rect2-0" />
+<rect x="15" y="52" width="9" height="2" fill="#b39700" id="rect3-9" />
+<rect x="15" y="56" width="9" height="2" fill="#b39700" id="rect4-3" />
+<rect x="15" y="60" width="9" height="2" fill="#b39700" id="rect5-6" />
+<rect x="11" y="44" width="2" height="2" fill="#b39700" id="rect6-0" />
+<rect x="11" y="48" width="2" height="2" fill="#b39700" id="rect7-6" />
+<rect x="11" y="52" width="2" height="2" fill="#b39700" id="rect8-2" />
+<rect x="11" y="56" width="2" height="2" fill="#b39700" id="rect9-6" />
+<rect x="11" y="60" width="2" height="2" fill="#b39700" id="rect10-1" />
+<path d="M28,38H8a2,2,0,0,0-2,2V68a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V40A2,2,0,0,0,28,38Zm0,30H8V40H28Z" fill="#b39700" />
+<rect x="15" y="80" width="9" height="2" fill="#000000" id="rect1-79" />
+<rect x="15" y="84" width="9" height="2" fill="#000000" id="rect2-2" />
+<rect x="15" y="88" width="9" height="2" fill="#000000" id="rect3-0" />
+<rect x="15" y="92" width="9" height="2" fill="#000000" id="rect4-2" />
+<rect x="15" y="96" width="9" height="2" fill="#000000" id="rect5-3" />
+<rect x="11" y="80" width="2" height="2" fill="#000000" id="rect6-7" />
+<rect x="11" y="84" width="2" height="2" fill="#000000" id="rect7-5" />
+<rect x="11" y="88" width="2" height="2" fill="#000000" id="rect8-9" />
+<rect x="11" y="92" width="2" height="2" fill="#000000" id="rect9-2" />
+<rect x="11" y="96" width="2" height="2" fill="#000000" id="rect10-2" />
+<path d="M28,74H8a2,2,0,0,0-2,2V104a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V76A2,2,0,0,0,28,74Zm0,30H8V76H28Z" fill="#000000" />
+</svg>

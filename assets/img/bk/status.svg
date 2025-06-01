@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="200"
+   height="1600"
+   viewBox="0 0 200 1600"
+   version="1.1"
+   id="svg12"
+   sodipodi:docname="status.svg"
+   inkscape:version="1.3.2 (1:1.3.2+202311252150+091e20ef0f)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <metadata
+     id="metadata18">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs16" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="2560"
+     inkscape:window-height="1368"
+     id="namedview14"
+     showgrid="false"
+     inkscape:zoom="0.78687932"
+     inkscape:cx="-158.21994"
+     inkscape:cy="264.33532"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg12"
+     showborder="true"
+     inkscape:showpageshadow="false"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
+  <circle
+     cx="100"
+     cy="1300"
+     style="fill:#ff6600;stroke-width:0.769231"
+     id="circle6"
+     r="60" />
+  <circle
+     cx="100"
+     cy="1100"
+     style="fill:#6699ff;stroke-width:0.769231"
+     id="circle4"
+     r="60" />
+  <circle
+     cx="100"
+     cy="900"
+     style="fill:#cc0000;stroke-width:0.769231"
+     id="circle2"
+     r="60" />
+  <circle
+     cx="100"
+     cy="700"
+     style="fill:#00cc00;stroke-width:0.769231"
+     id="circle6-7"
+     r="60" />
+  <circle
+     cx="100"
+     cy="500"
+     style="fill:#ffcc00;stroke-width:0.769231"
+     id="circle4-6"
+     r="60" />
+  <circle
+     cx="100"
+     cy="100"
+     style="fill:#808080;stroke-width:0.961539"
+     id="circle2-3"
+     r="60" />
+  <circle
+     cx="100"
+     cy="300"
+     style="fill:#bfbfbf;stroke-width:0.769231"
+     id="circle6-3"
+     r="60" />
+  <circle
+     cx="100"
+     cy="1500"
+     style="fill:#1a2400;fill-opacity:1;stroke-width:0.76923"
+     id="circle6-3-3"
+     r="60" />
+</svg>

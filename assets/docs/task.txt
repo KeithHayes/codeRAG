@@ -1,0 +1,8 @@
+A vector store is built but is not yet funcional. 
+
+examine the logs for information.
+
+Remember to furnish complete query_doomstead.py and test_query.php and full_builder.py listing if any of these files change.  
+Provide all listings without omissions.
+            
+******************************************************************************************************************

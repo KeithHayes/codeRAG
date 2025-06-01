@@ -1,0 +1,15 @@
+******************************************************************************************************************
+
+Code generation boilerplate:
+
+Please generate full, complete code files as needed which meet the following non-negotiable requirements:
+No partial code in any file. Do not skip sections or use placeholders like “...”, “# unchanged”, or “rest of code”.
+Preserve all existing code and comments which are not related to the current task. Do not rewrite or refine unrelated features.
+Do not add features not asked for.  All code must be ready to copy and run as-is. The user cannot edit or fix the output.
+Output the full code file exactly as it should exist on disk — including imports, function definitions, and any required boilerplate.
+Do not explain anything inside code blocks.  Only make file changes related to the task and errors.
+ 
+
+All code for a revised file will be shown in a single download box, One box for each file.
+
+******************************************************************************************************************

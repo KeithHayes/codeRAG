@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+   width="200"
+   height="600"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <rect
+     x="8.9555998"
+     y="19.955618"
+     width="182.08876"
+     height="160.08876"
+     rx="14.844193"
+     ry="15.008322"
+     fill="none"
+     stroke="#964b00"
+     stroke-width="17.9112"
+     id="rect1" />
+  <line
+     x1="100"
+     y1="20"
+     x2="100"
+     y2="178"
+     stroke="#964b00"
+     stroke-width="18"
+     id="line1" />
+  <line
+     x1="34"
+     y1="50"
+     x2="74"
+     y2="50"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line2" />
+  <line
+     x1="34"
+     y1="70"
+     x2="74"
+     y2="70"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line3" />
+  <line
+     x1="34"
+     y1="90"
+     x2="74"
+     y2="90"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line4" />
+  <line
+     x1="34"
+     y1="110"
+     x2="74"
+     y2="110"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line5" />
+  <line
+     x1="34"
+     y1="130"
+     x2="74"
+     y2="130"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line6" />
+  <line
+     x1="34"
+     y1="150"
+     x2="74"
+     y2="150"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line7" />
+  <line
+     x1="128"
+     y1="50"
+     x2="166"
+     y2="50"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line8" />
+  <line
+     x1="128"
+     y1="70"
+     x2="166"
+     y2="70"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line9" />
+  <line
+     x1="128"
+     y1="90"
+     x2="166"
+     y2="90"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line10" />
+  <line
+     x1="128"
+     y1="110"
+     x2="166"
+     y2="110"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line11" />
+  <line
+     x1="128"
+     y1="130"
+     x2="166"
+     y2="130"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line12" />
+  <line
+     x1="128"
+     y1="150"
+     x2="166"
+     y2="150"
+     stroke="#964b00"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line13" />
+  <rect
+     x="8.9556189"
+     y="219.95561"
+     width="182.08876"
+     height="160.08876"
+     rx="14.844193"
+     ry="15.008322"
+     fill="none"
+     stroke="#b39700"
+     stroke-width="17.9112"
+     id="rect13" />
+  <line
+     x1="100"
+     y1="220"
+     x2="100"
+     y2="378"
+     stroke="#B39700"
+     stroke-width="18"
+     id="line14" />
+  <line
+     x1="34"
+     y1="250"
+     x2="74"
+     y2="250"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line15" />
+  <line
+     x1="34"
+     y1="270"
+     x2="74"
+     y2="270"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line16" />
+  <line
+     x1="34"
+     y1="290"
+     x2="74"
+     y2="290"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line17" />
+  <line
+     x1="34"
+     y1="310"
+     x2="74"
+     y2="310"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line18" />
+  <line
+     x1="34"
+     y1="330"
+     x2="74"
+     y2="330"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line19" />
+  <line
+     x1="34"
+     y1="350"
+     x2="74"
+     y2="350"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line20" />
+  <line
+     x1="128"
+     y1="250"
+     x2="166"
+     y2="250"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line21" />
+  <line
+     x1="128"
+     y1="270"
+     x2="166"
+     y2="270"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line22" />
+  <line
+     x1="128"
+     y1="290"
+     x2="166"
+     y2="290"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line23" />
+  <line
+     x1="128"
+     y1="310"
+     x2="166"
+     y2="310"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line24" />
+  <line
+     x1="128"
+     y1="330"
+     x2="166"
+     y2="330"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line25" />
+  <line
+     x1="128"
+     y1="350"
+     x2="166"
+     y2="350"
+     stroke="#b39700"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line26" />
+  <rect
+     x="8.9556189"
+     y="419.95563"
+     width="182.08876"
+     height="160.08876"
+     rx="14.844193"
+     ry="15.008322"
+     fill="none"
+     stroke="#000000"
+     stroke-width="17.9112"
+     id="rect26" />
+  <line
+     x1="100"
+     y1="420"
+     x2="100"
+     y2="578"
+     stroke="#000000"
+     stroke-width="18"
+     id="line27" />
+  <line
+     x1="34"
+     y1="450"
+     x2="74"
+     y2="450"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line28" />
+  <line
+     x1="34"
+     y1="470"
+     x2="74"
+     y2="470"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line29" />
+  <line
+     x1="34"
+     y1="490"
+     x2="74"
+     y2="490"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line30" />
+  <line
+     x1="34"
+     y1="510"
+     x2="74"
+     y2="510"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line31" />
+  <line
+     x1="34"
+     y1="530"
+     x2="74"
+     y2="530"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line32" />
+  <line
+     x1="34"
+     y1="550"
+     x2="74"
+     y2="550"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line33" />
+  <line
+     x1="128"
+     y1="450"
+     x2="166"
+     y2="450"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line34" />
+  <line
+     x1="128"
+     y1="470"
+     x2="166"
+     y2="470"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line35" />
+  <line
+     x1="128"
+     y1="490"
+     x2="166"
+     y2="490"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line36" />
+  <line
+     x1="128"
+     y1="510"
+     x2="166"
+     y2="510"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line37" />
+  <line
+     x1="128"
+     y1="530"
+     x2="166"
+     y2="530"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line38" />
+  <line
+     x1="128"
+     y1="550"
+     x2="166"
+     y2="550"
+     stroke="#000000"
+     stroke-width="10"
+     stroke-linecap="round"
+     id="line39" />
+</svg>
