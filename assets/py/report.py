@@ -35,6 +35,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'docs', 'system_requirements.txt'),
         os.path.join(base_path, 'assets', 'docs', 'error.txt'),
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
+        os.path.join(base_path, 'assets', 'docs', 'README.md'),
     ]
 
     css_files = [
