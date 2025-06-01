@@ -8,9 +8,10 @@ class BuildModal {
         this.progressBar = null;
         this.progressText = null;
         this.totalChunks = 0;
-        this.currentState = 0;
+        this.currentState = 'initializing';
         this.creationTime = new Date().getTime();
         this.pollInterval = null;
+        this.lastProcessedLine = '';
         this.createModal();
     }
 
@@ -42,7 +43,7 @@ class BuildModal {
         this.title.style.textAlign = 'center';
 
         this.statusText = document.createElement('p');
-        this.statusText.textContent = 'Preparing for Build';
+        this.statusText.textContent = 'Initializing build process...';
         this.statusText.style.color = '#523A28';
         this.statusText.style.textAlign = 'center';
         this.statusText.style.margin = '20px 0';
@@ -55,7 +56,8 @@ class BuildModal {
 
         this.progressBar = document.createElement('div');
         this.progressBar.style.height = '20px';
-        this.progressBar.style.backgroundColor = '#e6d5bf';
+        this.progressBar.style.backgroundColor = '#523A28';
+        this.progressBar.style.borderColor = '#523A28';
         this.progressBar.style.borderRadius = '4px';
         this.progressBar.style.width = '0%';
         this.progressBar.style.transition = 'width 0.3s ease';
@@ -84,7 +86,8 @@ class BuildModal {
                     return response.json();
                 })
                 .then(data => {
-                    if (data.line) {
+                    if (data.line && data.line !== this.lastProcessedLine) {
+                        this.lastProcessedLine = data.line;
                         this.processLogLine(data.line);
                     }
                 })
@@ -114,48 +117,52 @@ class BuildModal {
     processLogLine(line) {
         const lineTime = this.parseLogTimestamp(line);
         
-        if (this.currentState === 0) {
+        // Skip old log entries if we're still initializing
+        if (this.currentState === 'initializing') {
             if (lineTime > this.creationTime) {
-                this.currentState = 1;
+                this.currentState = 'processing';
             } else {
-                return; // Skip old log entries
+                return;
             }
         }
 
-        if (this.currentState === 1) {
-            const infoMatch = line.match(/- INFO - (.*)/);
-            if (infoMatch) {
-                this.statusText.textContent = infoMatch[1];
-            }
-
-            const chunksMatch = line.match(/(\d+) chunks being rendered and saved/);
-            if (chunksMatch) {
-                this.totalChunks = parseInt(chunksMatch[1]);
-                this.currentState = 2;
-                this.progressBar.style.backgroundColor = '#523A28';
-                this.progressText.textContent = '0%';
-            }
+        // Extract INFO messages for status updates
+        const infoMatch = line.match(/- INFO - (.*)/);
+        if (infoMatch) {
+            this.statusText.textContent = infoMatch[1];
         }
 
-        if (this.currentState === 2) {
-            const chunksMatch = line.match(/(\d+) chunks embedded and saved/);
-            if (chunksMatch) {
-                const currentChunks = parseInt(chunksMatch[1]);
-                const percent = Math.min(Math.ceil((currentChunks / this.totalChunks) * 100), 100);
-                this.progressBar.style.width = `${percent}%`;
-                this.progressText.textContent = `${percent}%`;
-            }
+        // State transitions and processing
+        switch (this.currentState) {
 
-            if (line.includes('Vector store created successfully')) {
-                this.progressBar.style.width = '100%';
-                this.progressText.textContent = '100%';
-                this.statusText.textContent = 'Vector Store Created';
-                this.currentState = 3;
-                setTimeout(() => {
-                    this.close();
-                }, 2000);
-            }
+            case 'processing':
+                // Handle batch processing updates
+                const batchMatch = line.match(/Processed batch (\d+)\/(\d+)/);
+                if (batchMatch) {
+                    const currentBatch = parseInt(batchMatch[1]);
+                    const totalBatches = parseInt(batchMatch[2]);
+                    const percent = Math.min(Math.ceil((currentBatch / totalBatches) * 100), 100);
+                    this.updateProgress(percent, `Processing batch ${currentBatch} of ${totalBatches}`);
+                }
+                
+                // Handle completion
+                if (line.includes('Build completed successfully')) {
+                    this.updateProgress(100, 'Build completed successfully');
+                    this.currentState = 'complete';
+                    this.progressBar.style.backgroundColor = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        this.close();
+                    }, 5000);
+                }
+                break;
         }
+    }
+
+    updateProgress(percent, status) {
+        this.progressBar.style.width = `${percent}%`;
+        this.progressText.textContent = `${percent}%`;
+        this.statusText.textContent = status;
     }
 
     close() {

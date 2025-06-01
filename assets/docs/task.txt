@@ -1,10 +1,5 @@
-A basic vector store db is built by full_builder.py and a separate sqlite db is built for file tracking.
 
-Revise a README.md file in md format to explain in detail how full_builder.py works, and give precise details 
-about the databases it creates.
 
-In README.md also provide an algorithm to show how changes would be incorporated in an incremental build which updates 
-changed file embeddings without changing embeddings for unchanged files.  Also describe how new files would be added 
-and old files deleted from an existing vector store.  Detail how both databases change from the operations.
+build_modal.js is not advancing through the states and updating the modal as it should as it monitors the log
             
 ******************************************************************************************************************

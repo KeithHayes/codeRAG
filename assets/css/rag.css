@@ -75,7 +75,7 @@ h1 {
 #userInput:focus-visible {
     outline: none;
     box-shadow: none;
-    border-color: #523A28; /* reset to match your default border */
+    border-color: #523A28;
 }
 
 #sendButton {

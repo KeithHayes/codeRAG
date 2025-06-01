@@ -9,7 +9,9 @@
 Each directory will have a vector store db and a sqlite db for file tracking.  Begin 
 by enhancing the metadata in config.yaml to mark which project files belongs to.
 
-On startup the default configuration is loaded, the dropdown will change the selection.
+On startup the default configuration is loaded, the dropdown will change the selection such as 
+to textgenerationwebui.
+
 
 
 Following is code which moves dropdown outside of toolbar.
@@ -112,3 +114,7 @@ Rendered html follows.
     <p>Item 3</p>
   </div>
 </body>
+
+
+Monitoring last line should not skip lines.  Initialize a counter, and process lines from the last line processed to 
+the end on every poll.
