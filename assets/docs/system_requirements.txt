@@ -1,18 +1,3 @@
 
-Config driven: Uses a YAML config file doomsteadrag.yaml for all paths, chunk sizes, and model names.
-
-Database: Initializes SQLite DB for file metadata and embeddings bookkeeping.
-
-File loading: Loads all code files recursively for PHP, JS, CSS, HTML based on config.  Special handling for css an js files.
-
-Text splitting: Uses RecursiveCharacterTextSplitter with specified chunk size and separators.
-
-Vector store: Creates a Chroma vector DB, removes old files first, batches embeddings, and then adds them.
-
-Error handling: Logs errors and raises exceptions if critical steps fail.
-
-Requirement: Until valid results can be returned from query_doomstead.py the only files which may be changed 
-are  query_doomstead.py and most importantly full_builder.py 
-
 
 ******************************************************************************************************************
