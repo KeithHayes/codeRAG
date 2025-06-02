@@ -1,11 +1,1 @@
-php test_query.php 
 
-=== Testing: ' The 'info_center' section is styled by which CSS files? List only the file names (not full paths).' ===
-Failed to configure logging: [Errno 1] Operation not permitted: '/var/www/html/doomsteadRAG/assets/logs'
-Traceback (most recent call last):
-  File "/var/www/html/doomsteadRAG/assets/py/query_doomstead.py", line 45, in <module>
-    logger = setup_logging()
-  File "/var/www/html/doomsteadRAG/assets/py/query_doomstead.py", line 26, in setup_logging
-    os.chmod(LOG_DIR, 0o777)
-PermissionError: [Errno 1] Operation not permitted: '/var/www/html/doomsteadRAG/assets/logs'
-Invalid response

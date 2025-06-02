@@ -31,7 +31,6 @@
 
     statusLi.appendChild(statusDiv)
 
-    // Append AFTER the book button (so it appears even farther right when floated)
     const bookButton = buttonlist.querySelector('#button_book')
     if (bookButton?.parentNode?.nextSibling) {
       buttonlist.insertBefore(statusLi, bookButton.parentNode.nextSibling)
@@ -61,10 +60,6 @@
     ragcode()
   }
 
-  /**
-   * @function addbutton
-   * @description Creates a toolbar button.
-   */
   function addbutton(id, className, side, isIndicator) {
     const a = document.createElement('a');
     a.id = id;
@@ -83,10 +78,19 @@
     return li;
   }
 
-  /**
-   * @function addbuttondropdown
-   * @description Creates a dropdown toolbar button.
-   */
+  function colordropdowntext(content) {
+    const dropdown = document.getElementById('dropdown_fileload');
+    if (dropdown) {
+      const ul = dropdown.querySelector('ul');
+      if (ul) {
+        const items = ul.querySelectorAll('li a');
+        items.forEach(item => {
+          item.style.color = item.textContent.trim() === content ? '#006400' : '#964b00';
+        });
+      }
+    }
+  }
+
   function addbuttondropdown(id, className, side, items) {
     const dropdownfunctions = { RAGcode: ragcode, Doomstead: doomsteadcode };
     const li = document.createElement('li');
@@ -101,9 +105,9 @@
     li.appendChild(a);
 
     const content = document.createElement('div');
-    content.id = `dropdown_${id}`;  // Add ID for easy reference
+    content.id = `dropdown_${id}`;
     content.classList.add('dropdown');
-    content.style.display = 'none'; // Start hidden
+    content.style.display = 'none';
     content.style.position = 'absolute';
 
     const ul = document.createElement('ul');
@@ -113,6 +117,7 @@
       const itemLink = document.createElement('a');
       itemLink.href = '#';
       itemLink.textContent = item;
+      itemLink.style.color = '#964b00';
       const liItem = document.createElement('li');
       liItem.appendChild(itemLink);
       ul.appendChild(liItem);
@@ -153,10 +158,6 @@
     return li;
   }
 
-  /**
-   * @function addtablearrow
-   * @description Adds a directional arrow button.
-   */
   function addtablearrow(id, className, text) {
     const bar = document.getElementById("coderagtoolbar");
     const list = bar.querySelector('.coderag-menu');
@@ -209,10 +210,6 @@
     }
   }
 
-  /**
-   * @function statusColor
-   * @description Visually indicates status by shifting button background.
-   */
   function statusColor(StatusID, shift) {
     const el = document.getElementById(StatusID)
     if (el) {
@@ -220,10 +217,6 @@
     }
   }
 
-  /**
-   * @function ragcode
-   * @description Code for dropdown.
-   */
   function ragcode() {
     const content = { "filesetconfig": "ragcode" };
     fetch('assets/php/save_config.php', {
@@ -233,13 +226,10 @@
     }).finally(() => {
       const dropdown = document.getElementById('dropdown_fileload');
       if (dropdown) dropdown.style.display = 'none';
+      colordropdowntext("RAGcode");
     });
   }
 
-  /**
-   * @function doomsteadcode
-   * @description Code for dropdown.
-   */
   function doomsteadcode() {
     const content = { "filesetconfig": "doomstead" };
     fetch('assets/php/save_config.php', {
@@ -249,14 +239,10 @@
     }).finally(() => {
       const dropdown = document.getElementById('dropdown_fileload');
       if (dropdown) dropdown.style.display = 'none';
+      colordropdowntext("Doomstead");
     });
   }
 
-
-  /**
-   * @function rebuild_vectorstore
-   * @description Code for button.
-   */
   function rebuild_vectorstore() {
     const modal = new BuildModal();
     modal.startPolling();
@@ -272,10 +258,6 @@
     });
   }
 
-  /**
-   * @function refresh_vectorstore
-   * @description Code for button.
-   */
   function refresh_vectorstore() {
       const modal = new BuildModal();
     modal.startPolling();
@@ -292,7 +274,6 @@
   }
 
   window.loadtoolbar = loadtoolbar
+})();
 
-})()
-
-window.loadtoolbar()
+window.loadtoolbar();

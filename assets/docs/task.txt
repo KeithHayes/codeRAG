@@ -1,13 +1,14 @@
-full_builder.py needs to be corrected.  Functionality has been incorrectly added.
+      if (dropdown) dropdown.style.display = 'none';
+      // change the colors of dropdown text selections to the default
+      // then change the selected color green.
+      // find the 'ul_filename' and iterate through the list elements setting 
+      // the default color #964b00, except for the text matching variable 'content' 
+      // where the color is set to #006400.  this will show a visual indication to 
+      // match what has been placed into config.json
 
-Also query_doomstead.py which uses databases created by full_builder.py needs correction.
+      will be found in two places in toolbar.js 
 
+      code will be generated to accomplish the requirements defined in this comment block 
 
-The added functionality is to simply read a configuration file assets/data/config.json that will specify yaml file 
-such as {"filesetconfig":"doomstead"} which yields doomstead to produce doomstead.yaml wich is then used for settings
-Use the information in the yaml as before to create two databases, a vector database 
-and an sqlite3 database both of which go into the newly created folder.
-
-databases are created as they were but they simply go in a subfolder which is specified in the config.json
-
-query_doomstead.py will use exactly the same logic to pick a yaml file from wich it will read from the correct subdirectory.
+      A new function named colordropdowntext(content) will be created so code will not have 
+      to be duplicated.
