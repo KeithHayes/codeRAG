@@ -54,7 +54,6 @@ class DoomsteadRAG:
         self.splitter = self._init_splitter()
         self.vector_db = None
         
-        # Load config from JSON to get filesetconfig
         config_json_path = DATA_DIR / "config.json"
         if config_json_path.exists():
             with open(config_json_path, 'r') as f:
@@ -63,9 +62,9 @@ class DoomsteadRAG:
         else:
             self.filesetconfig = 'doomstead'
             
-        # Set database paths based on filesetconfig
-        self.vector_db_path = DATA_DIR / f"vector_db_{self.filesetconfig}"
-        self.db_file = DATA_DIR / f"file_metadata_{self.filesetconfig}.db"
+        self.db_subdir = DATA_DIR / self.filesetconfig
+        self.vector_db_path = self.db_subdir / "vector_db"
+        self.db_file = self.db_subdir / "file_metadata.db"
         
         self._verify_directories()
         self._initialize_database()
@@ -88,7 +87,7 @@ class DoomsteadRAG:
 
     def _verify_directories(self):
         logger.info("Verifying directories...")
-        required_dirs = [LOG_DIR, DATA_DIR, self.vector_db_path]
+        required_dirs = [LOG_DIR, self.db_subdir]
         
         for dir_path in required_dirs:
             try:
@@ -160,7 +159,7 @@ class DoomsteadRAG:
 
     def _initialize_database(self):
         try:
-            self.db_file.parent.mkdir(parents=True, exist_ok=True)
+            self.db_subdir.mkdir(parents=True, exist_ok=True)
             
             self.db_conn = sqlite3.connect(self.db_file)
             self.db_conn.execute("PRAGMA journal_mode=WAL")

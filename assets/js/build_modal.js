@@ -50,16 +50,17 @@ class BuildModal {
 
         this.progressContainer = document.createElement('div');
         this.progressContainer.style.backgroundColor = '#e4d2ba';
+        this.progressContainer.style.border = '1px solid #964B00';
         this.progressContainer.style.borderRadius = '4px';
-        this.progressContainer.style.borderColor = '#523A28';
-        this.progressContainer.style.padding = '10px';
-        this.progressContainer.style.marginBottom = '20px';
+        this.progressContainer.style.padding = '8px';
+        this.progressContainer.style.marginBottom = '18px';
 
         this.progressBar = document.createElement('div');
         this.progressBar.style.height = '20px';
         this.progressBar.style.backgroundColor = '#523A28';
         this.progressBar.style.width = '0%';
         this.progressBar.style.transition = 'width 0.3s ease';
+        this.progressBar.style.borderRadius = '4px';
 
         this.progressText = document.createElement('div');
         this.progressText.textContent = '';
@@ -116,7 +117,6 @@ class BuildModal {
     processLogLine(line) {
         const lineTime = this.parseLogTimestamp(line);
         
-        // Skip old log entries if we're still initializing
         if (this.currentState === 'initializing') {
             if (lineTime > this.creationTime) {
                 this.currentState = 'processing';
@@ -125,17 +125,13 @@ class BuildModal {
             }
         }
 
-        // Extract INFO messages for status updates
         const infoMatch = line.match(/- INFO - (.*)/);
         if (infoMatch) {
             this.statusText.textContent = infoMatch[1];
         }
 
-        // State transitions and processing
         switch (this.currentState) {
-
             case 'processing':
-                // Handle batch processing updates
                 const batchMatch = line.match(/Processed batch (\d+)\/(\d+)/);
                 if (batchMatch) {
                     const currentBatch = parseInt(batchMatch[1]);
@@ -144,15 +140,14 @@ class BuildModal {
                     this.updateProgress(percent, `Processing batch ${currentBatch} of ${totalBatches}`);
                 }
                 
-                // Handle completion
                 if (line.includes('Build completed successfully')) {
                     this.updateProgress(100, 'Build completed successfully');
                     this.currentState = 'complete';
-                    this.progressBar.style.backgroundColor = '#4CAF50';
+                    this.progressBar.style.backgroundColor = '#0f5e02';
                     
                     setTimeout(() => {
                         this.close();
-                    }, 5000);
+                    }, 3000);
                 }
                 break;
         }

@@ -3,7 +3,7 @@
 $python = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
 $script = '/var/www/html/doomsteadRAG/assets/py/query_doomstead.py';
 $testQueries = [
-    "in which file is the doomstead info_center rendered to html",
+    "The 'info_center' section is styled by which CSS files? List only the file names (not full paths).",
 ];
 
 foreach ($testQueries as $query) {

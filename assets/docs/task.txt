@@ -1,5 +1,13 @@
+full_builder.py needs to be corrected.  Functionality has been incorrectly added.
+
+Also query_doomstead.py which uses databases created by full_builder.py needs correction.
 
 
-build_modal.js is not advancing through the states and updating the modal as it should as it monitors the log
-            
-******************************************************************************************************************
+The added functionality is to simply read a configuration file assets/data/config.json that will specify yaml file 
+such as {"filesetconfig":"doomstead"} which yields doomstead to produce doomstead.yaml wich is then used for settings
+Use the information in the yaml as before to create two databases, a vector database 
+and an sqlite3 database both of which go into the newly created folder.
+
+databases are created as they were but they simply go in a subfolder which is specified in the config.json
+
+query_doomstead.py will use exactly the same logic to pick a yaml file from wich it will read from the correct subdirectory.

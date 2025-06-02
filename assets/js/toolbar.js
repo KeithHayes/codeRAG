@@ -9,7 +9,7 @@
     buttonlist.id = 'coderag_menu_buttons';
     buttonlist.classList.add('coderag-menu');
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['Default']));
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead']));
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true));
     buttonlist.appendChild(addbutton('full_build', 'eraserBTN', 'left', false));
     buttonlist.appendChild(addbutton('vectordb', 'vectordbBTN', 'left', false));
@@ -58,6 +58,7 @@
       e.preventDefault()
       toolbarfunctions[e.target.innerHTML]()
     }
+    ragcode()
   }
 
   /**
@@ -87,7 +88,7 @@
    * @description Creates a dropdown toolbar button.
    */
   function addbuttondropdown(id, className, side, items) {
-    const dropdownfunctions = { Load: fileload, Default: loaddefault };
+    const dropdownfunctions = { RAGcode: ragcode, Doomstead: doomsteadcode };
     const li = document.createElement('li');
     li.style.float = side;
     li.id = `button_${id}`;
@@ -193,7 +194,7 @@
 
   function loadtooltips() {
     const tooltips = {
-      fileload: 'Load Dynamo Cards',
+      fileload: 'File Set',
       full_build: 'Rebuild Vector Store',
       vectordb: 'Refresh Vector Store',
       hashtag: 'Initial Values',
@@ -220,12 +221,37 @@
   }
 
   /**
-   * @function fileload
-   * @description Code for button.
+   * @function ragcode
+   * @description Code for dropdown.
    */
-  function fileload() {
-
+  function ragcode() {
+    const content = { "filesetconfig": "ragcode" };
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload');
+      if (dropdown) dropdown.style.display = 'none';
+    });
   }
+
+  /**
+   * @function doomsteadcode
+   * @description Code for dropdown.
+   */
+  function doomsteadcode() {
+    const content = { "filesetconfig": "doomstead" };
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload');
+      if (dropdown) dropdown.style.display = 'none';
+    });
+  }
+
 
   /**
    * @function rebuild_vectorstore
@@ -263,14 +289,6 @@
     }).catch(() => {
       // Ignore fetch errors completely
     });
-  }
-
-  /**
-   * @function loaddefault
-   * @description Code for button.
-   */
-  function loaddefault() {
-
   }
 
   window.loadtoolbar = loadtoolbar

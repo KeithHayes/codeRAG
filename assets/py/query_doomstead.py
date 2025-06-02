@@ -3,14 +3,15 @@ import os
 import sys
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Any
 import yaml
 import argparse
 import logging
-from warnings import filterwarnings
-from typing import List, Dict, Any
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -32,7 +33,6 @@ class VectorSearch:
         self.config = config
         self.embeddings = self._init_embeddings()
         
-        # Load config from JSON to get filesetconfig
         config_json_path = DATA_DIR / "config.json"
         if config_json_path.exists():
             with open(config_json_path, 'r') as f:
@@ -41,7 +41,8 @@ class VectorSearch:
         else:
             self.filesetconfig = 'doomstead'
             
-        self.vector_db_path = DATA_DIR / f"vector_db_{self.filesetconfig}"
+        self.db_subdir = DATA_DIR / self.filesetconfig
+        self.vector_db_path = self.db_subdir / "vector_db"
         self.vectordb = self._init_vector_db()
 
     def _init_embeddings(self) -> HuggingFaceEmbeddings:
@@ -61,11 +62,21 @@ class VectorSearch:
     def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
         try:
             docs = self.vectordb.similarity_search_with_relevance_scores(query, k=k)
-            return [{
-                'content': doc.page_content,
-                'metadata': doc.metadata,
-                'score': float(score)
-            } for doc, score in docs if score > self.config['min_score']]
+            min_score = float(self.config.get('min_score', 0.5))  # Default to 0.5 if not specified
+            results = []
+            for doc, score in docs:
+                try:
+                    score_float = float(score)
+                    if score_float > min_score:
+                        results.append({
+                            'content': doc.page_content,
+                            'metadata': doc.metadata,
+                            'score': score_float
+                        })
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Invalid score value {score}: {str(e)}")
+                    continue
+            return results
         except Exception as e:
             logger.error(f"Search failed: {str(e)}")
             raise RuntimeError(f"Search failed: {str(e)}")
