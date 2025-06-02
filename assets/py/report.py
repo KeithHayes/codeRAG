@@ -35,12 +35,12 @@ def create_report():
         os.path.join(base_path, 'assets', 'docs', 'system_requirements.txt'),
         os.path.join(base_path, 'assets', 'docs', 'error.txt'),
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'README.md'),
+        #os.path.join(base_path, 'assets', 'docs', 'README.md'),
     ]
 
     css_files = [
-        os.path.join(base_path, 'assets', 'css', 'rag.css'),
-        os.path.join(base_path, 'assets', 'css', 'toolbar.css')
+        #os.path.join(base_path, 'assets', 'css', 'rag.css'),
+        #os.path.join(base_path, 'assets', 'css', 'toolbar.css')
     ]
 
     log_files = [
@@ -50,15 +50,15 @@ def create_report():
     ]
 
     js_files = [
-        os.path.join(base_path, 'assets', 'js', 'rag.js'),
-        os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
-        os.path.join(base_path, 'assets', 'js', 'build_modal.js')
+        #os.path.join(base_path, 'assets', 'js', 'rag.js'),
+        #os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
+        #os.path.join(base_path, 'assets', 'js', 'build_modal.js')
     ]
 
     php_files = [
-        os.path.join(base_path, 'assets', 'php', 'rag.php'),
-        os.path.join(base_path, 'assets', 'php', 'show_log.php'),
-        os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
+        #os.path.join(base_path, 'assets', 'php', 'rag.php'),
+        #os.path.join(base_path, 'assets', 'php', 'show_log.php'),
+        #os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
         #os.path.join(base_path, 'assets', 'php', 'incremental_builder.php'),
         #os.path.join(base_path, 'assets', 'php', 'test_query.php')
     ]
