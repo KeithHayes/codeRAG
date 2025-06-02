@@ -18,4 +18,5 @@ rag_doomstead:
       - "/var/www/html/homedog/assets/css"
 
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/doomstead"
-
+  collection_name: "doomstead"
+  min_score: "0.25"

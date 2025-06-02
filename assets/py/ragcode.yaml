@@ -13,4 +13,5 @@ rag_doomstead:
       - "/var/www/html/doomsteadRAG/assets/css"
 
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragcode"
-
+  collection_name: "ragcode"
+  min_score: "0.25"
