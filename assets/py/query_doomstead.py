@@ -3,6 +3,8 @@ import os
 import sys
 import json
 import argparse
+import yaml
+from pathlib import Path
 from warnings import filterwarnings
 from typing import List, Dict, Any
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -11,14 +13,35 @@ from langchain_chroma import Chroma
 # Suppress warnings
 filterwarnings("ignore")
 
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
+def load_config() -> Dict:
+    """Load configuration based on config.json if present, otherwise use config.yaml"""
+    config_json_path = SCRIPT_DIR / "assets/data/config.json"
+    config_yaml_file = "ragcode.yaml"  # Default YAML config file
+    
+    # Check if config.json exists and contains filesetconfig
+    if config_json_path.exists():
+        try:
+            with open(config_json_path, 'r') as f:
+                json_config = json.load(f)
+                if isinstance(json_config, dict) and 'filesetconfig' in json_config:
+                    config_yaml_file = f"{json_config['filesetconfig']}.yaml"
+        except Exception as e:
+            print(f"Could not read config.json: {str(e)}. Falling back to default ragcode.yaml", file=sys.stderr)
+    
+    # Load the YAML config file
+    config_path = SCRIPT_DIR / config_yaml_file
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+        if not config or 'rag_doomstead' not in config:
+            raise ValueError(f"Invalid or empty config file: {config_yaml_file}")
+        return config['rag_doomstead']
+
 class VectorSearch:
     def __init__(self):
-        self.config = {
-            'vector_db_path': '/var/www/html/doomsteadRAG/assets/data',
-            'embedding_model': 'sentence-transformers/all-mpnet-base-v2',
-            'collection_name': 'doomstead_rag',
-            'min_score': 0.25
-        }
+        # Load configuration using the same logic as full_builder.py
+        self.config = load_config()
         self.embeddings = self._init_embeddings()
         self.vectordb = self._init_vector_db()
 
@@ -32,9 +55,14 @@ class VectorSearch:
 
     def _init_vector_db(self) -> Chroma:
         """Initialize Chroma vector database"""
+        # Get the absolute path to the vector database
+        vector_db_path = Path(self.config['vector_db_path'])
+        if not vector_db_path.is_absolute():
+            vector_db_path = SCRIPT_DIR / vector_db_path
+
         return Chroma(
-            collection_name=self.config['collection_name'],
-            persist_directory=self.config['vector_db_path'],
+            collection_name="doomstead_rag",
+            persist_directory=str(vector_db_path),
             embedding_function=self.embeddings
         )
 
@@ -46,7 +74,7 @@ class VectorSearch:
                 'content': doc.page_content,
                 'metadata': doc.metadata,
                 'score': float(score)
-            } for doc, score in docs if score > self.config['min_score']]
+            } for doc, score in docs if score > self.config.get('min_score', 0.25)]
         except Exception as e:
             raise RuntimeError(f"Search failed: {str(e)}")
 

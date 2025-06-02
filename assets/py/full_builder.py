@@ -6,6 +6,7 @@ import logging
 import hashlib
 import sqlite3
 import shutil
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -18,13 +19,15 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import numpy as np # Fix numpy compatibility before any imports
 np.float_ = np.float64  # Fix for NumPy 2.0
 
+# Path configuration
+PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 SCRIPT_DIR = Path(__file__).parent.resolve()
-LOG_DIR = Path("/var/www/html/doomsteadRAG/assets/logs")
-LOG_FILE = LOG_DIR / "vector_build.log"
-DB_FILE = Path("/var/www/html/doomsteadRAG/assets/data/file_metadata.db")
+LOG_DIR = PROJECT_ROOT / "assets/logs"
+DATA_DIR = PROJECT_ROOT / "assets/data"
 
 def setup_logging():
     """Configure logging with proper file permissions"""
+    LOG_FILE = LOG_DIR / "vector_build.log"
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         os.chmod(LOG_DIR, 0o777)
@@ -55,6 +58,14 @@ class DoomsteadRAG:
         self.embeddings = self._init_embeddings()
         self.splitter = self._init_splitter()
         self.vector_db = None
+        
+        # Set database path based on config
+        self.vector_db_path = Path(self.config['vector_db_path'])
+        if not self.vector_db_path.is_absolute():
+            self.vector_db_path = PROJECT_ROOT / self.vector_db_path
+            
+        self.db_file = self.vector_db_path / "file_metadata.db"
+        
         self._verify_directories()
         self._initialize_database()
         logger.info(f"Using {'GPU' if self.gpu_available else 'CPU'} for embeddings")
@@ -76,22 +87,25 @@ class DoomsteadRAG:
 
     def _verify_directories(self):
         logger.info("Verifying directories...")
-        vector_db_path = Path(self.config['vector_db_path'])
-        if not vector_db_path.is_absolute():
-            vector_db_path = SCRIPT_DIR / vector_db_path
+        try:
+            self.vector_db_path.mkdir(parents=True, exist_ok=True)
+            os.chmod(self.vector_db_path, 0o777)
+            os.system(f"chown -R www-data:www-data {self.vector_db_path}")
+            os.system(f"chmod -R 777 {self.vector_db_path}")
+            logger.info(f"Verified vector database directory at {self.vector_db_path}")
+        except Exception as e:
+            logger.error(f"Failed to create vector database directory {self.vector_db_path}: {e}")
+            raise
         
         try:
-            vector_db_path.mkdir(parents=True, exist_ok=True)
-            test_file = vector_db_path / ".permission_test"
+            test_file = self.vector_db_path / ".permission_test"
             test_file.touch()
             test_file.unlink()
-            os.chmod(vector_db_path, 0o777)
-            os.system(f"chown -R www-data:www-data {vector_db_path}")
-            os.system(f"chmod -R 777 {vector_db_path}")
         except Exception as e:
             logger.error(f"Primary vector store path not accessible: {e}")
+            raise
         
-        required_dirs = [LOG_DIR, DB_FILE.parent, vector_db_path]
+        required_dirs = [LOG_DIR, self.vector_db_path]
         for dir_path in required_dirs:
             try:
                 dir_path.mkdir(parents=True, exist_ok=True)
@@ -109,6 +123,8 @@ class DoomsteadRAG:
     def _ensure_vectorstore_permissions(self, path: Path):
         """Ensure proper permissions for vector store directory"""
         try:
+            path.mkdir(parents=True, exist_ok=True)
+            
             if path.exists():
                 for root, dirs, files in os.walk(path):
                     for d in dirs:
@@ -118,7 +134,6 @@ class DoomsteadRAG:
                             os.chmod(os.path.join(root, f), 0o666)
                         except Exception as e:
                             logger.warning(f"Could not change permissions for {f}: {str(e)}")
-            path.mkdir(parents=True, exist_ok=True)
             os.chmod(path, 0o777)
             os.system(f"chown -R www-data:www-data {path}")
             os.system(f"chmod -R 777 {path}")
@@ -161,7 +176,7 @@ class DoomsteadRAG:
 
     def _initialize_database(self):
         try:
-            self.db_conn = sqlite3.connect(DB_FILE)
+            self.db_conn = sqlite3.connect(self.db_file)
             self.db_conn.execute("PRAGMA journal_mode=WAL")
             self.db_conn.execute("PRAGMA synchronous=NORMAL")
             cursor = self.db_conn.cursor()
@@ -179,11 +194,11 @@ class DoomsteadRAG:
                 )
             ''')
             self.db_conn.commit()
-            logger.info(f"Database initialized at {DB_FILE}")
-            os.chmod(DB_FILE, 0o777)
-            os.system(f"chown www-data:www-data {DB_FILE}")
+            logger.info(f"Database initialized at {self.db_file}")
+            os.chmod(self.db_file, 0o777)
+            os.system(f"chown www-data:www-data {self.db_file}")
         except sqlite3.OperationalError as e:
-            logger.error(f"Cannot access database file at {DB_FILE}: {str(e)}")
+            logger.error(f"Cannot access database file at {self.db_file}: {str(e)}")
             raise
 
     def _update_file_metadata(self, file_path: str):
@@ -200,14 +215,13 @@ class DoomsteadRAG:
 
     def _load_documents(self) -> List[Document]:
         documents = []
-        skip_dirs = {"venv", "__pycache__", ".venv"}  # Add other dirs to exclude
+        skip_dirs = {"venv", "__pycache__", ".venv"}
         for file_type, dirs in self.config['code_dirs'].items():
             logger.info(f"Processing {file_type.upper()} files...")
             for path in dirs:
-                abs_path = Path(path) if Path(path).is_absolute() else SCRIPT_DIR / path
+                abs_path = Path(path) if Path(path).is_absolute() else PROJECT_ROOT / path
                 for ext in self._get_extensions(file_type):
                     for file in abs_path.rglob(f"*{ext}"):
-                        # Skip conditions
                         if any(skip_dir in file.parts for skip_dir in skip_dirs):
                             logger.debug(f"Skipping directory: {file}")
                             continue
@@ -215,7 +229,6 @@ class DoomsteadRAG:
                             logger.debug(f"Skipping minified file: {file}")
                             continue
                         
-                        # File processing
                         try:
                             file_path_str = str(file)
                             with open(file, 'r', encoding='utf-8') as f:
@@ -227,7 +240,6 @@ class DoomsteadRAG:
                             ))
                         except UnicodeDecodeError:
                             try:
-                                # Fallback to latin-1 if utf-8 fails
                                 with open(file, 'r', encoding='latin-1') as f:
                                     text = f.read()
                                 self._update_file_metadata(file_path_str)
@@ -270,31 +282,30 @@ class DoomsteadRAG:
                 raise
 
     def initialize_vectorstore(self):
-        vector_db_path = Path(self.config['vector_db_path'])
-        if not vector_db_path.is_absolute():
-            vector_db_path = SCRIPT_DIR / vector_db_path
+        try:
+            self.vector_db_path.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create vector store directory {self.vector_db_path}: {e}")
+            raise
             
-        if not self._ensure_vectorstore_permissions(vector_db_path):
+        if not self._ensure_vectorstore_permissions(self.vector_db_path):
             raise RuntimeError("Failed to set vector store permissions")
 
-        self._clear_vectorstore(vector_db_path)
+        self._clear_vectorstore(self.vector_db_path)
         logger.info("Building vector store...")
         docs = self._load_documents()
         chunks = self._split_documents(docs)
 
         try:
-            # Initialize Chroma with persistent storage
             client = chromadb.PersistentClient(
-                path=str(vector_db_path),
+                path=str(self.vector_db_path),
                 settings=Settings(allow_reset=True)
             )
             
-            # Create collection with proper configuration
             collection = client.create_collection(
                 name="doomstead_rag",
                 metadata={"hnsw:space": "cosine"})
 
-            # Process documents in batches
             batch_size = 512
             for i in range(0, len(chunks), batch_size):
                 batch = chunks[i:i + batch_size]
@@ -308,7 +319,7 @@ class DoomsteadRAG:
                     ids=[f"chunk_{i+j}" for j in range(len(batch))])
                 logger.info(f"Processed batch {(i//batch_size)+1}/{(len(chunks)-1)//batch_size + 1}")
 
-            logger.info(f"Vector store successfully created at {vector_db_path}")
+            logger.info(f"Vector store successfully created at {self.vector_db_path}")
             
         except Exception as e:
             logger.error(f"Error creating vector store: {str(e)}")
@@ -318,12 +329,26 @@ class DoomsteadRAG:
         if hasattr(self, 'db_conn'):
             self.db_conn.close()
 
-def load_config(config_file: str = "config.yaml") -> Dict:
-    config_path = SCRIPT_DIR / config_file
+def load_config() -> Dict:
+    config_json_path = DATA_DIR / "config.json"
+    logger.info(f"config_json_path: {config_json_path}")
+    config_yaml_file = "ragcode.yaml"  # Default YAML config file
+    
+    if config_json_path.exists():
+        try:
+            with open(config_json_path, 'r') as f:
+                json_config = json.load(f)
+                if isinstance(json_config, dict) and 'filesetconfig' in json_config:
+                    config_yaml_file = f"{json_config['filesetconfig']}.yaml"
+                    logger.info(f"Using config file from config.json: {config_yaml_file}")
+        except Exception as e:
+            logger.warning(f"Could not read config.json: {str(e)}. Falling back to default ragcode.yaml")
+    
+    config_path = PROJECT_ROOT / "assets" / "py" / config_yaml_file
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         if not config or 'rag_doomstead' not in config:
-            raise ValueError("Invalid or empty config file")
+            raise ValueError(f"Invalid or empty config file: {config_yaml_file}")
         return config['rag_doomstead']
 
 def main():

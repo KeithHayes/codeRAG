@@ -1,0 +1,16 @@
+rag_doomstead:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  code_dirs:
+    py:
+      - "/var/www/html/doomsteadRAG/assets/py"
+    php:
+      - "/var/www/html/doomsteadRAG/assets/php"
+    js:
+      - "/var/www/html/doomsteadRAG/assets/js"
+    css:
+      - "/var/www/html/doomsteadRAG/assets/css"
+
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragcode"
+
