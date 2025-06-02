@@ -14,22 +14,18 @@ from chromadb.config import Settings
 from langchain.schema import Document
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import numpy as np # Fix numpy compatibility before any imports
-np.float_ = np.float64  # Fix for NumPy 2.0
+import numpy as np
+np.float_ = np.float64
 
-# Path configuration
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 SCRIPT_DIR = Path(__file__).parent.resolve()
 LOG_DIR = PROJECT_ROOT / "assets/logs"
 DATA_DIR = PROJECT_ROOT / "assets/data"
-VECTOR_DB_DIR = DATA_DIR / "vector_db"  # Explicit subdirectory for vector db
 
 def setup_logging():
-    """Configure logging with proper file permissions"""
     LOG_FILE = LOG_DIR / "vector_build.log"
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
-        os.chmod(LOG_DIR, 0o777)
         if LOG_FILE.exists():
             LOG_FILE.unlink()
         LOG_FILE.touch()
@@ -58,9 +54,18 @@ class DoomsteadRAG:
         self.splitter = self._init_splitter()
         self.vector_db = None
         
-        # Set database paths
-        self.vector_db_path = VECTOR_DB_DIR
-        self.db_file = DATA_DIR / "file_metadata.db"
+        # Load config from JSON to get filesetconfig
+        config_json_path = DATA_DIR / "config.json"
+        if config_json_path.exists():
+            with open(config_json_path, 'r') as f:
+                json_config = json.load(f)
+                self.filesetconfig = json_config.get('filesetconfig', 'doomstead')
+        else:
+            self.filesetconfig = 'doomstead'
+            
+        # Set database paths based on filesetconfig
+        self.vector_db_path = DATA_DIR / f"vector_db_{self.filesetconfig}"
+        self.db_file = DATA_DIR / f"file_metadata_{self.filesetconfig}.db"
         
         self._verify_directories()
         self._initialize_database()
@@ -82,22 +87,17 @@ class DoomsteadRAG:
         return False
 
     def _verify_directories(self):
-        """Verify and create all required directories with correct permissions"""
         logger.info("Verifying directories...")
-        required_dirs = [LOG_DIR, DATA_DIR, VECTOR_DB_DIR]
+        required_dirs = [LOG_DIR, DATA_DIR, self.vector_db_path]
         
         for dir_path in required_dirs:
             try:
                 dir_path.mkdir(parents=True, exist_ok=True)
                 os.chmod(dir_path, 0o775)
-                
-                # Test write permissions
                 test_file = dir_path / ".permission_test"
                 with open(test_file, 'w') as f:
                     f.write("test")
                 os.unlink(test_file)
-                
-                # Set ownership and permissions
                 os.system(f"chown -R www-data:www-data {dir_path}")
                 logger.info(f"Verified directory: {dir_path}")
             except Exception as e:
@@ -105,15 +105,12 @@ class DoomsteadRAG:
                 raise PermissionError(f"Insufficient permissions for {dir_path}")
 
     def _ensure_vectorstore_permissions(self, path: Path):
-        """Ensure proper permissions for vector store directory"""
         try:
             if not path.exists():
                 path.mkdir(parents=True, exist_ok=True)
             
-            # Set directory permissions
             os.chmod(path, 0o775)
             
-            # Set permissions for all files in the directory
             for root, dirs, files in os.walk(path):
                 for d in dirs:
                     os.chmod(os.path.join(root, d), 0o775)
@@ -123,7 +120,6 @@ class DoomsteadRAG:
                     except Exception:
                         continue
             
-            # Set ownership
             os.system(f"chown -R www-data:www-data {path}")
             return True
         except Exception as e:
@@ -163,9 +159,7 @@ class DoomsteadRAG:
                (filename.endswith('.css') or filename.endswith('.js')))
 
     def _initialize_database(self):
-        """Initialize the metadata database with proper permissions"""
         try:
-            # Create parent directory if it doesn't exist
             self.db_file.parent.mkdir(parents=True, exist_ok=True)
             
             self.db_conn = sqlite3.connect(self.db_file)
@@ -188,7 +182,6 @@ class DoomsteadRAG:
             ''')
             self.db_conn.commit()
             
-            # Set database file permissions
             os.chmod(self.db_file, 0o664)
             os.system(f"chown www-data:www-data {self.db_file}")
             
@@ -219,10 +212,8 @@ class DoomsteadRAG:
                 for ext in self._get_extensions(file_type):
                     for file in abs_path.rglob(f"*{ext}"):
                         if any(skip_dir in file.parts for skip_dir in skip_dirs):
-                            logger.debug(f"Skipping directory: {file}")
                             continue
                         if self._should_skip_file(str(file)):
-                            logger.debug(f"Skipping minified file: {file}")
                             continue
                         
                         try:
@@ -277,9 +268,7 @@ class DoomsteadRAG:
                 raise
 
     def initialize_vectorstore(self):
-        """Initialize the vector store with proper directory structure and permissions"""
         try:
-            # Ensure vector db directory exists with correct permissions
             if not self._ensure_vectorstore_permissions(self.vector_db_path):
                 raise RuntimeError("Failed to set vector store permissions")
 
@@ -298,11 +287,10 @@ class DoomsteadRAG:
             )
             
             collection = client.create_collection(
-                name="doomstead_rag",
+                name=f"{self.filesetconfig}_rag",
                 metadata={"hnsw:space": "cosine"}
             )
 
-            # Process in batches
             batch_size = 512
             for i in range(0, len(chunks), batch_size):
                 batch = chunks[i:i + batch_size]
@@ -318,8 +306,6 @@ class DoomsteadRAG:
                 logger.info(f"Processed batch {(i//batch_size)+1}/{(len(chunks)-1)//batch_size + 1}")
 
             logger.info(f"Vector store successfully created at {self.vector_db_path}")
-            
-            # Final permission check
             self._ensure_vectorstore_permissions(self.vector_db_path)
             
         except Exception as e:
@@ -332,8 +318,7 @@ class DoomsteadRAG:
 
 def load_config() -> Dict:
     config_json_path = DATA_DIR / "config.json"
-    logger.info(f"config_json_path: {config_json_path}")
-    config_yaml_file = "ragcode.yaml"  # Default YAML config file
+    config_yaml_file = "ragcode.yaml"
     
     if config_json_path.exists():
         try:

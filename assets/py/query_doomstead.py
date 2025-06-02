@@ -12,15 +12,12 @@ from typing import List, Dict, Any
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
-# Path configuration
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 SCRIPT_DIR = Path(__file__).parent.resolve()
 LOG_DIR = PROJECT_ROOT / "assets/logs"
 DATA_DIR = PROJECT_ROOT / "assets/data"
-VECTOR_DB_DIR = DATA_DIR / "vector_db"
 
 def setup_logging():
-    """Configure basic logging"""
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -34,10 +31,20 @@ class VectorSearch:
     def __init__(self, config: Dict):
         self.config = config
         self.embeddings = self._init_embeddings()
+        
+        # Load config from JSON to get filesetconfig
+        config_json_path = DATA_DIR / "config.json"
+        if config_json_path.exists():
+            with open(config_json_path, 'r') as f:
+                json_config = json.load(f)
+                self.filesetconfig = json_config.get('filesetconfig', 'doomstead')
+        else:
+            self.filesetconfig = 'doomstead'
+            
+        self.vector_db_path = DATA_DIR / f"vector_db_{self.filesetconfig}"
         self.vectordb = self._init_vector_db()
 
     def _init_embeddings(self) -> HuggingFaceEmbeddings:
-        """Initialize HuggingFace embeddings model"""
         return HuggingFaceEmbeddings(
             model_name=self.config['embedding_model'],
             model_kwargs={'device': 'cpu'},
@@ -45,15 +52,13 @@ class VectorSearch:
         )
 
     def _init_vector_db(self) -> Chroma:
-        """Initialize Chroma vector database"""
         return Chroma(
-            collection_name=self.config['collection_name'],
-            persist_directory=str(VECTOR_DB_DIR),
+            collection_name=f"{self.filesetconfig}_rag",
+            persist_directory=str(self.vector_db_path),
             embedding_function=self.embeddings
         )
 
     def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
-        """Perform similarity search with relevance scores"""
         try:
             docs = self.vectordb.similarity_search_with_relevance_scores(query, k=k)
             return [{
@@ -66,7 +71,6 @@ class VectorSearch:
             raise RuntimeError(f"Search failed: {str(e)}")
 
 def load_config() -> Dict:
-    """Load configuration from YAML file"""
     config_json_path = DATA_DIR / "config.json"
     config_yaml_file = "ragcode.yaml"
     
