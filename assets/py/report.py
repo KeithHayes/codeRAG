@@ -46,7 +46,7 @@ def create_report():
     log_files = [
         #os.path.join(base_path, 'assets', 'logs', 'vector_build.log'),
         #os.path.join(base_path, 'assets', 'logs', 'test_query.log'),
-        os.path.join(base_path, 'assets', 'logs', 'query_doomstead.log')
+        #os.path.join(base_path, 'assets', 'logs', 'query_doomstead.log')
     ]
 
     js_files = [
