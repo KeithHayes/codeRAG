@@ -13,14 +13,16 @@ from langchain_chroma import Chroma
 # Suppress warnings
 filterwarnings("ignore")
 
+# Path configuration - matching full_builder.py
+PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 SCRIPT_DIR = Path(__file__).parent.resolve()
+DATA_DIR = PROJECT_ROOT / "assets/data"
 
 def load_config() -> Dict:
     """Load configuration based on config.json if present, otherwise use config.yaml"""
-    config_json_path = SCRIPT_DIR / "assets/data/config.json"
+    config_json_path = DATA_DIR / "config.json"
     config_yaml_file = "ragcode.yaml"  # Default YAML config file
     
-    # Check if config.json exists and contains filesetconfig
     if config_json_path.exists():
         try:
             with open(config_json_path, 'r') as f:
@@ -30,8 +32,7 @@ def load_config() -> Dict:
         except Exception as e:
             print(f"Could not read config.json: {str(e)}. Falling back to default ragcode.yaml", file=sys.stderr)
     
-    # Load the YAML config file
-    config_path = SCRIPT_DIR / config_yaml_file
+    config_path = PROJECT_ROOT / "assets" / "py" / config_yaml_file
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         if not config or 'rag_doomstead' not in config:
@@ -40,7 +41,6 @@ def load_config() -> Dict:
 
 class VectorSearch:
     def __init__(self):
-        # Load configuration using the same logic as full_builder.py
         self.config = load_config()
         self.embeddings = self._init_embeddings()
         self.vectordb = self._init_vector_db()
@@ -55,10 +55,9 @@ class VectorSearch:
 
     def _init_vector_db(self) -> Chroma:
         """Initialize Chroma vector database"""
-        # Get the absolute path to the vector database
         vector_db_path = Path(self.config['vector_db_path'])
         if not vector_db_path.is_absolute():
-            vector_db_path = SCRIPT_DIR / vector_db_path
+            vector_db_path = PROJECT_ROOT / vector_db_path
 
         return Chroma(
             collection_name="doomstead_rag",
