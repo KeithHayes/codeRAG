@@ -17,30 +17,16 @@ PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 SCRIPT_DIR = Path(__file__).parent.resolve()
 LOG_DIR = PROJECT_ROOT / "assets/logs"
 DATA_DIR = PROJECT_ROOT / "assets/data"
+VECTOR_DB_DIR = DATA_DIR / "vector_db"
 
 def setup_logging():
-    """Configure logging with proper file permissions"""
-    LOG_FILE = LOG_DIR / "vector_build.log"
-    try:
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-        os.chmod(LOG_DIR, 0o777)
-        if LOG_FILE.exists():
-            LOG_FILE.unlink()
-        LOG_FILE.touch()
-        os.chmod(LOG_FILE, 0o666)
-        
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(LOG_FILE),
-                logging.StreamHandler()
-            ]
-        )
-        return logging.getLogger("DoomsteadRAG")
-    except Exception as e:
-        print(f"Failed to configure logging: {str(e)}", file=sys.stderr)
-        raise
+    """Configure basic logging"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+    return logging.getLogger("DoomsteadRAG")
 
 logger = setup_logging()
 
@@ -62,7 +48,7 @@ class VectorSearch:
         """Initialize Chroma vector database"""
         return Chroma(
             collection_name=self.config['collection_name'],
-            persist_directory=self.config['vector_db_path'],
+            persist_directory=str(VECTOR_DB_DIR),
             embedding_function=self.embeddings
         )
 
@@ -76,41 +62,36 @@ class VectorSearch:
                 'score': float(score)
             } for doc, score in docs if score > self.config['min_score']]
         except Exception as e:
+            logger.error(f"Search failed: {str(e)}")
             raise RuntimeError(f"Search failed: {str(e)}")
 
 def load_config() -> Dict:
+    """Load configuration from YAML file"""
     config_json_path = DATA_DIR / "config.json"
-    logger.info(f"config_json_path: {config_json_path}")
-    config_yaml_file = "ragcode.yaml"  # Default YAML config file
+    config_yaml_file = "ragcode.yaml"
     
     if config_json_path.exists():
-        try:
-            with open(config_json_path, 'r') as f:
-                json_config = json.load(f)
-                if isinstance(json_config, dict) and 'filesetconfig' in json_config:
-                    config_yaml_file = f"{json_config['filesetconfig']}.yaml"
-                    logger.info(f"Using config file from config.json: {config_yaml_file}")
-        except Exception as e:
-            logger.warning(f"Could not read config.json: {str(e)}. Falling back to default ragcode.yaml")
+        with open(config_json_path, 'r') as f:
+            json_config = json.load(f)
+            if isinstance(json_config, dict) and 'filesetconfig' in json_config:
+                config_yaml_file = f"{json_config['filesetconfig']}.yaml"
     
     config_path = PROJECT_ROOT / "assets" / "py" / config_yaml_file
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         if not config or 'rag_doomstead' not in config:
-            raise ValueError(f"Invalid or empty config file: {config_yaml_file}")
+            raise ValueError("Invalid or empty config file")
         return config['rag_doomstead']
 
 def main():
-    config = load_config()
-
-
-    parser = argparse.ArgumentParser(description='Doomstead RAG Vector Search')
-    parser.add_argument('--query', required=True, help='Search query')
-    parser.add_argument('--k', type=int, default=5, help='Number of results to return')
-    
     try:
+        config = load_config()
+        parser = argparse.ArgumentParser(description='Doomstead RAG Vector Search')
+        parser.add_argument('--query', required=True, help='Search query')
+        parser.add_argument('--k', type=int, default=5, help='Number of results to return')
+        
         args = parser.parse_args()
-        searcher = VectorSearch()
+        searcher = VectorSearch(config)
         results = searcher.search(args.query, args.k)
         print(json.dumps(results[:args.k]))
     except Exception as e:
