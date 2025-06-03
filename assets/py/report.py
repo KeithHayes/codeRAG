@@ -60,7 +60,8 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
         #os.path.join(base_path, 'assets', 'php', 'incremental_builder.php'),
-        os.path.join(base_path, 'assets', 'php', 'test_query.php')
+        os.path.join(base_path, 'assets', 'php', 'test_query.php'),
+        os.path.join(base_path, 'assets', 'php', 'model_reader.php')
     ]
 
     py_files = [
@@ -70,7 +71,8 @@ def create_report():
         #os.path.join(base_path, 'assets', 'py', 'incremental_builder.py'),
         os.path.join(base_path, 'assets', 'py', 'listfiles.py'),
         os.path.join(base_path, 'assets', 'py', 'logger.py'),
-        os.path.join(base_path, 'assets', 'py', 'query_doomstead.py')
+        os.path.join(base_path, 'assets', 'py', 'query_doomstead.py'),
+        os.path.join(base_path, 'assets', 'py', 'model_reader.py')
     ]
 
     # Report file path
