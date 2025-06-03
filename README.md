@@ -5,7 +5,7 @@ A code assistant.
 
 # Requirements
 
-This local web app requires the Text generation web UI server to be running.
+This local web app requires the Text generation web UI server to be running.  The model also has been made available to the Text generation web UI server in the appropriate folder so it can be loaded. 
 
     python3 server.py --listen --api --trust-remote-code \
 
