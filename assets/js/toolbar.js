@@ -39,6 +39,7 @@
     }
 
     bar.appendChild(buttonlist)
+    loadtooltips()
 
     const toolbarfunctions = {
       fileloadBTN: fileload,
@@ -51,8 +52,6 @@
       bookBTN: book,
       targetBTN: homepage
     }
-
-    loadtooltips()
 
     buttonlist.onclick = (e) => {
       e.preventDefault()

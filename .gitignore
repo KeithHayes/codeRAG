@@ -1,4 +1,7 @@
 /assets/py/venv/
 /assets/data
 /assets/logs
+.gitignore
+.project
+.pydevproject
 
