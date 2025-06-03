@@ -11,10 +11,10 @@
 
     buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
-    buttonlist.appendChild(addbutton('full_build', 'eraserBTN', 'left', false))
-    buttonlist.appendChild(addbutton('vectordb', 'vectordbBTN', 'left', false))
-    buttonlist.appendChild(addbutton('checkmodel', 'hashtagBTN', 'left', false))
-    buttonlist.appendChild(addbutton('fastapi', 'shapesstackBTN', 'left', false))
+    buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
+    buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
+    buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
+    buttonlist.appendChild(addbutton('fastapi', 'horuseyeBTN', 'left', false))
     buttonlist.appendChild(addbutton('run', 'dogrunBTN', 'left', false))
     buttonlist.appendChild(addbutton('csvdata', 'filesaveBTN', 'left', false))
     buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
@@ -42,10 +42,10 @@
 
     const toolbarfunctions = {
       fileloadBTN: fileload,
-      eraserBTN: rebuild_vectorstore,
-      vectordbBTN: refresh_vectorstore,
-      hashtagBTN: checkmodel,
-      shapesstackBTN: fastapi,
+      dbuploadBTN: rebuild_vectorstore,
+      dbrefreshBTN: refresh_vectorstore,
+      sailboatBTN: checkmodel,
+      horuseyeBTN: fastapi,
       dogrunBTN: run,
       printerBTN: print,
       bookBTN: book,
@@ -260,6 +260,10 @@
   }
 
   function refresh_vectorstore() {
+
+  }
+
+  function test() {
     const modal = new BuildModal()
     modal.startPolling()
 

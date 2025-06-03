@@ -4,6 +4,7 @@
     <title>Doomstead Code RAG for Local LLM</title>
     <link rel="stylesheet" href="assets/css/rag.css">
     <link rel="stylesheet" href="./assets/css/toolbar.css">
+    <link rel="stylesheet" href="./assets/css/toolbarbuttons.css">
     <link rel="stylesheet" href="./assets/css/w3.css">
 </head>
 <body>

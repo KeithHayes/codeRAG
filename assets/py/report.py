@@ -33,7 +33,7 @@ def create_report():
     boilerplate_files = [
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
         os.path.join(base_path, 'assets', 'docs', 'error.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'system_requirements.txt'),
+        os.path.join(base_path, 'assets', 'docs', 'requirements.txt'),
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'README.md'),
     ]

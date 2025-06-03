@@ -15,3 +15,8 @@ LLM (gpt-3.5-turbo): The `preparedisplay` function is used to prepare and displa
 this by ensuring that `$id_msg` is an integer and then using it to fetch and display the relevant message from the database. The 
 function also uses global variables such as `$smcFunc`, `$memberContext`, `$settings`, `$user_info`, `$modSettings`, and `$txt`, 
 which are likely to be used for accessing and manipulating the message data.
+
+You: What is the webui endpoint.
+LLM (gpt-3.5-turbo): The WebUI endpoint is the URL where the text-generation-webui is hosted. In this case, it is 
+"http://localhost:5000/v1/internal/model/info". This means the model information API is running on localhost at port 5000 and the 
+API version is v1.
