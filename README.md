@@ -1,5 +1,5 @@
 # Doomstead RAG
-A code assistant
+A code assistant.
 
 <img src="assets/img/bg/gui.png" alt="RAG GUI" width="800" style="margin-left: 110px;">
 
