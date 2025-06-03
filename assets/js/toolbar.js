@@ -13,8 +13,8 @@
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true));
     buttonlist.appendChild(addbutton('full_build', 'eraserBTN', 'left', false));
     buttonlist.appendChild(addbutton('vectordb', 'vectordbBTN', 'left', false));
-    buttonlist.appendChild(addbutton('hashtag', 'hashtagBTN', 'left', false));
-    buttonlist.appendChild(addbutton('shapesstack', 'shapesstackBTN', 'left', false));
+    buttonlist.appendChild(addbutton('checkmodel', 'hashtagBTN', 'left', false));
+    buttonlist.appendChild(addbutton('fastapi', 'shapesstackBTN', 'left', false));
     buttonlist.appendChild(addbutton('run', 'dogrunBTN', 'left', false));
     buttonlist.appendChild(addbutton('csvdata', 'filesaveBTN', 'left', false));
     buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false));
@@ -44,7 +44,8 @@
       fileloadBTN: fileload,
       eraserBTN: rebuild_vectorstore,
       vectordbBTN: refresh_vectorstore,
-      hashtagBTN: hashtag,
+      hashtagBTN: checkmodel,
+      shapesstackBTN: fastapi,
       dogrunBTN: run,
       printerBTN: print,
       bookBTN: book,
@@ -76,19 +77,6 @@
     li.id = `button_${id}`;
     li.appendChild(a);
     return li;
-  }
-
-  function colordropdowntext(content) {
-    const dropdown = document.getElementById('dropdown_fileload');
-    if (dropdown) {
-      const ul = dropdown.querySelector('ul');
-      if (ul) {
-        const items = ul.querySelectorAll('li a');
-        items.forEach(item => {
-          item.style.color = item.textContent.trim() === content ? '#006400' : '#964b00';
-        });
-      }
-    }
   }
 
   function addbuttondropdown(id, className, side, items) {
@@ -198,8 +186,8 @@
       fileload: 'File Set',
       full_build: 'Rebuild Vector Store',
       vectordb: 'Refresh Vector Store',
-      hashtag: 'Initial Values',
-      shapesstack: 'Processed Cards',
+      checkmodel: 'Check Model',
+      fastapi: 'Documentation',
       run: 'Run Model',
       print: 'Print Results',
       plot: 'Plot Results',
@@ -214,6 +202,19 @@
     const el = document.getElementById(StatusID)
     if (el) {
       el.style.backgroundPosition = `0 ${shift}px`
+    }
+  }
+
+  function colordropdowntext(content) {
+    const dropdown = document.getElementById('dropdown_fileload');
+    if (dropdown) {
+      const ul = dropdown.querySelector('ul');
+      if (ul) {
+        const items = ul.querySelectorAll('li a');
+        items.forEach(item => {
+          item.style.color = item.textContent.trim() === content ? '#006400' : '#964b00';
+        });
+      }
     }
   }
 
@@ -259,7 +260,7 @@
   }
 
   function refresh_vectorstore() {
-      const modal = new BuildModal();
+    const modal = new BuildModal();
     modal.startPolling();
 
     fetch('assets/php/test_query.php', {
@@ -271,6 +272,28 @@
     }).catch(() => {
       // Ignore fetch errors completely
     });
+  }
+
+  async function checkmodel() {
+      try {
+          const response = await fetch('assets/php/model_reader.php')
+          const data = await response.json()
+
+          if (data.success) {
+              console.log(`Current model: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
+              alert(`Current model: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+          } else {
+              console.error('Error checking model:', data.error)
+              alert(`Error checking model: ${data.error}`)
+          }
+      } catch (error) {
+          console.error('Failed to check model:', error)
+          alert('Failed to check model - see console for details')
+      }
+  }
+
+  function fastapi() {
+    window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer');
   }
 
   window.loadtoolbar = loadtoolbar

@@ -88,7 +88,9 @@ h1 {
 	font-weight: 500;
 	font-family: "lucida grande",verdana,arial,geneva,helvetica,sans-serif;
     padding: 9px 21px 9px 21px;
-	margin-left: 0.5em;;
+	margin-left: 4px;
+    margin-bottom: 4px;
+    margin-top: 4px;
     cursor: pointer;
     flex-shrink: 0;
 }

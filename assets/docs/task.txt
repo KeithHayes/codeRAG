@@ -1,14 +1,3 @@
-      if (dropdown) dropdown.style.display = 'none';
-      // change the colors of dropdown text selections to the default
-      // then change the selected color green.
-      // find the 'ul_filename' and iterate through the list elements setting 
-      // the default color #964b00, except for the text matching variable 'content' 
-      // where the color is set to #006400.  this will show a visual indication to 
-      // match what has been placed into config.json
+Three files will be modified toolbar.js model_reader.php and model_reader py.
 
-      will be found in two places in toolbar.js 
-
-      code will be generated to accomplish the requirements defined in this comment block 
-
-      A new function named colordropdowntext(content) will be created so code will not have 
-      to be duplicated.
+The instructions for the modification are described in comments in toolbar.js
