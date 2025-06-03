@@ -15,7 +15,7 @@
     buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
     buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
     buttonlist.appendChild(addbutton('fastapi', 'horuseyeBTN', 'left', false))
-    buttonlist.appendChild(addbutton('run', 'dogrunBTN', 'left', false))
+    buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
     buttonlist.appendChild(addbutton('csvdata', 'filesaveBTN', 'left', false))
     buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
     buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true))
@@ -47,7 +47,7 @@
       dbrefreshBTN: refresh_vectorstore,
       sailboatBTN: checkmodel,
       horuseyeBTN: fastapi,
-      dogrunBTN: run,
+      dogrunBTN: loadmodel,
       printerBTN: print,
       bookBTN: book,
       targetBTN: homepage
@@ -187,7 +187,7 @@
       vectordb: 'Refresh Vector Store',
       checkmodel: 'Check Model',
       fastapi: 'Documentation',
-      run: 'Run Model',
+      loadmodel: 'Load Model',
       print: 'Print Results',
       plot: 'Plot Results',
       csvdata: 'Print or Plot CSV File'
@@ -297,6 +297,24 @@
 
   function fastapi() {
     window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer')
+  }
+
+  async function loadmodel() {
+      try {
+          const response = await fetch('assets/php/model_loader.php')
+          const data = await response.json()
+
+          if (data.success) {
+              console.log(`Model load initiated: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
+              alert(`Model load initiated:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+          } else {
+              console.error('Error loading model:', data.error)
+              alert(`Error loading model: ${data.error}`)
+          }
+      } catch (error) {
+          console.error('Failed to load model:', error)
+          alert('Failed to load model - see console for details')
+      }
   }
 
   window.loadtoolbar = loadtoolbar
