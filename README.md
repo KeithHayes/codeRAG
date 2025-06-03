@@ -1,23 +1,7 @@
 # Doomstead RAG
 A code assistant
 
-todo
-
-Add source highlighting
-Include which document, file, or chunk produced that response.
-
-Enable markdown formatting
-Allow the model to return markdown which your JS renders for richer responses.
-
-Add RAG context display
-Below each answer, show the document snippet that was retrieved to support the generation.
-
-Improve prompt template
-Customize the system prompt for your use case. Currently it may be too generic.
-
-Integrate full query logging
-Capture full query → context → response logs for inspection and fine-tuning.
-
+<img src="assets/img/bg/gui.png" alt="RAG GUI" width="800" style="margin-left: 110px;">
 
 # Operation
 

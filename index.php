@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Doomstead Code RAG for Local LLM</title>
+    <title>LLM code RAG</title>
     <link rel="stylesheet" href="assets/css/rag.css">
     <link rel="stylesheet" href="./assets/css/toolbar.css">
     <link rel="stylesheet" href="./assets/css/toolbarbuttons.css">
@@ -9,7 +9,7 @@
 </head>
 <body>
 <div id="main_content" class="w3-twothird w3-panel">
-    <h1>Doomstead Code RAG</h1>
+    <h1>Retrieval Argumentation Generation for Code</h1>
     <div id="coderagtoolbar"></div>
     <div id="chatbox"></div>
     <div id="inputContainer">
