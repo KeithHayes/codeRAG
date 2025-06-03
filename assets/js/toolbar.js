@@ -4,22 +4,22 @@
    * @description Initializes the application toolbar.
    */
   function loadtoolbar() {
-    const bar = document.getElementById("coderagtoolbar");
-    const buttonlist = document.createElement('ul');
-    buttonlist.id = 'coderag_menu_buttons';
-    buttonlist.classList.add('coderag-menu');
+    const bar = document.getElementById("coderagtoolbar")
+    const buttonlist = document.createElement('ul')
+    buttonlist.id = 'coderag_menu_buttons'
+    buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead']));
-    buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true));
-    buttonlist.appendChild(addbutton('full_build', 'eraserBTN', 'left', false));
-    buttonlist.appendChild(addbutton('vectordb', 'vectordbBTN', 'left', false));
-    buttonlist.appendChild(addbutton('checkmodel', 'hashtagBTN', 'left', false));
-    buttonlist.appendChild(addbutton('fastapi', 'shapesstackBTN', 'left', false));
-    buttonlist.appendChild(addbutton('run', 'dogrunBTN', 'left', false));
-    buttonlist.appendChild(addbutton('csvdata', 'filesaveBTN', 'left', false));
-    buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false));
-    buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true));
-    buttonlist.appendChild(addbutton('book', 'bookBTN', 'right', false));
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead']))
+    buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
+    buttonlist.appendChild(addbutton('full_build', 'eraserBTN', 'left', false))
+    buttonlist.appendChild(addbutton('vectordb', 'vectordbBTN', 'left', false))
+    buttonlist.appendChild(addbutton('checkmodel', 'hashtagBTN', 'left', false))
+    buttonlist.appendChild(addbutton('fastapi', 'shapesstackBTN', 'left', false))
+    buttonlist.appendChild(addbutton('run', 'dogrunBTN', 'left', false))
+    buttonlist.appendChild(addbutton('csvdata', 'filesaveBTN', 'left', false))
+    buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
+    buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true))
+    buttonlist.appendChild(addbutton('book', 'bookBTN', 'right', false))
 
     const statusLi = document.createElement('li')
     statusLi.style.float = 'right'
@@ -38,7 +38,7 @@
       buttonlist.appendChild(statusLi)
     }
 
-    bar.appendChild(buttonlist);
+    bar.appendChild(buttonlist)
 
     const toolbarfunctions = {
       fileloadBTN: fileload,
@@ -50,9 +50,9 @@
       printerBTN: print,
       bookBTN: book,
       targetBTN: homepage
-    };
+    }
 
-    loadtooltips();
+    loadtooltips()
 
     buttonlist.onclick = (e) => {
       e.preventDefault()
@@ -62,109 +62,109 @@
   }
 
   function addbutton(id, className, side, isIndicator) {
-    const a = document.createElement('a');
-    a.id = id;
-    a.className = className;
-    a.textContent = className;
+    const a = document.createElement('a')
+    a.id = id
+    a.className = className
+    a.textContent = className
     if (isIndicator) {
-      a.style = 'background-position: 0 0px; margin-top: 0px; margin-left: 0px;';
+      a.style = 'background-position: 0 0px; margin-top: 0px; margin-left: 0px;'
     } else {
-      a.href = '#';
+      a.href = '#'
     }
 
-    const li = document.createElement('li');
-    li.style.float = side;
-    li.id = `button_${id}`;
-    li.appendChild(a);
-    return li;
+    const li = document.createElement('li')
+    li.style.float = side
+    li.id = `button_${id}`
+    li.appendChild(a)
+    return li
   }
 
   function addbuttondropdown(id, className, side, items) {
-    const dropdownfunctions = { RAGcode: ragcode, Doomstead: doomsteadcode };
-    const li = document.createElement('li');
-    li.style.float = side;
-    li.id = `button_${id}`;
+    const dropdownfunctions = { RAGcode: ragcode, Doomstead: doomsteadcode }
+    const li = document.createElement('li')
+    li.style.float = side
+    li.id = `button_${id}`
 
-    const a = document.createElement('a');
-    a.id = id;
-    a.className = className;
-    a.textContent = className;
-    a.href = '#';
-    li.appendChild(a);
+    const a = document.createElement('a')
+    a.id = id
+    a.className = className
+    a.textContent = className
+    a.href = '#'
+    li.appendChild(a)
 
-    const content = document.createElement('div');
-    content.id = `dropdown_${id}`;
-    content.classList.add('dropdown');
-    content.style.display = 'none';
-    content.style.position = 'absolute';
+    const content = document.createElement('div')
+    content.id = `dropdown_${id}`
+    content.classList.add('dropdown')
+    content.style.display = 'none'
+    content.style.position = 'absolute'
 
-    const ul = document.createElement('ul');
-    ul.id = `ul_${id}`;
+    const ul = document.createElement('ul')
+    ul.id = `ul_${id}`
 
     items.forEach(item => {
-      const itemLink = document.createElement('a');
-      itemLink.href = '#';
-      itemLink.textContent = item;
-      itemLink.style.color = '#964b00';
-      const liItem = document.createElement('li');
-      liItem.appendChild(itemLink);
-      ul.appendChild(liItem);
-    });
+      const itemLink = document.createElement('a')
+      itemLink.href = '#'
+      itemLink.textContent = item
+      itemLink.style.color = '#964b00'
+      const liItem = document.createElement('li')
+      liItem.appendChild(itemLink)
+      ul.appendChild(liItem)
+    })
 
     ul.addEventListener('click', (e) => {
-      e.preventDefault();
-      const target = e.target;
+      e.preventDefault()
+      const target = e.target
       if (target.tagName === 'A') {
-        dropdownfunctions[target.textContent.trim()]?.();
+        dropdownfunctions[target.textContent.trim()]?.()
       }
-    });
+    })
 
-    content.appendChild(ul);
-    document.body.appendChild(content);
+    content.appendChild(ul)
+    document.body.appendChild(content)
     a.addEventListener('mouseenter', () => {
-        const rect = a.getBoundingClientRect();
-        content.style.left = `${rect.left}px`;
-        content.style.top = `${rect.bottom}px`;
-        content.style.display = 'block';
-    });
+        const rect = a.getBoundingClientRect()
+        content.style.left = `${rect.left}px`
+        content.style.top = `${rect.bottom}px`
+        content.style.display = 'block'
+    })
 
     a.addEventListener('mouseleave', () => {
         setTimeout(() => {
             if (!content.matches(':hover')) {
-                content.style.display = 'none';
+                content.style.display = 'none'
             }
-        }, 100);
-    });
+        }, 100)
+    })
     
     content.addEventListener('mouseleave', () => {
-        content.style.display = 'none';
-    });
+        content.style.display = 'none'
+    })
     
     content.addEventListener('mouseenter', () => {
-        content.style.display = 'block';
-    });
-    return li;
+        content.style.display = 'block'
+    })
+    return li
   }
 
   function addtablearrow(id, className, text) {
-    const bar = document.getElementById("coderagtoolbar");
-    const list = bar.querySelector('.coderag-menu');
-    const ref = list.querySelector('#button_book');
+    const bar = document.getElementById("coderagtoolbar")
+    const list = bar.querySelector('.coderag-menu')
+    const ref = list.querySelector('#button_book')
 
-    const li = document.createElement('li');
-    li.style.float = 'right';
-    li.id = id;
-    li.innerHTML = `<a id="${className}" class="${className}" href="#">${text}</a>`;
+    const li = document.createElement('li')
+    li.style.float = 'right'
+    li.id = id
+    li.innerHTML = `<a id="${className}" class="${className}" href="#">${text}</a>`
 
-    ref?.insertAdjacentElement('beforebegin', li) || list.appendChild(li);
+    ref?.insertAdjacentElement('beforebegin', li) || list.appendChild(li)
   }
 
   function addarrowleft() {
-    addtablearrow('button_left', 'leftBTN', 'leftBTN');
+    addtablearrow('button_left', 'leftBTN', 'leftBTN')
   }
 
   function addarrowright() {
-    addtablearrow('button_right', 'rightBTN', 'rightBTN');
+    addtablearrow('button_right', 'rightBTN', 'rightBTN')
   }
 
   function addpagescroll() {
@@ -177,7 +177,7 @@
         li.id = `button_${dir}`
         li.innerHTML = `<a id="page${dir}" class="page${dir === 'up' ? 'in' : 'out'}BTN" href="#">page${dir === 'up' ? 'in' : 'out'}BTN</a>`
         ref.insertAdjacentElement('afterend', li)
-      });
+      })
     }
   }
 
@@ -192,7 +192,7 @@
       print: 'Print Results',
       plot: 'Plot Results',
       csvdata: 'Print or Plot CSV File'
-    };
+    }
     for (const id in tooltips) {
       document.getElementById(id)?.setAttribute('title', tooltips[id])
     }
@@ -206,47 +206,47 @@
   }
 
   function colordropdowntext(content) {
-    const dropdown = document.getElementById('dropdown_fileload');
+    const dropdown = document.getElementById('dropdown_fileload')
     if (dropdown) {
-      const ul = dropdown.querySelector('ul');
+      const ul = dropdown.querySelector('ul')
       if (ul) {
-        const items = ul.querySelectorAll('li a');
+        const items = ul.querySelectorAll('li a')
         items.forEach(item => {
-          item.style.color = item.textContent.trim() === content ? '#006400' : '#964b00';
-        });
+          item.style.color = item.textContent.trim() === content ? '#006400' : '#964b00'
+        })
       }
     }
   }
 
   function ragcode() {
-    const content = { "filesetconfig": "ragcode" };
+    const content = { "filesetconfig": "ragcode" }
     fetch('assets/php/save_config.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content)
     }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload');
-      if (dropdown) dropdown.style.display = 'none';
-      colordropdowntext("RAGcode");
-    });
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("RAGcode")
+    })
   }
 
   function doomsteadcode() {
-    const content = { "filesetconfig": "doomstead" };
+    const content = { "filesetconfig": "doomstead" }
     fetch('assets/php/save_config.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content)
     }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload');
-      if (dropdown) dropdown.style.display = 'none';
-      colordropdowntext("Doomstead");
-    });
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("Doomstead")
+    })
   }
 
   function rebuild_vectorstore() {
-    const modal = new BuildModal();
-    modal.startPolling();
+    const modal = new BuildModal()
+    modal.startPolling()
 
     fetch('assets/php/full_builder.php', {
       method: 'POST',
@@ -256,12 +256,12 @@
       }
     }).catch(() => {
       // Ignore fetch errors completely
-    });
+    })
   }
 
   function refresh_vectorstore() {
-    const modal = new BuildModal();
-    modal.startPolling();
+    const modal = new BuildModal()
+    modal.startPolling()
 
     fetch('assets/php/test_query.php', {
       method: 'POST',
@@ -271,32 +271,32 @@
       }
     }).catch(() => {
       // Ignore fetch errors completely
-    });
+    })
   }
 
   async function checkmodel() {
-      try {
-          const response = await fetch('assets/php/model_reader.php')
-          const data = await response.json()
+    try {
+        const response = await fetch('assets/php/model_reader.php')
+        const data = await response.json()
 
-          if (data.success) {
-              console.log(`Current model: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-              alert(`Current model: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
-          } else {
-              console.error('Error checking model:', data.error)
-              alert(`Error checking model: ${data.error}`)
-          }
-      } catch (error) {
-          console.error('Failed to check model:', error)
-          alert('Failed to check model - see console for details')
-      }
+        if (data.success) {
+            console.log(`Current model: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
+            alert(`Current model: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+        } else {
+            console.error('Error checking model:', data.error)
+            alert(`Error checking model: ${data.error}`)
+        }
+    } catch (error) {
+        console.error('Failed to check model:', error)
+        alert('Failed to check model - see console for details')
+    }
   }
 
   function fastapi() {
-    window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer');
+    window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer')
   }
 
   window.loadtoolbar = loadtoolbar
-})();
+})()
 
-window.loadtoolbar();
+window.loadtoolbar()
