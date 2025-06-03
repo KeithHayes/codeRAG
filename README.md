@@ -3,6 +3,34 @@ A code assistant.
 
 <img src="assets/img/bg/gui.png" alt="RAG GUI" width="800" style="margin-left: 110px;">
 
+# Requirements
+
+This local web app requires the Text generation web UI server to be running.
+
+    python3 server.py --listen --api --trust-remote-code \
+
+This launches a command window :
+
+    Activating virtual environment...
+    Checking system requirements...
+    Initializing system...
+    Starting server...
+    11:02:30-480139 INFO     Starting Text generation web UI                        
+    11:02:30-483014 WARNING  trust_remote_code is enabled. This is dangerous.       
+    11:02:30-483764 WARNING                                                         
+                             You are potentially exposing the web UI to the entire  
+                             internet without any access password.                  
+                             You can create one with the "--gradio-auth" flag like  
+                             this:                                                  
+                                                                                
+                             --gradio-auth username:password                        
+                                                                                
+                             Make sure to replace username:password with your own.  
+    11:02:30-491511 INFO     Loading the extension "openai"                         
+    11:02:30-577386 INFO     OpenAI-compatible API URL:                             
+                                                                                
+                             http://0.0.0.0:5000  
+
 # Operation
 
 Understanding the Operation of the RAG System

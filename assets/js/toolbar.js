@@ -317,6 +317,10 @@
       }
   }
 
+  function homepage() {
+    window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
+  }
+
   window.loadtoolbar = loadtoolbar
 })()
 
