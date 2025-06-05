@@ -277,22 +277,25 @@
     })
   }
 
-  async function checkmodel() {
-    try {
-        const response = await fetch('assets/php/model_reader.php')
-        const data = await response.json()
+  async function modelapi(action) {
+      try {
+          const response = await fetch(`assets/php/model_api.php?action=${action}`)
+          const data = await response.json()
+          if (data.success) {
+              console.log(`Model ${action}: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
+              alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+          } else {
+              console.error(`Error in ${action}:`, data.error)
+              alert(`Error in ${action}: ${data.error}`)
+          }
+      } catch (error) {
+          console.error(`Failed to ${action} model:`, error)
+          alert(`Failed to ${action} model - see console for details`)
+      }
+  }
 
-        if (data.success) {
-            console.log(`Current model: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-            alert(`Current model: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
-        } else {
-            console.error('Error checking model:', data.error)
-            alert(`Error checking model: ${data.error}`)
-        }
-    } catch (error) {
-        console.error('Failed to check model:', error)
-        alert('Failed to check model - see console for details')
-    }
+  async function checkmodel() {
+      modelapi('check')
   }
 
   function fastapi() {
@@ -300,21 +303,7 @@
   }
 
   async function loadmodel() {
-      try {
-          const response = await fetch('assets/php/model_loader.php')
-          const data = await response.json()
-
-          if (data.success) {
-              console.log(`Model load initiated: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-              alert(`Model load initiated:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
-          } else {
-              console.error('Error loading model:', data.error)
-              alert(`Error loading model: ${data.error}`)
-          }
-      } catch (error) {
-          console.error('Failed to load model:', error)
-          alert('Failed to load model - see console for details')
-      }
+      modelapi('load')
   }
 
   function homepage() {
