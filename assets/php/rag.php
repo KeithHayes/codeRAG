@@ -113,12 +113,22 @@ class RAGSystem {
     }
 
     public function build_rag_context($vector_results) {
-        $context = "Relevant information:\n";
-        foreach ($vector_results as $doc) {
+        $context = "📄 Retrieved Context:\n" . str_repeat("-", 40) . "\n";
+        foreach ($vector_results as $i => $doc) {
             $source = $doc['metadata']['source'] ?? 'unknown';
+            $chunk = $doc['metadata']['chunk'] ?? 'N/A';
             $content = $doc['content'] ?? $doc['page_content'] ?? '';
-            $context .= "From: $source\nContent:\n$content\n\n";
+            $snippet = wordwrap(trim($content), 100); // wrap long lines
+
+            $context .= sprintf(
+                "%d. [Source: %s | Chunk: %s]\n\"%s\"\n\n",
+                $i + 1,
+                basename($source),
+                $chunk,
+                $snippet
+            );
         }
+        $context .= str_repeat("-", 40) . "\n";
         return $context;
     }
 

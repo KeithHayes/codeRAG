@@ -4,10 +4,22 @@ document.addEventListener("DOMContentLoaded", function () {
     const promptInput = document.getElementById("userInput")
     const chatbox = document.getElementById("chatbox")
 
+    function escapeHTML(str) {
+        return str.replace(/[&<>"']/g, function (match) {
+            const escape = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+            return escape[match]
+        })
+    }
+
+    function formatMultiline(text) {
+        const escaped = escapeHTML(text)
+        return escaped.replace(/\n/g, "<br>")
+    }
+
     function addMessage(text, sender = "user") {
         const msg = document.createElement("div")
         msg.className = "message " + sender
-        msg.textContent = text
+        msg.innerHTML = formatMultiline(text)
         chatbox.appendChild(msg)
         chatbox.scrollTop = chatbox.scrollHeight
     }
