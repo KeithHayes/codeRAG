@@ -11,8 +11,9 @@ from pathlib import Path
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 LOG_DIR = PROJECT_ROOT / "assets/logs"
 API_CHECK_URL = "http://localhost:5000/v1/internal/model/info"
-MAX_CHECK_ATTEMPTS = 10
+MAX_CHECK_ATTEMPTS = 20  # Increased from 10
 CHECK_INTERVAL = 5  # seconds
+MODEL_LOAD_TIMEOUT = 300  # 5 minutes for model loading
 
 def setup_logging():
     """Configure logging for server operations"""
@@ -43,23 +44,27 @@ def setup_logging():
 logger = setup_logging()
 
 def check_server_ready():
-    """Check if the server API is responding"""
-    for attempt in range(MAX_CHECK_ATTEMPTS):
+    """Check if the server API is responding with a loaded model"""
+    start_time = time.time()
+    while time.time() - start_time < MODEL_LOAD_TIMEOUT:
         try:
             response = requests.get(API_CHECK_URL, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 if data.get('model_name'):
+                    logger.info(f"Model loaded: {data['model_name']}")
                     return True
-        except (requests.exceptions.ConnectionError, requests.exceptions.RequestException):
-            pass
+                else:
+                    logger.info("API responding but no model loaded yet")
+        except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
+            logger.info(f"API not ready yet: {str(e)}")
         time.sleep(CHECK_INTERVAL)
     return False
 
 def launch_server() -> dict:
-    """Launch the text generation webui server"""
+    """Launch the text generation webui server with proper environment"""
     tg_dir = "/home/kdog/text-generation-webui"
-    venv_dir = os.path.join(os.path.dirname(__file__), "venv")
+    venv_dir = os.path.join(tg_dir, "venv")  # Corrected venv path
     python_exec = os.path.join(venv_dir, "bin", "python")
     server_script = os.path.join(tg_dir, "server.py")
 
@@ -82,10 +87,16 @@ def launch_server() -> dict:
                 "message": "Server script not found"
             }
 
+        # Activate the virtual environment
+        env = os.environ.copy()
+        env["PATH"] = f"{os.path.join(venv_dir, 'bin')}:{env.get('PATH', '')}"
+        env["VIRTUAL_ENV"] = venv_dir
+
         logger.info(f"Starting server process: {python_exec} {server_script}")
         process = subprocess.Popen(
-            [python_exec, server_script, "--listen", "--api", "--trust-remote-code"],
+            [python_exec, server_script, "--listen", "--api", "--trust-remote-code", "--model", "gpt-3.5-turbo"],
             cwd=tg_dir,
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
@@ -98,7 +109,8 @@ def launch_server() -> dict:
                 "success": True,
                 "status": "ready",
                 "message": "Server started and ready",
-                "pid": process.pid
+                "pid": process.pid,
+                "model": "gpt-3.5-turbo"
             }
         else:
             process.terminate()
