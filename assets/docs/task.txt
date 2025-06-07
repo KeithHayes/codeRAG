@@ -1,29 +1,9 @@
-async function modelapi(action) {
-    try {
-        const response = await fetch(`assets/php/model_api.php?action=${action}`)
-        const data = await response.json()
+The TASK !
 
-        if (data.success) {
-            console.log(`Model ${action}: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-            alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
-        } else {
-            console.error(`Error in ${action}:`, data.error)
-            alert(`Error in ${action}: ${data.error}`)
-        }
-    } catch (error) {
-        console.error(`Failed to ${action} model:`, error)
-        alert(`Failed to ${action} model - see console for details`)
-    }
-}
 
-function checkmodel() {
-    modelapi('check')
-}
+The only file to correct is server_loader.py 
 
-function loadmodel() {
-    modelapi('load')
-}
+The entire philosophy of this file is WRONG.  To start the server all the python file has to do is call 
 
-function fastapi() {
-    window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer')
-}
+
+/home/kdog/text-generation-webui/server.py with the correct options.

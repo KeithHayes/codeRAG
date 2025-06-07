@@ -4,4 +4,4 @@
 .gitignore
 .project
 .pydevproject
-
+/var/www/html/doomsteadRAG/assets/py/doomstead.yaml

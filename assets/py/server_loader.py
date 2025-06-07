@@ -1,157 +1,131 @@
 #!/usr/bin/env python3
-import subprocess
 import os
 import sys
-import json
-import logging
-import time
-import requests
+import subprocess
 from pathlib import Path
+import logging
+from typing import Tuple
 
-PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
-LOG_DIR = PROJECT_ROOT / "assets/logs"
-API_CHECK_URL = "http://localhost:5000"
-MAX_CHECK_ATTEMPTS = 30
-CHECK_INTERVAL = 3
+# Configuration
+TG_DIR = Path("/home/kdog/text-generation-webui")
+VENV_DIR = TG_DIR / "venv"
+LOG_FILE = TG_DIR / "launch.log"
+RAG_DIR = TG_DIR / "extensions" / "documents"
 
-def setup_logging():
-    """Configure logging for server operations"""
-    LOG_FILE = LOG_DIR / "server_loader.log"
+def setup_logging() -> logging.Logger:
+    """Configure logging to both file and console"""
+    logger = logging.getLogger("RAG_Launcher")
+    logger.setLevel(logging.INFO)
+    
+    # File handler
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter('%(message)s'))
+    
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+def check_requirements(logger: logging.Logger) -> bool:
+    """Check system requirements"""
+    logger.info("Checking system requirements...")
+    
+    # Check Python
     try:
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-        if LOG_FILE.exists():
-            LOG_FILE.unlink()
-        LOG_FILE.touch(mode=0o666, exist_ok=True)
-        
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(LOG_FILE),
-                logging.StreamHandler()
-            ]
+        subprocess.run(["python3", "--version"], check=True, capture_output=True)
+    except subprocess.CalledProcessError:
+        logger.error("ERROR: Python3 not found or not working")
+        return False
+    
+    # Check RAG extension
+    if not (RAG_DIR / "rag.py").exists():
+        logger.error(f"ERROR: RAG extension not found at {RAG_DIR}")
+        return False
+    
+    return True
+
+def initialize_rag(logger: logging.Logger) -> bool:
+    """Initialize RAG system"""
+    logger.info("Initializing system...")
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "rag", 
+            str(RAG_DIR / "rag.py")
         )
-        return logging.getLogger("ServerLoader")
+        rag = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(rag)
+        rag.initialize()
+        logger.info("RAG initialization successful")
+        return True
     except Exception as e:
-        print(json.dumps({
-            "success": False,
-            "status": "error",
-            "message": f"Logging setup failed: {str(e)}"
-        }))
-        sys.exit(1)
+        logger.warning(f"RAG initialization warning: {str(e)}")
+        logger.warning("The system will still launch but RAG may not work")
+        return False
 
-logger = setup_logging()
-
-def check_server_ready():
-    """Check if the server API is responding"""
-    attempts = 0
-    while attempts < MAX_CHECK_ATTEMPTS:
-        try:
-            # Check basic API endpoint
-            response = requests.get(f"{API_CHECK_URL}/", timeout=5)
-            if response.status_code == 200:
-                logger.info("API server is ready")
-                return True
-            logger.info(f"API responded with status {response.status_code}")
-        except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
-            logger.info(f"API not ready yet: {str(e)}")
-        
-        attempts += 1
-        if attempts < MAX_CHECK_ATTEMPTS:
-            time.sleep(CHECK_INTERVAL)
+def launch_server(logger: logging.Logger) -> int:
+    """Launch the text generation webui server"""
+    logger.info("Starting server...")
     
-    return False
-
-def launch_server() -> dict:
-    """Launch the text generation webui server with proper environment"""
-    tg_dir = "/home/kdog/text-generation-webui"
-    venv_dir = os.path.join(tg_dir, "venv")
-    python_exec = os.path.join(venv_dir, "bin", "python")
-    server_script = os.path.join(tg_dir, "server.py")
-
-    logger.info("Attempting to launch text generation webui server")
+    # Prepare environment
+    env = os.environ.copy()
+    env["PATH"] = f"{VENV_DIR / 'bin'}:{env.get('PATH', '')}"
+    env["VIRTUAL_ENV"] = str(VENV_DIR)
+    
+    # Prepare command
+    server_command = [
+        str(VENV_DIR / "bin" / "python3"),
+        str(TG_DIR / "server.py"),
+        "--listen",
+        "--api",
+        "--trust-remote-code"
+    ]
     
     try:
-        if not os.path.exists(python_exec):
-            logger.error(f"Python executable not found at {python_exec}")
-            return {
-                "success": False,
-                "status": "error",
-                "message": "Python executable not found"
-            }
-
-        if not os.path.exists(server_script):
-            logger.error(f"Server script not found at {server_script}")
-            return {
-                "success": False,
-                "status": "error",
-                "message": "Server script not found"
-            }
-
-        # Activate the virtual environment
-        env = os.environ.copy()
-        env["PATH"] = f"{os.path.join(venv_dir, 'bin')}:{env.get('PATH', '')}"
-        env["VIRTUAL_ENV"] = venv_dir
-
-        # Start the server process with required flags
-        server_args = [
-            python_exec, 
-            server_script, 
-            "--listen", 
-            "--api", 
-            "--trust-remote-code",
-            "--extensions", "documents"
-        ]
-        
-        logger.info(f"Starting server process: {' '.join(server_args)}")
-        process = subprocess.Popen(
-            server_args,
-            cwd=tg_dir,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            start_new_session=True
-        )
+        # Start the server process
+        with open(LOG_FILE, 'a') as log_file:
+            process = subprocess.Popen(
+                server_command,
+                cwd=str(TG_DIR),
+                env=env,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
         
         logger.info(f"Server started with PID: {process.pid}")
-        
-        # Wait for server to be ready
-        if check_server_ready():
-            return {
-                "success": True,
-                "status": "ready",
-                "message": "Server started and ready",
-                "pid": process.pid
-            }
-        else:
-            process.terminate()
-            return {
-                "success": False,
-                "status": "error",
-                "message": "Server failed to start - API not responding after multiple attempts"
-            }
-            
+        return process.wait()
     except Exception as e:
-        logger.error(f"Failed to launch server: {str(e)}")
-        return {
-            "success": False,
-            "status": "error",
-            "message": f"Failed to launch server: {str(e)}"
-        }
+        logger.error(f"Failed to start server: {str(e)}")
+        return 1
+
+def main() -> int:
+    """Main entry point"""
+    logger = setup_logging()
+    
+    logger.info("=== Launching Text Generation WebUI with RAG ===")
+    logger.info(f"Log file: {LOG_FILE}")
+    
+    # Check requirements
+    if not check_requirements(logger):
+        return 1
+    
+    # Initialize RAG (optional)
+    initialize_rag(logger)
+    
+    # Launch server
+    return launch_server(logger)
 
 if __name__ == "__main__":
     try:
-        logger.info("=== Starting server loader ===")
-        result = launch_server()
-        logger.info(f"Operation result: {json.dumps(result)}")
-        print(json.dumps(result, ensure_ascii=False))
-        sys.exit(0 if result["success"] else 1)
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print("\nServer stopped by user")
+        sys.exit(0)
     except Exception as e:
-        error_msg = f"Critical error: {str(e)}"
-        logger.critical(error_msg)
-        print(json.dumps({
-            "success": False,
-            "status": "error",
-            "message": error_msg
-        }))
+        print(f"Critical error: {str(e)}", file=sys.stderr)
         sys.exit(1)

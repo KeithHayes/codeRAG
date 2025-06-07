@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./assets/css/w3.css">
 </head>
 <body>
-<div id="main_content" class="w3-twothird w3-panel">
+<div id="main_content" class="w3-threequarter w3-panel">
     <h1>Retrieval Argumentation Generation for Code</h1>
     <div id="coderagtoolbar"></div>
     <div id="chatbox"></div>

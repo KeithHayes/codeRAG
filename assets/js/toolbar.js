@@ -227,6 +227,7 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGcode")
+      clearchatbox()
     })
   }
 
@@ -240,7 +241,12 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Doomstead")
+      clearchatbox()
     })
+  }
+
+  function clearchatbox() {
+    document.getElementById("chatbox").innerHTML = ""
   }
 
   function rebuild_vectorstore() {

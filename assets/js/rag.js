@@ -27,7 +27,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function sendPrompt() {
         const prompt = promptInput.value.trim()
         if (!prompt) return
-
         addMessage("You: " + prompt, "user")
         promptInput.value = ""
         promptInput.disabled = true
