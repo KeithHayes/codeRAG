@@ -74,7 +74,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'query_doomstead.py'),
         os.path.join(base_path, 'assets', 'py', 'model_reader.py'),
         os.path.join(base_path, 'assets', 'py', 'model_loader.py'),
-        os.path.join(base_path, 'assets', 'py', 'load_server.py')
+        os.path.join(base_path, 'assets', 'py', 'server_loader.py')
     ]
 
     # Report file path
