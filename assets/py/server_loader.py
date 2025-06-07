@@ -19,6 +19,8 @@ def setup_logging():
     LOG_FILE = LOG_DIR / "server_loader.log"
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
+        if LOG_FILE.exists():
+            LOG_FILE.unlink()
         LOG_FILE.touch(mode=0o666, exist_ok=True)
         
         logging.basicConfig(
