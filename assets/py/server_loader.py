@@ -10,10 +10,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 LOG_DIR = PROJECT_ROOT / "assets/logs"
-API_CHECK_URL = "http://localhost:5000/v1/internal/model/info"
-MAX_CHECK_ATTEMPTS = 30  # Increased further to allow more time
-CHECK_INTERVAL = 3  # Reduced interval for more frequent checks
-MODEL_LOAD_TIMEOUT = 600  # 10 minutes for model loading
+API_CHECK_URL = "http://localhost:5000/v1"
+MAX_CHECK_ATTEMPTS = 30
+CHECK_INTERVAL = 3
 
 def setup_logging():
     """Configure logging for server operations"""
@@ -44,19 +43,16 @@ def setup_logging():
 logger = setup_logging()
 
 def check_server_ready():
-    """Check if the server API is responding with a loaded model"""
+    """Check if the server API is responding"""
     attempts = 0
     while attempts < MAX_CHECK_ATTEMPTS:
         try:
-            response = requests.get(API_CHECK_URL, timeout=5)
+            # Check basic API endpoint instead of model info
+            response = requests.get(f"{API_CHECK_URL}/", timeout=5)
             if response.status_code == 200:
-                data = response.json()
-                if data.get('model_name'):
-                    logger.info(f"Model loaded: {data['model_name']}")
-                    return True
-                logger.info("API responding but no model loaded yet")
-            else:
-                logger.info(f"API responded with status {response.status_code}")
+                logger.info("API server is ready")
+                return True
+            logger.info(f"API responded with status {response.status_code}")
         except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
             logger.info(f"API not ready yet: {str(e)}")
         
@@ -97,16 +93,13 @@ def launch_server() -> dict:
         env["PATH"] = f"{os.path.join(venv_dir, 'bin')}:{env.get('PATH', '')}"
         env["VIRTUAL_ENV"] = venv_dir
 
-        # Start the server process with all required flags
+        # Start the server process with required flags
         server_args = [
             python_exec, 
             server_script, 
             "--listen", 
             "--api", 
             "--trust-remote-code",
-            "--model", "gpt-3.5-turbo",
-            "--api-blocking-port", "5000",
-            "--api-bind",
             "--extensions", "documents"
         ]
         
@@ -117,7 +110,7 @@ def launch_server() -> dict:
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True  # Prevent child process from being killed when parent exits
+            start_new_session=True
         )
         
         logger.info(f"Server started with PID: {process.pid}")
@@ -128,8 +121,7 @@ def launch_server() -> dict:
                 "success": True,
                 "status": "ready",
                 "message": "Server started and ready",
-                "pid": process.pid,
-                "model": "gpt-3.5-turbo"
+                "pid": process.pid
             }
         else:
             process.terminate()
