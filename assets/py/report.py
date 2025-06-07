@@ -61,6 +61,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
         #os.path.join(base_path, 'assets', 'php', 'incremental_builder.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
+        os.path.join(base_path, 'assets', 'php', 'load_server.php'),
         os.path.join(base_path, 'assets', 'php', 'model_api.php'),
         os.path.join(base_path, 'assets', 'php', 'test_query.php'),
     ]
