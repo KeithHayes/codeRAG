@@ -11,9 +11,9 @@ from pathlib import Path
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 LOG_DIR = PROJECT_ROOT / "assets/logs"
 API_CHECK_URL = "http://localhost:5000/v1/internal/model/info"
-MAX_CHECK_ATTEMPTS = 20  # Increased from 10
-CHECK_INTERVAL = 5  # seconds
-MODEL_LOAD_TIMEOUT = 300  # 5 minutes for model loading
+MAX_CHECK_ATTEMPTS = 30  # Increased further to allow more time
+CHECK_INTERVAL = 3  # Reduced interval for more frequent checks
+MODEL_LOAD_TIMEOUT = 600  # 10 minutes for model loading
 
 def setup_logging():
     """Configure logging for server operations"""
@@ -45,8 +45,8 @@ logger = setup_logging()
 
 def check_server_ready():
     """Check if the server API is responding with a loaded model"""
-    start_time = time.time()
-    while time.time() - start_time < MODEL_LOAD_TIMEOUT:
+    attempts = 0
+    while attempts < MAX_CHECK_ATTEMPTS:
         try:
             response = requests.get(API_CHECK_URL, timeout=5)
             if response.status_code == 200:
@@ -54,17 +54,22 @@ def check_server_ready():
                 if data.get('model_name'):
                     logger.info(f"Model loaded: {data['model_name']}")
                     return True
-                else:
-                    logger.info("API responding but no model loaded yet")
+                logger.info("API responding but no model loaded yet")
+            else:
+                logger.info(f"API responded with status {response.status_code}")
         except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
             logger.info(f"API not ready yet: {str(e)}")
-        time.sleep(CHECK_INTERVAL)
+        
+        attempts += 1
+        if attempts < MAX_CHECK_ATTEMPTS:
+            time.sleep(CHECK_INTERVAL)
+    
     return False
 
 def launch_server() -> dict:
     """Launch the text generation webui server with proper environment"""
     tg_dir = "/home/kdog/text-generation-webui"
-    venv_dir = os.path.join(tg_dir, "venv")  # Corrected venv path
+    venv_dir = os.path.join(tg_dir, "venv")
     python_exec = os.path.join(venv_dir, "bin", "python")
     server_script = os.path.join(tg_dir, "server.py")
 
@@ -92,13 +97,27 @@ def launch_server() -> dict:
         env["PATH"] = f"{os.path.join(venv_dir, 'bin')}:{env.get('PATH', '')}"
         env["VIRTUAL_ENV"] = venv_dir
 
-        logger.info(f"Starting server process: {python_exec} {server_script}")
+        # Start the server process with all required flags
+        server_args = [
+            python_exec, 
+            server_script, 
+            "--listen", 
+            "--api", 
+            "--trust-remote-code",
+            "--model", "gpt-3.5-turbo",
+            "--api-blocking-port", "5000",
+            "--api-bind",
+            "--extensions", "documents"
+        ]
+        
+        logger.info(f"Starting server process: {' '.join(server_args)}")
         process = subprocess.Popen(
-            [python_exec, server_script, "--listen", "--api", "--trust-remote-code", "--model", "gpt-3.5-turbo"],
+            server_args,
             cwd=tg_dir,
             env=env,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
+            start_new_session=True  # Prevent child process from being killed when parent exits
         )
         
         logger.info(f"Server started with PID: {process.pid}")
@@ -117,7 +136,7 @@ def launch_server() -> dict:
             return {
                 "success": False,
                 "status": "error",
-                "message": "Server failed to start - API not responding"
+                "message": "Server failed to start - API not responding after multiple attempts"
             }
             
     except Exception as e:
