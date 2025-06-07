@@ -4,10 +4,15 @@ import os
 import sys
 import json
 import logging
+import time
+import requests
 from pathlib import Path
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 LOG_DIR = PROJECT_ROOT / "assets/logs"
+API_CHECK_URL = "http://localhost:5000/v1/internal/model/info"
+MAX_CHECK_ATTEMPTS = 10
+CHECK_INTERVAL = 5  # seconds
 
 def setup_logging():
     """Configure logging for server operations"""
@@ -34,6 +39,20 @@ def setup_logging():
         sys.exit(1)
 
 logger = setup_logging()
+
+def check_server_ready():
+    """Check if the server API is responding"""
+    for attempt in range(MAX_CHECK_ATTEMPTS):
+        try:
+            response = requests.get(API_CHECK_URL, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('model_name'):
+                    return True
+        except (requests.exceptions.ConnectionError, requests.exceptions.RequestException):
+            pass
+        time.sleep(CHECK_INTERVAL)
+    return False
 
 def launch_server() -> dict:
     """Launch the text generation webui server"""
@@ -65,16 +84,28 @@ def launch_server() -> dict:
         process = subprocess.Popen(
             [python_exec, server_script, "--listen", "--api", "--trust-remote-code"],
             cwd=tg_dir,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
         
         logger.info(f"Server started with PID: {process.pid}")
-        return {
-            "success": True,
-            "status": "starting",
-            "message": "Server launch initiated"
-        }
+        
+        # Wait for server to be ready
+        if check_server_ready():
+            return {
+                "success": True,
+                "status": "ready",
+                "message": "Server started and ready",
+                "pid": process.pid
+            }
+        else:
+            process.terminate()
+            return {
+                "success": False,
+                "status": "error",
+                "message": "Server failed to start - API not responding"
+            }
+            
     except Exception as e:
         logger.error(f"Failed to launch server: {str(e)}")
         return {
