@@ -10,7 +10,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 LOG_DIR = PROJECT_ROOT / "assets/logs"
-API_CHECK_URL = "http://localhost:5000/v1"
+API_CHECK_URL = "http://localhost:5000"
 MAX_CHECK_ATTEMPTS = 30
 CHECK_INTERVAL = 3
 
@@ -47,7 +47,7 @@ def check_server_ready():
     attempts = 0
     while attempts < MAX_CHECK_ATTEMPTS:
         try:
-            # Check basic API endpoint instead of model info
+            # Check basic API endpoint
             response = requests.get(f"{API_CHECK_URL}/", timeout=5)
             if response.status_code == 200:
                 logger.info("API server is ready")
