@@ -13,10 +13,10 @@
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
     buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
+    buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
+    buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
     buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
     buttonlist.appendChild(addbutton('fastapi', 'horuseyeBTN', 'left', false))
-    buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
-    buttonlist.appendChild(addbutton('csvdata', 'filesaveBTN', 'left', false))
     buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
     buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true))
     buttonlist.appendChild(addbutton('book', 'bookBTN', 'right', false))
@@ -45,10 +45,10 @@
       fileloadBTN: fileload,
       dbuploadBTN: rebuild_vectorstore,
       dbrefreshBTN: refresh_vectorstore,
+      homeserverBTN: load_server,
+      dogrunBTN: loadmodel,
       sailboatBTN: checkmodel,
       horuseyeBTN: fastapi,
-      dogrunBTN: loadmodel,
-      printerBTN: print,
       bookBTN: book,
       targetBTN: homepage
     }
@@ -185,12 +185,12 @@
       fileload: 'File Set',
       full_build: 'Rebuild Vector Store',
       vectordb: 'Refresh Vector Store',
+      homeserver: 'Load Server',
+      loadmodel: 'Load Model',
       checkmodel: 'Check Model',
       fastapi: 'Documentation',
-      loadmodel: 'Load Model',
       print: 'Print Results',
       plot: 'Plot Results',
-      csvdata: 'Print or Plot CSV File'
     }
     for (const id in tooltips) {
       document.getElementById(id)?.setAttribute('title', tooltips[id])
@@ -283,6 +283,26 @@
     })
   }
 
+  function load_server() {
+    fetch('assets/php/load_server.php')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          alert('Server started successfully');
+        } else {
+          alert('Error starting server: ' + (data.error || 'Unknown error'));
+        }
+      })
+    .catch(error => {
+      alert('Error: ' + error.message);
+    });
+  }
+
   async function modelapi(action) {
       try {
           const response = await fetch(`assets/php/model_api.php?action=${action}`)
@@ -300,16 +320,15 @@
       }
   }
 
+  async function loadmodel() {
+      modelapi('load')
+  }
+
   async function checkmodel() {
       modelapi('check')
   }
-
   function fastapi() {
     window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer')
-  }
-
-  async function loadmodel() {
-      modelapi('load')
   }
 
   function homepage() {

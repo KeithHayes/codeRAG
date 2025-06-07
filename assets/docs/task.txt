@@ -1,9 +1,11 @@
 The TASK !
 
+javascript->php->python cannot start the server using the homeservverBTTN.
 
-The only file to correct is server_loader.py 
+The command line can launch the server.
 
-The entire philosophy of this file is WRONG.  To start the server all the python file has to do is call 
+Why ?
 
 
-/home/kdog/text-generation-webui/server.py with the correct options.
+
+ 

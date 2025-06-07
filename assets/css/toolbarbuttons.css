@@ -261,3 +261,9 @@
   background-size: 30px 90px;
   background-repeat: no-repeat;
 }
+
+.homeserverBTN {
+  background-image: url(../img/bk/homeserver.svg);
+  background-size: 30px 90px;
+  background-repeat: no-repeat;
+}
