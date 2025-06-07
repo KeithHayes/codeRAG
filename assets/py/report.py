@@ -64,6 +64,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'load_server.php'),
         os.path.join(base_path, 'assets', 'php', 'model_api.php'),
         os.path.join(base_path, 'assets', 'php', 'test_query.php'),
+        os.path.join(base_path, 'assets', 'php', 'kill_process.php'),
     ]
 
     py_files = [

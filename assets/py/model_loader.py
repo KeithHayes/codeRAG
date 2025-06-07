@@ -5,7 +5,7 @@ import sys
 
 MODEL_NAME = "Deepseek-coder-6.7B/deepseek-coder-6.7b-instruct.Q4_0.gguf"
 LOAD_API_URL = "http://localhost:5000/v1/internal/model/load"
-TIMEOUT_SECONDS = 30
+TIMEOUT_SECONDS = 40
 
 def load_model():
     try:

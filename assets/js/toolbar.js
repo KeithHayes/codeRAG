@@ -4,6 +4,7 @@
    * @description Initializes the application toolbar.
    */
   function loadtoolbar() {
+    let launcherPID = null;
     const bar = document.getElementById("coderagtoolbar")
     const buttonlist = document.createElement('ul')
     buttonlist.id = 'coderag_menu_buttons'
@@ -293,7 +294,8 @@
       })
       .then(data => {
         if (data.success) {
-          alert('Server started successfully');
+          launcherPID = data.pid;
+          alert('Server started successfully with PID: ' + launcherPID);
         } else {
           alert('Error starting server: ' + (data.error || 'Unknown error'));
         }
@@ -301,6 +303,23 @@
     .catch(error => {
       alert('Error: ' + error.message);
     });
+  }
+
+  function killpid() {
+      fetch('kill_process.php', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `pid=${launcherPID}`
+      })
+      .then(response => response.text())
+      .then(result => {
+          console.log(result);
+      })
+      .catch(error => {
+          console.error('Error:', error);
+      });
   }
 
   async function modelapi(action) {
@@ -332,6 +351,7 @@
   }
 
   function homepage() {
+    // killpid()
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
   }
 

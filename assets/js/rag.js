@@ -78,7 +78,6 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch(err => {
             statusEl.textContent = "Model Status: error (check server)"
-            console.error("Status check failed", err)
             setTimeout(updateModelStatus, 5000)
         })
     }

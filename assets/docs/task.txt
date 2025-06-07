@@ -1,11 +1,6 @@
 The TASK !
 
-javascript->php->python cannot start the server using the homeservverBTTN.
-
-The command line can launch the server.
-
-Why ?
-
+The process which is started to launch the server.py file will have a PID which will be saved in the toolbar.js class variable - let launcherPID
 
 
  
