@@ -1,0 +1,22 @@
+rag_doomstead:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  code_dirs:
+    php:
+      - "/var/www/html/homedog/doomstead"
+      - "/var/www/html/homedog/doomstead/Themes"
+      - "/var/www/html/homedog/doomstead/Themes/doomstead"
+      - "/var/www/html/homedog/doomstead/Sources"
+      - "/var/www/html/homedog"
+      - "/var/www/html/homedog/assets/php"
+    js:
+      - "/var/www/html/homedog/doomstead/Themes/doomstead/scripts"
+      - "/var/www/html/homedog/assets/js"
+    css:
+      - "/var/www/html/homedog/doomstead/Themes/doomstead/css"
+      - "/var/www/html/homedog/assets/css"
+
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/doomstead"
+  collection_name: "doomstead"
+  min_score: "0.25"
