@@ -9,5 +9,5 @@ rag_doomstead:
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs"
   collection_name: "ragdocs"
   min_score: "0.25"
-  loaded_model: "Deepseek-coder-6.7B/deepseek-coder-6.7b-instruct.Q4_0.gguf"
+  loaded_model: "solidrust_dolphin-2.8-experiment26-7b-AWQ"
 
