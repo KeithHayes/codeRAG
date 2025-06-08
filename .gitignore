@@ -1,7 +1,7 @@
 /assets/py/venv/
 /assets/data
 /assets/logs
+/assets/py/doomstead.yaml
 .gitignore
 .project
 .pydevproject
-/var/www/html/doomsteadRAG/assets/py/doomstead.yaml
