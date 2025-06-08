@@ -1,5 +1,6 @@
 rag_doomstead:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  loaded_model: "Deepseek-coder-6.7B/deepseek-coder-6.7b-instruct.Q4_0.gguf"
   chunk_size: 800
   chunk_overlap: 150
   code_dirs:
