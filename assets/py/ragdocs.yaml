@@ -12,7 +12,8 @@ rag_doomstead:
     css:
       - "/var/www/html/doomsteadRAG/assets/css"
 
-  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragcode"
-  collection_name: "ragcode"
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs"
+  collection_name: "ragdocs"
   min_score: "0.25"
   loaded_model: "Deepseek-coder-6.7B/deepseek-coder-6.7b-instruct.Q4_0.gguf"
+

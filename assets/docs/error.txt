@@ -1,0 +1,8 @@
+2025-06-08 11:29:21,484 - INFO - === Starting vector store build ===
+2025-06-08 11:29:21,484 - INFO - Using config file from config.json: ragcode.yaml
+2025-06-08 11:29:22,622 - INFO - === Begin Build ===
+2025-06-08 11:29:22,637 - INFO - GPU: NVIDIA GeForce RTX 3060
+2025-06-08 11:29:22,638 - INFO - CUDA: 12.6
+2025-06-08 11:29:22,638 - INFO - Memory: 12.62GB
+2025-06-08 11:29:22,638 - INFO - Loading embeddings on CUDA
+2025-06-08 11:29:24,690 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2

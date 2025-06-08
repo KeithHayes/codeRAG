@@ -4,13 +4,13 @@
    * @description Initializes the application toolbar.
    */
   function loadtoolbar() {
-    let launcherPID = null;
+    let launcherPID = null
     const bar = document.getElementById("coderagtoolbar")
     const buttonlist = document.createElement('ul')
     buttonlist.id = 'coderag_menu_buttons'
     buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead']))
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','RAGdocs']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
     buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
@@ -80,7 +80,11 @@
   }
 
   function addbuttondropdown(id, className, side, items) {
-    const dropdownfunctions = { RAGcode: ragcode, Doomstead: doomsteadcode }
+    const dropdownfunctions = {
+      RAGcode: ragcode,
+      Doomstead: doomsteadcode,
+      RAGdocs: ragdocs
+    }
     const li = document.createElement('li')
     li.style.float = side
     li.id = `button_${id}`
@@ -122,26 +126,26 @@
     content.appendChild(ul)
     document.body.appendChild(content)
     a.addEventListener('mouseenter', () => {
-        const rect = a.getBoundingClientRect()
-        content.style.left = `${rect.left}px`
-        content.style.top = `${rect.bottom}px`
-        content.style.display = 'block'
+      const rect = a.getBoundingClientRect()
+      content.style.left = `${rect.left}px`
+      content.style.top = `${rect.bottom}px`
+      content.style.display = 'block'
     })
 
     a.addEventListener('mouseleave', () => {
-        setTimeout(() => {
-            if (!content.matches(':hover')) {
-                content.style.display = 'none'
-            }
-        }, 100)
+      setTimeout(() => {
+        if (!content.matches(':hover')) {
+          content.style.display = 'none'
+        }
+      }, 100)
     })
-    
+
     content.addEventListener('mouseleave', () => {
-        content.style.display = 'none'
+      content.style.display = 'none'
     })
-    
+
     content.addEventListener('mouseenter', () => {
-        content.style.display = 'block'
+      content.style.display = 'block'
     })
     return li
   }
@@ -246,6 +250,20 @@
     })
   }
 
+  function ragdocs() {
+    const content = { "filesetconfig": "ragdocs" }
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("RAGdocs")
+      clearchatbox()
+    })
+  }
+
   function clearchatbox() {
     document.getElementById("chatbox").innerHTML = ""
   }
@@ -288,64 +306,65 @@
     fetch('assets/php/load_server.php')
       .then(response => {
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error('Network response was not ok')
         }
-        return response.json();
+        return response.json()
       })
       .then(data => {
         if (data.success) {
-          launcherPID = data.pid;
-          alert('Server started successfully with PID: ' + launcherPID);
+          launcherPID = data.pid
+          alert('Server started successfully with PID: ' + launcherPID)
         } else {
-          alert('Error starting server: ' + (data.error || 'Unknown error'));
+          alert('Error starting server: ' + (data.error || 'Unknown error'))
         }
       })
-    .catch(error => {
-      alert('Error: ' + error.message);
-    });
+      .catch(error => {
+        alert('Error: ' + error.message)
+      })
   }
 
   function killpid() {
-      fetch('kill_process.php', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: `pid=${launcherPID}`
-      })
+    fetch('kill_process.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `pid=${launcherPID}`
+    })
       .then(response => response.text())
       .then(result => {
-          console.log(result);
+        console.log(result)
       })
       .catch(error => {
-          console.error('Error:', error);
-      });
+        console.error('Error:', error)
+      })
   }
 
   async function modelapi(action) {
-      try {
-          const response = await fetch(`assets/php/model_api.php?action=${action}`)
-          const data = await response.json()
-          if (data.success) {
-              console.log(`Model ${action}: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-              alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
-          } else {
-              console.error(`Error in ${action}:`, data.error)
-              alert(`Error in ${action}: ${data.error}`)
-          }
-      } catch (error) {
-          console.error(`Failed to ${action} model:`, error)
-          alert(`Failed to ${action} model - see console for details`)
+    try {
+      const response = await fetch(`assets/php/model_api.php?action=${action}`)
+      const data = await response.json()
+      if (data.success) {
+        console.log(`Model ${action}: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
+        alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+      } else {
+        console.error(`Error in ${action}:`, data.error)
+        alert(`Error in ${action}: ${data.error}`)
       }
+    } catch (error) {
+      console.error(`Failed to ${action} model:`, error)
+      alert(`Failed to ${action} model - see console for details`)
+    }
   }
 
   async function loadmodel() {
-      modelapi('load')
+    modelapi('load')
   }
 
   async function checkmodel() {
-      modelapi('check')
+    modelapi('check')
   }
+
   function fastapi() {
     window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer')
   }
