@@ -2,15 +2,9 @@ rag_doomstead:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   chunk_size: 800
   chunk_overlap: 150
-  code_dirs:
-    py:
-      - "/var/www/html/doomsteadRAG/assets/py"
-    php:
-      - "/var/www/html/doomsteadRAG/assets/php"
-    js:
-      - "/var/www/html/doomsteadRAG/assets/js"
-    css:
-      - "/var/www/html/doomsteadRAG/assets/css"
+  text_dirs:
+  pdf:
+      - "/var/www/html/doomsteadRAG/assets/ragdocs/pdf"
 
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs"
   collection_name: "ragdocs"
