@@ -2,8 +2,18 @@
 import requests
 import json
 import sys
+import yaml
+from pathlib import Path
 
-MODEL_NAME = "Deepseek-coder-6.7B/deepseek-coder-6.7b-instruct.Q4_0.gguf"
+PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
+CONFIG_PATH = PROJECT_ROOT / "assets" / "py" / "ragcode.yaml"
+
+def load_config():
+    with open(CONFIG_PATH, 'r') as f:
+        config = yaml.safe_load(f)
+        return config['rag_doomstead']['loaded_model']
+
+MODEL_NAME = load_config()
 LOAD_API_URL = "http://localhost:5000/v1/internal/model/load"
 TIMEOUT_SECONDS = 40
 

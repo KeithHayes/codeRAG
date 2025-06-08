@@ -1,6 +1,5 @@
 The TASK !
 
-The process which is started to launch the server.py file will have a PID which will be saved in the toolbar.js class variable - let launcherPID
-
+loaded_model in the .yaml files will now supply the value to MODEL_NAME in file model_loader.py.  Cnange the model_loader.py to assign MODEL_NAME from the .yaml
 
  
