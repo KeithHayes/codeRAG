@@ -1,5 +1,9 @@
 The TASK !
 
-Build stops at : Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
+A new dropdown is already added in toolbar.js so that a collection of pdf files can be used in the rag.
 
-fix.
+full_builder must me modified to accept code files or pdf files alone or together as defined in the .yaml files.
+
+full builder must be modified to chunck pdf files for the database.
+
+Not having any code files defined in the yaml will not cause failure.

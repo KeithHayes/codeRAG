@@ -14,6 +14,11 @@ from chromadb.config import Settings
 from langchain.schema import Document
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import (
+    TextLoader,
+    PyPDFLoader,
+    DirectoryLoader
+)
 import numpy as np
 np.float_ = np.float64
 
@@ -149,6 +154,8 @@ class DoomsteadRAG:
             'js': ['.js', '.jsx', '.mjs', '.cjs'],
             'css': ['.css', '.scss', '.less'],
             'html': ['.html', '.htm', '.xhtml'],
+            'pdf': ['.pdf'],
+            'text': ['.txt', '.md', '.rst']
         }
         return extension_map.get(file_type.lower(), [])
 
@@ -191,8 +198,13 @@ class DoomsteadRAG:
 
     def _update_file_metadata(self, file_path: str):
         last_modified = os.path.getmtime(file_path)
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content_hash = hashlib.md5(f.read().encode()).hexdigest()
+        if file_path.endswith('.pdf'):
+            with open(file_path, 'rb') as f:
+                content_hash = hashlib.md5(f.read()).hexdigest()
+        else:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content_hash = hashlib.md5(f.read().encode()).hexdigest()
+        
         cursor = self.db_conn.cursor()
         cursor.execute('''
             INSERT OR REPLACE INTO file_metadata 
@@ -201,9 +213,14 @@ class DoomsteadRAG:
         ''', (file_path, last_modified, content_hash))
         self.db_conn.commit()
 
-    def _load_documents(self) -> List[Document]:
+    def _load_code_documents(self) -> List[Document]:
         documents = []
         skip_dirs = {"venv", "__pycache__", ".venv"}
+        
+        if 'code_dirs' not in self.config:
+            logger.info("No code directories configured")
+            return documents
+            
         for file_type, dirs in self.config['code_dirs'].items():
             logger.info(f"Processing {file_type.upper()} files...")
             for path in dirs:
@@ -237,6 +254,77 @@ class DoomsteadRAG:
                                 logger.error(f"Failed to read {file} with fallback encoding: {e}")
                         except Exception as e:
                             logger.error(f"Error reading {file}: {str(e)}")
+        return documents
+
+    def _load_pdf_documents(self) -> List[Document]:
+        documents = []
+        
+        if 'pdf' not in self.config:
+            logger.info("No PDF directories configured")
+            return documents
+            
+        for pdf_dir in self.config['pdf']:
+            abs_path = Path(pdf_dir) if Path(pdf_dir).is_absolute() else PROJECT_ROOT / pdf_dir
+            if not abs_path.exists():
+                logger.warning(f"PDF directory not found: {abs_path}")
+                continue
+                
+            logger.info(f"Processing PDF files in {abs_path}")
+            loader = DirectoryLoader(
+                str(abs_path),
+                glob="**/*.pdf",
+                loader_cls=PyPDFLoader,
+                show_progress=True
+            )
+            
+            try:
+                pdf_docs = loader.load()
+                for doc in pdf_docs:
+                    file_path = doc.metadata['source']
+                    self._update_file_metadata(file_path)
+                    documents.append(doc)
+            except Exception as e:
+                logger.error(f"Error loading PDFs from {abs_path}: {str(e)}")
+                
+        return documents
+
+    def _load_text_documents(self) -> List[Document]:
+        documents = []
+        
+        if 'text_dirs' not in self.config or not self.config['text_dirs']:
+            logger.info("No text directories configured")
+            return documents
+            
+        for text_dir in self.config['text_dirs']:
+            abs_path = Path(text_dir) if Path(text_dir).is_absolute() else PROJECT_ROOT / text_dir
+            if not abs_path.exists():
+                logger.warning(f"Text directory not found: {abs_path}")
+                continue
+                
+            logger.info(f"Processing text files in {abs_path}")
+            loader = DirectoryLoader(
+                str(abs_path),
+                glob="**/*.*",
+                loader_kwargs={'autodetect_encoding': True}
+            )
+            
+            try:
+                text_docs = loader.load()
+                for doc in text_docs:
+                    if any(doc.metadata['source'].endswith(ext) for ext in self._get_extensions('text')):
+                        file_path = doc.metadata['source']
+                        self._update_file_metadata(file_path)
+                        documents.append(doc)
+            except Exception as e:
+                logger.error(f"Error loading text files from {abs_path}: {str(e)}")
+                
+        return documents
+
+    def _load_documents(self) -> List[Document]:
+        documents = []
+        documents.extend(self._load_code_documents())
+        documents.extend(self._load_pdf_documents())
+        documents.extend(self._load_text_documents())
         return documents
 
     def _split_documents(self, docs: List[Document]) -> List[Document]:
@@ -275,6 +363,10 @@ class DoomsteadRAG:
             logger.info("Building vector store...")
             
             docs = self._load_documents()
+            if not docs:
+                logger.warning("No documents found to process")
+                return
+
             chunks = self._split_documents(docs)
 
             client = chromadb.PersistentClient(
