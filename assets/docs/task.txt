@@ -1,0 +1,3 @@
+When results are returned from the llm they are hard to read.  
+When the results are written to the chatbox they should be formatted nicely.
+The work should be done in the run.php file
