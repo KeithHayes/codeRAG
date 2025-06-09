@@ -94,7 +94,7 @@ CREATE TABLE files_embeddings (
 
 ## Configuration (`config.yaml`)
 ```yaml
-rag_doomstead:
+doomsteadRAG:
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data"
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   chunk_size: 1000
@@ -267,7 +267,7 @@ for file in scan_files():
 
 ## Configuration (`config.yaml`)
 ```yaml
-rag_doomstead:
+doomsteadRAG:
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data"
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   chunk_size: 1000

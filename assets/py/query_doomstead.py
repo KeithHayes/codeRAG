@@ -94,9 +94,9 @@ def load_config() -> Dict:
     config_path = PROJECT_ROOT / "assets" / "py" / config_yaml_file
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
-        if not config or 'rag_doomstead' not in config:
+        if not config or 'doomsteadRAG' not in config:
             raise ValueError("Invalid or empty config file")
-        return config['rag_doomstead']
+        return config['doomsteadRAG']
 
 def main():
     try:

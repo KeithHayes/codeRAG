@@ -21,7 +21,7 @@ def load_config():
     config_path = get_config_path()
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
-        return config['rag_doomstead']['loaded_model']
+        return config['doomsteadRAG']['loaded_model']
 
 MODEL_NAME = load_config()
 LOAD_API_URL = "http://localhost:5000/v1/internal/model/load"
