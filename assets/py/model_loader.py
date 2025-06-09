@@ -6,10 +6,20 @@ import yaml
 from pathlib import Path
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
-CONFIG_PATH = PROJECT_ROOT / "assets" / "py" / "ragcode.yaml"
+CONFIG_JSON_PATH = PROJECT_ROOT / "assets" / "data" / "config.json"
+
+def get_config_path():
+    try:
+        with open(CONFIG_JSON_PATH, 'r') as f:
+            config = json.load(f)
+            filesetconfig = config.get('filesetconfig', 'ragcode')
+            return PROJECT_ROOT / "assets" / "py" / f"{filesetconfig}.yaml"
+    except Exception:
+        return PROJECT_ROOT / "assets" / "py" / "ragcode.yaml"
 
 def load_config():
-    with open(CONFIG_PATH, 'r') as f:
+    config_path = get_config_path()
+    with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         return config['rag_doomstead']['loaded_model']
 
