@@ -1,131 +1,109 @@
 #!/usr/bin/env python3
 import os
 import sys
+import time
 import subprocess
 from pathlib import Path
 import logging
-from typing import Tuple
 
-# Configuration
-TG_DIR = Path("/home/kdog/text-generation-webui")
-VENV_DIR = TG_DIR / "venv"
-LOG_FILE = TG_DIR / "launch.log"
-RAG_DIR = TG_DIR / "extensions" / "documents"
+# Configuration - matches bash launcher exactly
+WEBUI_DIR = Path("/home/kdog/text-generation-webui")
+VENV_DIR = WEBUI_DIR / "venv"
+LOG_FILE = WEBUI_DIR / "launch.log"
+RAG_DIR = WEBUI_DIR / "extensions" / "documents"
 
-def setup_logging() -> logging.Logger:
-    """Configure logging to both file and console"""
-    logger = logging.getLogger("RAG_Launcher")
+def setup_logging():
+    """Identical logging setup to bash tee behavior"""
+    logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     
-    # File handler
-    file_handler = logging.FileHandler(LOG_FILE)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    # File handler (matches bash >)
+    fh = logging.FileHandler(LOG_FILE, mode='w')
+    fh.setLevel(logging.INFO)
     
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter('%(message)s'))
+    # Console handler (matches bash tee)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
     
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    formatter = logging.Formatter('%(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
     
+    logger.addHandler(fh)
+    logger.addHandler(ch)
     return logger
 
-def check_requirements(logger: logging.Logger) -> bool:
-    """Check system requirements"""
-    logger.info("Checking system requirements...")
-    
-    # Check Python
+def check_dependencies():
+    """More thorough dependency checks"""
     try:
-        subprocess.run(["python3", "--version"], check=True, capture_output=True)
-    except subprocess.CalledProcessError:
-        logger.error("ERROR: Python3 not found or not working")
-        return False
-    
-    # Check RAG extension
-    if not (RAG_DIR / "rag.py").exists():
-        logger.error(f"ERROR: RAG extension not found at {RAG_DIR}")
-        return False
-    
-    return True
-
-def initialize_rag(logger: logging.Logger) -> bool:
-    """Initialize RAG system"""
-    logger.info("Initializing system...")
-    try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "rag", 
-            str(RAG_DIR / "rag.py")
+        subprocess.run(
+            ['python3', '--version'],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
-        rag = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(rag)
-        rag.initialize()
-        logger.info("RAG initialization successful")
-        return True
-    except Exception as e:
-        logger.warning(f"RAG initialization warning: {str(e)}")
-        logger.warning("The system will still launch but RAG may not work")
-        return False
+    except subprocess.CalledProcessError as e:
+        logging.error("ERROR: Python3 not found")
+        sys.exit(1)
 
-def launch_server(logger: logging.Logger) -> int:
-    """Launch the text generation webui server"""
-    logger.info("Starting server...")
+def check_rag_extension():
+    """Verifies RAG extension exists"""
+    if not (RAG_DIR / "rag.py").exists():
+        logging.error(f"ERROR: RAG extension not found at {RAG_DIR}")
+        sys.exit(1)
+
+def preinitialize_rag():
+    """Identical RAG initialization to bash version"""
+    try:
+        # Ensure proper Python path for extensions
+        sys.path.insert(0, str(WEBUI_DIR))
+        from extensions.documents.rag import rag
+        
+        logging.info("Initializing system...")
+        rag.initialize()
+        logging.info("RAG initialization successful")
+    except Exception as e:
+        logging.warning(f"RAG initialization warning: {str(e)}")
+        logging.warning("The system will still launch but RAG may not work")
+
+def launch_server():
+    """Matches exact server launch behavior"""
+    os.chdir(WEBUI_DIR)
     
-    # Prepare environment
-    env = os.environ.copy()
-    env["PATH"] = f"{VENV_DIR / 'bin'}:{env.get('PATH', '')}"
-    env["VIRTUAL_ENV"] = str(VENV_DIR)
-    
-    # Prepare command
-    server_command = [
+    # Identical server launch command
+    cmd = [
         str(VENV_DIR / "bin" / "python3"),
-        str(TG_DIR / "server.py"),
+        "server.py",
         "--listen",
         "--api",
         "--trust-remote-code"
     ]
     
-    try:
-        # Start the server process
-        with open(LOG_FILE, 'a') as log_file:
-            process = subprocess.Popen(
-                server_command,
-                cwd=str(TG_DIR),
-                env=env,
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                text=True
-            )
-        
-        logger.info(f"Server started with PID: {process.pid}")
-        return process.wait()
-    except Exception as e:
-        logger.error(f"Failed to start server: {str(e)}")
-        return 1
+    # Duplicate bash exec behavior exactly
+    logging.info("Starting server...")
+    os.execv(cmd[0], cmd)
 
-def main() -> int:
-    """Main entry point"""
+def main():
+    """Main execution matching bash script sequence"""
     logger = setup_logging()
     
+    # Identical header
     logger.info("=== Launching Text Generation WebUI with RAG ===")
-    logger.info(f"Log file: {LOG_FILE}")
+    logger.info(time.ctime())
+    logger.info("----------------------------------------")
     
-    # Check requirements
-    if not check_requirements(logger):
-        return 1
+    logger.info("Activating virtual environment...")
+    os.environ['PATH'] = f"{VENV_DIR}/bin:{os.environ['PATH']}"
+    os.environ['VIRTUAL_ENV'] = str(VENV_DIR)
     
-    # Initialize RAG (optional)
-    initialize_rag(logger)
+    logger.info("Checking system requirements...")
+    check_dependencies()
     
-    # Launch server
-    return launch_server(logger)
+    logger.info("Checking RAG extension...")
+    check_rag_extension()
+    
+    preinitialize_rag()
+    launch_server()
 
 if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        print("\nServer stopped by user")
-        sys.exit(0)
-    except Exception as e:
-        print(f"Critical error: {str(e)}", file=sys.stderr)
-        sys.exit(1)
+    main()
