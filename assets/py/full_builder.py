@@ -150,7 +150,7 @@ class DoomsteadRAG:
     def _get_extensions(self, file_type: str) -> List[str]:
         extension_map = {
             'py': ['.py'],
-            'php': ['.php', '.php3', '.php4', '.php5', '.phtml'],
+            'php': ['.php', '.php3', '.php4', '.php5', '.phtml', '.template.php'],  # Added .template.php
             'js': ['.js', '.jsx', '.mjs', '.cjs'],
             'css': ['.css', '.scss', '.less'],
             'html': ['.html', '.htm', '.xhtml'],
