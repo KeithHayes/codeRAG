@@ -12,6 +12,10 @@ VENV_DIR = WEBUI_DIR / "venv"
 LOG_FILE = WEBUI_DIR / "launch.log"
 RAG_DIR = WEBUI_DIR / "extensions" / "documents"
 
+triton_cache_dir = '/var/www/html/doomsteadRAG/assets/data'
+os.makedirs(triton_cache_dir, exist_ok=True)
+os.environ['TRITON_CACHE_DIR'] = triton_cache_dir
+
 def setup_logging():
     """Identical logging setup to bash tee behavior"""
     logger = logging.getLogger()
