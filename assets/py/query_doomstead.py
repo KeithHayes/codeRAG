@@ -61,13 +61,34 @@ class VectorSearch:
 
     def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
         try:
-            docs = self.vectordb.similarity_search_with_relevance_scores(query, k=k)
-            min_score = float(self.config.get('min_score', 0.5))  # Default to 0.5 if not specified
+            # First try exact function name match
+            if '()' in query:
+                func_name = query.split('(')[0]
+                exact_query = f"function {func_name}("
+                docs = self.vectordb.similarity_search_with_relevance_scores(exact_query, k=k)
+            else:
+                docs = self.vectordb.similarity_search_with_relevance_scores(query, k=k*2)  # Get more results
+            
+            min_score = 0.2  # Lower threshold for code searches
+            
             results = []
+            seen_sources = set()
+            
             for doc, score in docs:
                 try:
                     score_float = float(score)
                     if score_float > min_score:
+                        source = doc.metadata.get('source', '')
+                        
+                        # Skip duplicate sources
+                        if source in seen_sources:
+                            continue
+                        seen_sources.add(source)
+                        
+                        # Boost scores for exact function matches
+                        if '()' in query and f"function {func_name}(" in doc.page_content:
+                            score_float = 1.0  # Max score for exact match
+                            
                         results.append({
                             'content': doc.page_content,
                             'metadata': doc.metadata,
@@ -76,7 +97,11 @@ class VectorSearch:
                 except (TypeError, ValueError) as e:
                     logger.warning(f"Invalid score value {score}: {str(e)}")
                     continue
-            return results
+            
+            # Sort results by score and return top k
+            results.sort(key=lambda x: x['score'], reverse=True)
+            return results[:k]
+            
         except Exception as e:
             logger.error(f"Search failed: {str(e)}")
             raise RuntimeError(f"Search failed: {str(e)}")
