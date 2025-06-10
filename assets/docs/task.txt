@@ -1,3 +1,6 @@
-When results are returned from the llm they are hard to read.  
-When the results are written to the chatbox they should be formatted nicely.
-The work should be done in the run.php file
+The task:
+
+The Load Model button 'dogrunBTN'  loads the model when the dropdown is set to RAGcode or RAGdocs from the appropriate .yaml 
+However when the dropdown is set to doomstead the madel definded in doomstead.yaml is not loaded as it should be.
+
+Why is this ?

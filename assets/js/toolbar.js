@@ -340,13 +340,18 @@
       })
   }
 
-  async function modelapi(action) {
+async function modelapi(action) {
     try {
       const response = await fetch(`assets/php/model_api.php?action=${action}`)
       const data = await response.json()
+
       if (data.success) {
         console.log(`Model ${action}: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-        alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+        if (action === 'check') {
+          alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+        } else {
+           modelapi('check')
+        }
       } else {
         console.error(`Error in ${action}:`, data.error)
         alert(`Error in ${action}: ${data.error}`)
