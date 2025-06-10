@@ -144,7 +144,7 @@ class DoomsteadRAG:
         return RecursiveCharacterTextSplitter(
             chunk_size=self.config['chunk_size'],
             chunk_overlap=self.config['chunk_overlap'],
-            separators=['\n\nfunction ', '\n\nclass ', '\n\n', '\n', ' ', '']
+            separators=['\n\nfunction ', '\nfunction ', '\n\nclass ', '\nclass ', '\n\n', '\n', ' ', '']
         )
 
     def _get_extensions(self, file_type: str) -> List[str]:
