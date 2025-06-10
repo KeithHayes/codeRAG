@@ -190,7 +190,6 @@ class RAGSystem {
             $error = curl_error($ch);
             $errno = curl_errno($ch);
             curl_close($ch);
-            $this->errorlog("CURL Error #$errno: $error");
             throw new Exception("API connection failed: $error");
         }
 
