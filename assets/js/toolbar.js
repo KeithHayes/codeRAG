@@ -1,4 +1,5 @@
 (function () {
+  const statusDiv = document.createElement('div')
   /**
    * @function loadtoolbar
    * @description Initializes the application toolbar.
@@ -25,7 +26,6 @@
     const statusLi = document.createElement('li')
     statusLi.style.float = 'right'
 
-    const statusDiv = document.createElement('div')
     statusDiv.id = 'status'
     statusDiv.className = 'status'
     statusDiv.textContent = 'Checking model status...'
@@ -335,23 +335,6 @@
       })
   }
 
-  function killpid() {
-    fetch('kill_process.php', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `pid=${launcherPID}`
-    })
-      .then(response => response.text())
-      .then(result => {
-        console.log(result)
-      })
-      .catch(error => {
-        console.error('Error:', error)
-      })
-  }
-
 async function modelapi(action) {
     try {
       const response = await fetch(`assets/php/model_api.php?action=${action}`)
@@ -368,6 +351,7 @@ async function modelapi(action) {
         console.error(`Error in ${action}:`, data.error)
         alert(`Error in ${action}: ${data.error}`)
       }
+      updateModelStatus()
     } catch (error) {
       console.error(`Failed to ${action} model:`, error)
       alert(`Failed to ${action} model - see console for details`)
@@ -387,11 +371,15 @@ async function modelapi(action) {
   }
 
   function homepage() {
-    // killpid()
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
   }
 
+  function updatestatus(text) {
+    statusDiv.textContent = text
+  }
+
   window.loadtoolbar = loadtoolbar
+  window.updatestatus = updatestatus
 })()
 
 window.loadtoolbar()

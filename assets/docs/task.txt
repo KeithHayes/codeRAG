@@ -1,5 +1,4 @@
 The task:
 
-The error listing shows the problem.
-
-Review all the php which builds and uses the vector store and find the contradiction.
+After the model is loaded from the toolbar the status element which is maintained by rag.js is not 
+updating the status element in the toolbar showing the change.

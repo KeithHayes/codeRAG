@@ -49,7 +49,6 @@ class RAGSystem {
             }
             return ['ready' => false, 'model' => 'No model loaded'];
         } catch (Exception $e) {
-            $this->errorlog("MODEL CHECK ERROR: " . $e->getMessage());
             return ['ready' => false, 'model' => 'Error checking'];
         }
     }
@@ -118,7 +117,7 @@ class RAGSystem {
             $source = $doc['metadata']['source'] ?? 'unknown';
             $chunk = $doc['metadata']['chunk'] ?? 'N/A';
             $content = $doc['content'] ?? $doc['page_content'] ?? '';
-            $snippet = wordwrap(trim($content), 100); // wrap long lines
+            $snippet = wordwrap(trim($content), 100);
 
             $context .= sprintf(
                 "%d. [Source: %s | Chunk: %s]\n\"%s\"\n\n",
