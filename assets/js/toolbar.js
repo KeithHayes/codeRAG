@@ -10,7 +10,7 @@
     buttonlist.id = 'coderag_menu_buttons'
     buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','RAGdocs']))
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','Mainpage','RAGdocs']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
     buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
@@ -43,7 +43,6 @@
     loadtooltips()
 
     const toolbarfunctions = {
-      fileloadBTN: fileload,
       dbuploadBTN: rebuild_vectorstore,
       dbrefreshBTN: refresh_vectorstore,
       homeserverBTN: load_server,
@@ -83,6 +82,7 @@
     const dropdownfunctions = {
       RAGcode: ragcode,
       Doomstead: doomsteadcode,
+      Mainpage: mainpagecode,
       RAGdocs: ragdocs
     }
     const li = document.createElement('li')
@@ -194,8 +194,6 @@
       loadmodel: 'Load Model',
       checkmodel: 'Check Model',
       fastapi: 'Documentation',
-      print: 'Print Results',
-      plot: 'Plot Results',
     }
     for (const id in tooltips) {
       document.getElementById(id)?.setAttribute('title', tooltips[id])
@@ -246,6 +244,20 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Doomstead")
+      clearchatbox()
+    })
+  }
+
+  function mainpagecode() {
+    const content = { "filesetconfig": "mainpage" }
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("Mainpage")
       clearchatbox()
     })
   }

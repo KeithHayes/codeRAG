@@ -2,6 +2,7 @@
 /assets/data
 /assets/logs
 /assets/py/doomstead.yaml
+/assets/py/mainpage.yaml
 .gitignore
 .project
 .pydevproject
