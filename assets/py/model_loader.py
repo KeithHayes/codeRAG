@@ -3,10 +3,13 @@ import requests
 import json
 import sys
 import yaml
+import os
+import shutil
 from pathlib import Path
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 CONFIG_JSON_PATH = PROJECT_ROOT / "assets" / "data" / "config.json"
+DATA_DIR = PROJECT_ROOT / "assets" / "data"
 
 def get_config_path():
     """
@@ -41,6 +44,24 @@ def load_config():
     except Exception as e:
         print(f"Error loading configuration from {config_path}: {e}", file=sys.stderr)
         sys.exit(1)
+
+def clear_awq_data():
+    """
+    Clears the data directory of files added by previous AWQ models.
+    """
+    try:
+        for item in DATA_DIR.iterdir():
+            if item.is_dir():
+                # Skip clearing vector store directories
+                if item.name in ['doomstead', 'ragcode', 'ragdocs']:
+                    continue
+                shutil.rmtree(item)
+            elif item.is_file() and item.name != 'config.json':
+                item.unlink()
+        return True
+    except Exception as e:
+        print(f"Error clearing AWQ data: {str(e)}", file=sys.stderr)
+        return False
 
 # Configuration for API calls
 MODEL_NAME_TO_LOAD = load_config() # This is the *new* model we want to load
@@ -140,6 +161,12 @@ def load_model(model_name_to_load):
     """
     print(f"Attempting to load model: {model_name_to_load} via {LOAD_API_URL}")
     try:
+        # Clear AWQ data before loading new model
+        if "AWQ" in model_name_to_load or "awq" in model_name_to_load.lower():
+            print("Clearing previous AWQ model data...")
+            if not clear_awq_data():
+                print("Warning: Failed to clear all AWQ data", file=sys.stderr)
+
         response = requests.post(
             LOAD_API_URL,
             json={"model_name": model_name_to_load},
@@ -206,7 +233,3 @@ if __name__ == "__main__":
     load_result = load_model(MODEL_NAME_TO_LOAD)
 
     sys.exit(0 if load_result["status"].startswith("loading_success") else 1)
-
-if __name__ == "__main__":
-    unload_model()
-    load_model()
