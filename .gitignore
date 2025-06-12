@@ -3,6 +3,7 @@
 /assets/logs
 /assets/py/doomstead.yaml
 /assets/py/mainpage.yaml
+assets/ragdocs/pdf/*.pdf
 .gitignore
 .project
 .pydevproject
