@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
             
             const data = await res.json()
             if (data.response) {
-                addMessage(`${data.model || "LLM"}: ${data.response}`, "bot")
+                addMessage(`locaLLM: ${data.response}`, "bot")
             } else if (data.error) {
                 addMessage(`Error: ${data.error}`, "bot")
             }
