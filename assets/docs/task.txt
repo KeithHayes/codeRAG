@@ -1,4 +1,6 @@
-The task:
 
-After the model is loaded from the toolbar the status element which is maintained by rag.js is not 
-updating the status element in the toolbar showing the change.
+Task :
+
+Complex models are failing because they do not have enough time.  What parameter can I adjust to control timeout.
+
+Generate no code , siply explain where in the php file the timeout is defined.

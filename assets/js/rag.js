@@ -56,7 +56,8 @@ document.addEventListener("DOMContentLoaded", function () {
             const res = await fetch("assets/php/rag.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ message: prompt })
+                body: new URLSearchParams({ message: prompt }),
+                signal: AbortSignal.timeout(360000) // 360 second timeout
             })
             
             const data = await res.json()

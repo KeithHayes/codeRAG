@@ -174,8 +174,8 @@ class RAGSystem {
                 'Content-Type: application/json',
                 'Accept: application/json'
             ],
-            CURLOPT_TIMEOUT => 120,
-            CURLOPT_CONNECTTIMEOUT => 10
+            CURLOPT_TIMEOUT => 360,
+            CURLOPT_CONNECTTIMEOUT => 20
         ];
 
         if ($method === 'POST' && $data !== null) {

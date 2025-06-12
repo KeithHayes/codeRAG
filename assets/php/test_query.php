@@ -3,7 +3,7 @@
 $python = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
 $script = '/var/www/html/doomsteadRAG/assets/py/query_doomstead.py';
 $testQueries = [
-    "What is the first functions in file index.template.php",
+    "How does Trotsky define fascism",
 ];
 
 foreach ($testQueries as $query) {
