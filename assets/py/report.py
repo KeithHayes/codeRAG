@@ -33,7 +33,7 @@ def create_report():
     boilerplate_files = [
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
         os.path.join(base_path, 'assets', 'docs', 'error.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'requirements.txt'),
+        #os.path.join(base_path, 'assets', 'docs', 'requirements.txt'),
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'README.md'),
     ]
@@ -64,7 +64,6 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'load_server.php'),
         os.path.join(base_path, 'assets', 'php', 'model_api.php'),
         os.path.join(base_path, 'assets', 'php', 'test_query.php'),
-        os.path.join(base_path, 'assets', 'php', 'kill_process.php'),
     ]
 
     py_files = [
@@ -73,11 +72,13 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'full_builder.py'),
         #os.path.join(base_path, 'assets', 'py', 'incremental_builder.py'),
         os.path.join(base_path, 'assets', 'py', 'listfiles.py'),
+        os.path.join(base_path, 'assets', 'py', 'load_server.py'),
         os.path.join(base_path, 'assets', 'py', 'logger.py'),
         os.path.join(base_path, 'assets', 'py', 'query_doomstead.py'),
         os.path.join(base_path, 'assets', 'py', 'model_reader.py'),
         os.path.join(base_path, 'assets', 'py', 'model_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'doomstead.yaml'),
+        os.path.join(base_path, 'assets', 'py', 'mainpage.yaml'),
         os.path.join(base_path, 'assets', 'py', 'ragcode.yaml'),
         os.path.join(base_path, 'assets', 'py', 'ragdocs.yaml')
     ]
