@@ -1,4 +1,7 @@
 /assets/py/venv/
+/assets/data/
+/assets/logs
+/assets/docs
 /assets/py/doomstead.yaml
 /assets/py/mainpage.yaml
 assets/ragdocs/archive/*.pdf
