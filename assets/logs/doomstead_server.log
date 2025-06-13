@@ -1,0 +1,44 @@
+=== Launching Text Generation WebUI ===
+Fri Jun 13 11:00:41 2025
+----------------------------------------
+Activating virtual environment...
+Checking system requirements...
+Starting text-generation-webui server...
+11:00:44-121730 INFO     Starting Text generation web UI                        
+11:00:44-124517 WARNING  trust_remote_code is enabled. This is dangerous.       
+11:00:44-125234 WARNING                                                         
+                         You are potentially exposing the web UI to the entire  
+                         internet without any access password.                  
+                         You can create one with the "--gradio-auth" flag like  
+                         this:                                                  
+                                                                                
+                         --gradio-auth username:password                        
+                                                                                
+                         Make sure to replace username:password with your own.  
+11:00:44-354417 INFO     Loading the extension "openai"                         
+11:00:44-460210 INFO     OpenAI-compatible API URL:                             
+                                                                                
+                         http://0.0.0.0:5000                                    
+                                                                                
+
+Running on local URL:  http://0.0.0.0:7860
+
+11:00:47-731716 INFO     Loading "solidrust_dolphin-2.8-experiment26-7b-AWQ"    
+11:00:50-798949 INFO     TRANSFORMERS_PARAMS=                                   
+/home/kdog/text-generation-webui/venv/lib/python3.10/site-packages/transformers/quantizers/auto.py:212: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['version', 'fuse_max_seq_len', 'exllama_config', 'modules_to_fuse', 'do_fuse']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
+  warnings.warn(warning_msg)
+/home/kdog/text-generation-webui/venv/lib/python3.10/site-packages/transformers/generation/configuration_utils.py:641: UserWarning: `do_sample` is set to `False`. However, `min_p` is set to `0.0` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `min_p`.
+  warnings.warn(
+{   'low_cpu_mem_usage': True,
+    'trust_remote_code': True,
+    'torch_dtype': torch.float16,
+    'device_map': 'auto',
+    'quantization_config': AwqConfig(quant_method=<QuantizationMethod.AWQ: 'awq'>),
+    'use_flash_attention_2': False}
+
+11:01:27-089027 INFO     Loaded "solidrust_dolphin-2.8-experiment26-7b-AWQ" in  
+                         39.36 seconds.                                         
+11:01:27-091971 INFO     LOADER: "Transformers"                                 
+11:01:27-092636 INFO     TRUNCATION LENGTH: 32768                               
+11:01:27-093337 INFO     INSTRUCTION TEMPLATE: "Custom (obtained from model     
+                         metadata)"                                             

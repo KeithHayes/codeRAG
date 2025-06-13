@@ -1,0 +1,23 @@
+2025-06-13 11:00:24,319 - INFO - === Starting vector store build ===
+2025-06-13 11:00:24,319 - INFO - Using config file from config.json: ragdocs.yaml
+2025-06-13 11:00:25,852 - INFO - === Begin Build ===
+2025-06-13 11:00:25,867 - INFO - GPU: NVIDIA GeForce RTX 3060
+2025-06-13 11:00:25,867 - INFO - CUDA: 12.6
+2025-06-13 11:00:25,867 - INFO - Memory: 12.62GB
+2025-06-13 11:00:25,867 - INFO - Loading embeddings on CUDA
+2025-06-13 11:00:28,600 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
+2025-06-13 11:00:32,410 - INFO - Verifying directories...
+2025-06-13 11:00:32,412 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
+2025-06-13 11:00:32,414 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/data/ragdocs
+2025-06-13 11:00:32,416 - INFO - Database initialized at /var/www/html/doomsteadRAG/assets/data/ragdocs/file_metadata.db
+2025-06-13 11:00:32,416 - INFO - Using GPU for embeddings
+2025-06-13 11:00:32,417 - INFO - Cleaning up existing vector store...
+2025-06-13 11:00:32,418 - INFO - Vector store cleanup completed
+2025-06-13 11:00:32,418 - INFO - Building vector store...
+2025-06-13 11:00:32,418 - INFO - No code directories configured
+2025-06-13 11:00:32,418 - INFO - Processing PDF files in /var/www/html/doomsteadRAG/assets/ragdocs/pdf
+2025-06-13 11:00:32,737 - INFO - No text directories configured
+2025-06-13 11:00:32,740 - INFO - Created 140 chunks
+2025-06-13 11:00:34,372 - INFO - Processed batch 1/1
+2025-06-13 11:00:34,372 - INFO - Vector store successfully created at /var/www/html/doomsteadRAG/assets/data/ragdocs/vector_db
+2025-06-13 11:00:34,375 - INFO - Build completed successfully

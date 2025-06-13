@@ -1,0 +1,2277 @@
+=== doomstead rag web page ===
+
+=== DOCS task.txt ===
+full_builder.php is not launching full_builder.py
+
+It appears to be a permissions issue.  the .yaml file exists and is valid
+
+=== DOCS error.txt ===
+2025-06-13 04:33:02,331 - INFO - === Starting vector store build ===
+2025-06-13 04:33:02,331 - INFO - Using config file from config.json: mainpage.yaml
+2025-06-13 04:33:02,333 - CRITICAL - Build failed: Invalid or empty config file: mainpage.yaml
+Traceback (most recent call last):
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 434, in main
+    config = load_config()
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 428, in load_config
+    raise ValueError(f"Invalid or empty config file: {config_yaml_file}")
+ValueError: Invalid or empty config file: mainpage.yaml
+
+
+
+=== DOCS boilerplate.txt ===
+******************************************************************************************************************
+
+Code generation boilerplate:
+
+Please generate full, complete code files as needed which meet the following non-negotiable requirements:
+No partial code in any file. Do not skip sections or use placeholders like “...”, “# unchanged”, or “rest of code”.
+Preserve all existing code and comments which are not related to the current task. Do not rewrite or refine unrelated features.
+Do not add features not asked for.  All code must be ready to copy and run as-is. The user cannot edit or fix the output.
+Output the full code file exactly as it should exist on disk — including imports, function definitions, and any required boilerplate.
+Do not explain anything inside code blocks.  Only make file changes related to the task and errors.
+ 
+
+All code for a revised file will be shown in a single download box, One box for each file.
+
+******************************************************************************************************************
+
+=== JS assets/js/rag.js ===
+document.addEventListener("DOMContentLoaded", function () {
+    // Elements
+    const sendBtn = document.getElementById("sendButton")
+    const promptInput = document.getElementById("userInput")
+    const chatbox = document.getElementById("chatbox")
+
+    // Formatting functions
+    function escapeHTML(str) {
+        const div = document.createElement('div')
+        div.textContent = str
+        return div.innerHTML
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    }
+
+    function formatMessage(text) {
+        return escapeHTML(text)
+            .replace(/\n\n+/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+    }
+
+    // Message display
+    function addMessage(text, sender = "user") {
+        const msg = document.createElement("div")
+        msg.className = `message ${sender}`
+        
+        if (sender === "user") {
+            msg.innerHTML = `<strong>You:</strong> ${formatMessage(text)}`
+        } else {
+            const separatorIdx = text.indexOf(':')
+            const prefix = separatorIdx > 0 
+                ? `<strong>${text.substring(0, separatorIdx)}:</strong> `
+                : ''
+            const content = separatorIdx > 0 
+                ? text.substring(separatorIdx + 1) 
+                : text
+                
+            msg.innerHTML = prefix + `<p>${formatMessage(content)}</p>`
+        }
+        
+        chatbox.appendChild(msg)
+        chatbox.scrollTop = chatbox.scrollHeight
+    }
+
+    // API communication
+    async function sendPrompt() {
+        const prompt = promptInput.value.trim()
+        if (!prompt) return
+        
+        addMessage(prompt, "user")
+        promptInput.value = ""
+        promptInput.disabled = true
+        sendBtn.disabled = true
+
+        try {
+            const res = await fetch("assets/php/rag.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ message: prompt }),
+                signal: AbortSignal.timeout(360000) // 360 second timeout
+            })
+            
+            const data = await res.json()
+            if (data.response) {
+                addMessage(`locaLLM: ${data.response}`, "bot")
+            } else if (data.error) {
+                addMessage(`Error: ${data.error}`, "bot")
+            }
+        } catch (err) {
+            addMessage(`Request failed: ${err.message}`, "bot")
+        } finally {
+            promptInput.disabled = false
+            sendBtn.disabled = false
+            promptInput.focus()
+        }
+    }
+
+    // Model status check
+    async function updateModelStatus() {
+        try {
+            const res = await fetch("assets/php/rag.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "message=status_check"
+            })
+            
+            let data = await res.json()
+
+            if (data.status === "loading") {
+                window.updatestatus('Server for model not found.  Load server.')
+            }
+            
+            if (data.status === "ready") {
+                promptInput.disabled = false
+                sendBtn.disabled = false
+                promptInput.focus()
+                
+                const response = await fetch(`assets/php/model_api.php?action=check`)
+                data = await response.json()
+                if (data.success) {
+                    if (data.model === 'None') {
+                        window.updatestatus('The server does not have a model loaded.')
+                    } else {
+                        console.log(`${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
+                        const choplength = 30
+                        if (data.model.length > choplength) {
+                            data.model = data.model.substring(0, choplength) + '...'
+                        }
+                        window.updatestatus(`Using model: ${data.model}`)
+                    }
+                }
+            } else {
+                setTimeout(updateModelStatus, 3000)
+            }
+        } catch (err) {
+            window.updatestatus("Model: Offline (retrying...)")
+            setTimeout(updateModelStatus, 5000)
+        }
+    }
+
+    window.updateModelStatus = updateModelStatus
+
+    // Event listeners
+    sendBtn.addEventListener("click", sendPrompt)
+    promptInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendPrompt()
+    })
+    
+    // Initialize
+    promptInput.disabled = true
+    sendBtn.disabled = true
+    updateModelStatus()
+})
+
+=== JS assets/js/toolbar.js ===
+(function () {
+  const statusDiv = document.createElement('div')
+  /**
+   * @function loadtoolbar
+   * @description Initializes the application toolbar.
+   */
+  function loadtoolbar() {
+    let launcherPID = null
+    const bar = document.getElementById("coderagtoolbar")
+    const buttonlist = document.createElement('ul')
+    buttonlist.id = 'coderag_menu_buttons'
+    buttonlist.classList.add('coderag-menu')
+
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','Mainpage','RAGdocs']))
+    buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
+    buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
+    buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
+    buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
+    buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
+    buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
+    buttonlist.appendChild(addbutton('fastapi', 'horuseyeBTN', 'left', false))
+    buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
+    buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true))
+    buttonlist.appendChild(addbutton('book', 'bookBTN', 'right', false))
+
+    const statusLi = document.createElement('li')
+    statusLi.style.float = 'right'
+
+    statusDiv.id = 'status'
+    statusDiv.className = 'status'
+    statusDiv.textContent = 'Checking model status...'
+
+    statusLi.appendChild(statusDiv)
+
+    const bookButton = buttonlist.querySelector('#button_book')
+    if (bookButton?.parentNode?.nextSibling) {
+      buttonlist.insertBefore(statusLi, bookButton.parentNode.nextSibling)
+    } else {
+      buttonlist.appendChild(statusLi)
+    }
+
+    bar.appendChild(buttonlist)
+    loadtooltips()
+
+    const toolbarfunctions = {
+      dbuploadBTN: rebuild_vectorstore,
+      dbrefreshBTN: refresh_vectorstore,
+      homeserverBTN: load_server,
+      dogrunBTN: loadmodel,
+      sailboatBTN: checkmodel,
+      horuseyeBTN: fastapi,
+      bookBTN: book,
+      targetBTN: homepage
+    }
+
+    buttonlist.onclick = (e) => {
+      e.preventDefault()
+      toolbarfunctions[e.target.innerHTML]()
+    }
+    ragcode()
+  }
+
+  function addbutton(id, className, side, isIndicator) {
+    const a = document.createElement('a')
+    a.id = id
+    a.className = className
+    a.textContent = className
+    if (isIndicator) {
+      a.style = 'background-position: 0 0px; margin-top: 0px; margin-left: 0px;'
+    } else {
+      a.href = '#'
+    }
+
+    const li = document.createElement('li')
+    li.style.float = side
+    li.id = `button_${id}`
+    li.appendChild(a)
+    return li
+  }
+
+  function addbuttondropdown(id, className, side, items) {
+    const dropdownfunctions = {
+      RAGcode: ragcode,
+      Doomstead: doomsteadcode,
+      Mainpage: mainpagecode,
+      RAGdocs: ragdocs
+    }
+    const li = document.createElement('li')
+    li.style.float = side
+    li.id = `button_${id}`
+
+    const a = document.createElement('a')
+    a.id = id
+    a.className = className
+    a.textContent = className
+    a.href = '#'
+    li.appendChild(a)
+
+    const content = document.createElement('div')
+    content.id = `dropdown_${id}`
+    content.classList.add('dropdown')
+    content.style.display = 'none'
+    content.style.position = 'absolute'
+
+    const ul = document.createElement('ul')
+    ul.id = `ul_${id}`
+
+    items.forEach(item => {
+      const itemLink = document.createElement('a')
+      itemLink.href = '#'
+      itemLink.textContent = item
+      itemLink.style.color = '#964b00'
+      const liItem = document.createElement('li')
+      liItem.appendChild(itemLink)
+      ul.appendChild(liItem)
+    })
+
+    ul.addEventListener('click', (e) => {
+      e.preventDefault()
+      const target = e.target
+      if (target.tagName === 'A') {
+        dropdownfunctions[target.textContent.trim()]?.()
+      }
+    })
+
+    content.appendChild(ul)
+    document.body.appendChild(content)
+    a.addEventListener('mouseenter', () => {
+      const rect = a.getBoundingClientRect()
+      content.style.left = `${rect.left}px`
+      content.style.top = `${rect.bottom}px`
+      content.style.display = 'block'
+    })
+
+    a.addEventListener('mouseleave', () => {
+      setTimeout(() => {
+        if (!content.matches(':hover')) {
+          content.style.display = 'none'
+        }
+      }, 100)
+    })
+
+    content.addEventListener('mouseleave', () => {
+      content.style.display = 'none'
+    })
+
+    content.addEventListener('mouseenter', () => {
+      content.style.display = 'block'
+    })
+    return li
+  }
+
+  function addtablearrow(id, className, text) {
+    const bar = document.getElementById("coderagtoolbar")
+    const list = bar.querySelector('.coderag-menu')
+    const ref = list.querySelector('#button_book')
+
+    const li = document.createElement('li')
+    li.style.float = 'right'
+    li.id = id
+    li.innerHTML = `<a id="${className}" class="${className}" href="#">${text}</a>`
+
+    ref?.insertAdjacentElement('beforebegin', li) || list.appendChild(li)
+  }
+
+  function addarrowleft() {
+    addtablearrow('button_left', 'leftBTN', 'leftBTN')
+  }
+
+  function addarrowright() {
+    addtablearrow('button_right', 'rightBTN', 'rightBTN')
+  }
+
+  function addpagescroll() {
+    const list = document.getElementById("coderagtoolbar").querySelector('.coderag-menu')
+    if (!list.querySelector('#button_up')) {
+      const ref = list.querySelector('#button_book')
+      ['down', 'up'].forEach(dir => {
+        const li = document.createElement('li')
+        li.style.float = 'right'
+        li.id = `button_${dir}`
+        li.innerHTML = `<a id="page${dir}" class="page${dir === 'up' ? 'in' : 'out'}BTN" href="#">page${dir === 'up' ? 'in' : 'out'}BTN</a>`
+        ref.insertAdjacentElement('afterend', li)
+      })
+    }
+  }
+
+  function loadtooltips() {
+    const tooltips = {
+      fileload: 'File Set',
+      full_build: 'Rebuild Vector Store',
+      vectordb: 'Refresh Vector Store',
+      homeserver: 'Load Server',
+      loadmodel: 'Load Model',
+      checkmodel: 'Check Model',
+      fastapi: 'Documentation',
+    }
+    for (const id in tooltips) {
+      document.getElementById(id)?.setAttribute('title', tooltips[id])
+    }
+  }
+
+  function statusColor(StatusID, shift) {
+    const el = document.getElementById(StatusID)
+    if (el) {
+      el.style.backgroundPosition = `0 ${shift}px`
+    }
+  }
+
+  function colordropdowntext(content) {
+    const dropdown = document.getElementById('dropdown_fileload')
+    if (dropdown) {
+      const ul = dropdown.querySelector('ul')
+      if (ul) {
+        const items = ul.querySelectorAll('li a')
+        items.forEach(item => {
+          item.style.color = item.textContent.trim() === content ? '#006400' : '#964b00'
+        })
+      }
+    }
+  }
+
+  function ragcode() {
+    const content = { "filesetconfig": "ragcode" }
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("RAGcode")
+      clearchatbox()
+    })
+  }
+
+  function doomsteadcode() {
+    const content = { "filesetconfig": "doomstead" }
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("Doomstead")
+      clearchatbox()
+    })
+  }
+
+  function mainpagecode() {
+    const content = { "filesetconfig": "mainpage" }
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("Mainpage")
+      clearchatbox()
+    })
+  }
+
+  function ragdocs() {
+    const content = { "filesetconfig": "ragdocs" }
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("RAGdocs")
+      clearchatbox()
+    })
+  }
+
+  function clearchatbox() {
+    document.getElementById("chatbox").innerHTML = ""
+  }
+
+  function rebuild_vectorstore() {
+    const modal = new BuildModal()
+    modal.startPolling()
+
+    fetch('assets/php/full_builder.php', {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      }
+    }).catch(() => {
+      // Ignore fetch errors completely
+    })
+  }
+
+  function refresh_vectorstore() {
+
+  }
+
+  function test() {
+    const modal = new BuildModal()
+    modal.startPolling()
+
+    fetch('assets/php/test_query.php', {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      }
+    }).catch(() => {
+      // Ignore fetch errors completely
+    })
+  }
+
+  function load_server() {
+    fetch('assets/php/load_server.php')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok')
+        }
+        return response.json()
+      })
+      .then(data => {
+        if (data.success) {
+          launcherPID = data.pid
+          alert('Server started successfully with PID: ' + launcherPID)
+        } else {
+          alert('Error starting server: ' + (data.error || 'Unknown error'))
+        }
+      })
+      .catch(error => {
+        alert('Error: ' + error.message)
+      })
+  }
+
+async function modelapi(action) {
+    try {
+      const response = await fetch(`assets/php/model_api.php?action=${action}`)
+      const data = await response.json()
+
+      if (data.success) {
+        console.log(`Model ${action}: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
+        if (action === 'check') {
+          alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
+        } else {
+           modelapi('check')
+        }
+      } else {
+        console.error(`Error in ${action}:`, data.error)
+        alert(`Error in ${action}: ${data.error}`)
+      }
+      updateModelStatus()
+    } catch (error) {
+      console.error(`Failed to ${action} model:`, error)
+      alert(`Failed to ${action} model - see console for details`)
+    }
+  }
+
+  async function loadmodel() {
+    modelapi('load')
+  }
+
+  async function checkmodel() {
+    modelapi('check')
+  }
+
+  function fastapi() {
+    window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer')
+  }
+
+  function homepage() {
+    window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
+  }
+
+  function updatestatus(text) {
+    statusDiv.textContent = text
+  }
+
+  window.loadtoolbar = loadtoolbar
+  window.updatestatus = updatestatus
+})()
+
+window.loadtoolbar()
+
+
+=== PHP assets/php/rag.php ===
+<?php
+// assets/php/rag.php — Doomstead RAG Backend
+
+class RAGSystem {
+    private $api_url = "http://localhost:5000/v1";
+    private $current_model = 'Unknown';
+    private $model_ready = false;
+    private $model_check_attempts = 0;
+    private $max_model_check_attempts = 10;
+    private $model_check_delay = 5;
+    private $last_raw_results = null;
+    private $python_path = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
+
+    public function errorlog($message) {
+        $logfile = __DIR__ . '/../logs/php_error.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $entry = "[$timestamp] $message\n";
+        file_put_contents($logfile, $entry, FILE_APPEND | LOCK_EX);
+    }
+
+    public function statuslog($message) {
+        $logfile = __DIR__ . '/../logs/php_status.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $entry = "[$timestamp] $message\n";
+        file_put_contents($logfile, $entry, FILE_APPEND | LOCK_EX);
+    }
+
+    public function clear_logs() {
+        $paths = [
+            __DIR__ . '/../logs/php_error.log',
+            __DIR__ . '/../logs/php_status.log'
+        ];
+        foreach ($paths as $logfile) {
+            file_put_contents($logfile, '', LOCK_EX);
+        }
+    }
+
+    public function is_model_ready() {
+        if ($this->model_ready) {
+            return ['ready' => true, 'model' => $this->current_model];
+        }
+
+        try {
+            $response = $this->make_api_call('/models', 'GET');
+            if (!empty($response['data'][0]['id'])) {
+                $this->model_ready = true;
+                $this->current_model = $response['data'][0]['id'];
+                return ['ready' => true, 'model' => $this->current_model];
+            }
+            return ['ready' => false, 'model' => 'No model loaded'];
+        } catch (Exception $e) {
+            return ['ready' => false, 'model' => 'Error checking'];
+        }
+    }
+
+    public function wait_for_model_ready() {
+        while ($this->model_check_attempts < $this->max_model_check_attempts) {
+            $status = $this->is_model_ready();
+            if ($status['ready']) {
+                return true;
+            }
+            $this->model_check_attempts++;
+            sleep($this->model_check_delay);
+        }
+        return false;
+    }
+
+    public function search_vector_store($query, $k = 5) {
+        $python_script = realpath(__DIR__ . '/../py/query_doomstead.py');
+        
+        if (!file_exists($this->python_path)) {
+            throw new Exception("Python interpreter not found at {$this->python_path}");
+        }
+        
+        if (!file_exists($python_script)) {
+            throw new Exception("Python script not found at {$python_script}");
+        }
+
+        $cmd = escapeshellcmd($this->python_path) . ' ' . escapeshellarg($python_script) .
+            ' --query ' . escapeshellarg($query) .
+            ' --k ' . (int)$k;
+
+        $this->statuslog("Executing vector search command: " . $cmd);
+        $output = shell_exec($cmd);
+        
+        if (!$output) {
+            throw new Exception("Vector store search returned no output");
+        }
+
+        // Extract JSON from output (handles logging mixed with JSON)
+        $json_start = strpos($output, '[');
+        $json_end = strrpos($output, ']');
+        
+        if ($json_start !== false && $json_end !== false) {
+            $clean_output = substr($output, $json_start, $json_end - $json_start + 1);
+            $results = json_decode($clean_output, true);
+        } else {
+            $results = json_decode($output, true);
+        }
+        
+        if (json_last_error() !== JSON_ERROR_NONE || !$results) {
+            $this->errorlog("Raw vector store output: " . substr($output, 0, 500));
+            throw new Exception("Failed to decode search results: " . json_last_error_msg());
+        }
+        
+        if (isset($results['error'])) {
+            throw new Exception("Search error: " . $results['error']);
+        }
+        
+        $this->last_raw_results = $results;
+        return $results;
+    }
+
+    public function build_rag_context($vector_results) {
+        $context = "📄 Retrieved Context:\n" . str_repeat("-", 40) . "\n";
+        foreach ($vector_results as $i => $doc) {
+            $source = $doc['metadata']['source'] ?? 'unknown';
+            $chunk = $doc['metadata']['chunk'] ?? 'N/A';
+            $content = $doc['content'] ?? $doc['page_content'] ?? '';
+            $snippet = wordwrap(trim($content), 100);
+
+            $context .= sprintf(
+                "%d. [Source: %s | Chunk: %s]\n\"%s\"\n\n",
+                $i + 1,
+                basename($source),
+                $chunk,
+                $snippet
+            );
+        }
+        $context .= str_repeat("-", 40) . "\n";
+        return $context;
+    }
+
+    public function query_llm($prompt) {
+        if (!$this->wait_for_model_ready()) {
+            throw new Exception("Model failed to load after multiple attempts");
+        }
+
+        $data = [
+            'model' => $this->current_model,
+            'messages' => [
+                ['role' => 'system', 'content' => 'You are a helpful assistant. Answer questions based on the provided context.'],
+                ['role' => 'user', 'content' => $prompt]
+            ],
+            'temperature' => 0.3,
+            'max_tokens' => 1000,
+            'stop' => ["\nFunction:"]
+        ];
+
+        try {
+            $this->statuslog("Sending LLM prompt: " . substr($prompt, 0, 200) . "...");
+            $response = $this->make_api_call('/chat/completions', 'POST', $data);
+            
+            if (!isset($response['choices'][0]['message']['content'])) {
+                $this->errorlog("Malformed LLM response: " . json_encode($response));
+                return false;
+            }
+            
+            return $response['choices'][0]['message']['content'];
+        } catch (Exception $e) {
+            $this->errorlog("API ERROR: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function make_api_call($endpoint, $method, $data = null) {
+        $url = $this->api_url . $endpoint;
+        $ch = curl_init($url);
+
+        $options = [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json'
+            ],
+            CURLOPT_TIMEOUT => 360,
+            CURLOPT_CONNECTTIMEOUT => 20
+        ];
+
+        if ($method === 'POST' && $data !== null) {
+            $options[CURLOPT_POSTFIELDS] = json_encode($data);
+        }
+
+        curl_setopt_array($ch, $options);
+        $response = curl_exec($ch);
+
+        if (curl_errno($ch)) {
+            $error = curl_error($ch);
+            $errno = curl_errno($ch);
+            curl_close($ch);
+            throw new Exception("API connection failed: $error");
+        }
+
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $this->statuslog("API Response Code: $http_code");
+
+        if ($http_code >= 400) {
+            $this->errorlog("API Error Response: " . substr($response, 0, 500));
+            throw new Exception("API returned HTTP $http_code");
+        }
+
+        $decoded = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->errorlog("Invalid JSON Response: " . substr($response, 0, 500));
+            throw new Exception("Invalid JSON response: " . json_last_error_msg());
+        }
+
+        return $decoded;
+    }
+
+    public function get_current_model() {
+        return $this->current_model;
+    }
+}
+
+// Handle status check
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
+    header('Content-Type: application/json');
+    
+    try {
+        $rag = new RAGSystem();
+        
+        if ($_POST['message'] === 'status_check') {
+            $status = $rag->is_model_ready();
+            echo json_encode([
+                'status' => $status['ready'] ? 'ready' : 'loading',
+                'model' => $status['model'],
+                'timestamp' => time()
+            ]);
+            exit;
+        }
+
+        // Process all queries through RAG pipeline
+        $query = $_POST['message'];
+        
+        // 1. Search vector store
+        $searchResults = $rag->search_vector_store($query);
+        
+        // 2. Build context
+        $context = $rag->build_rag_context($searchResults);
+        $prompt = "Context:\n{$context}\n\nQuestion: {$query}\n\nAnswer:";
+        
+        // 3. Query LLM
+        $response = $rag->query_llm($prompt);
+        
+        if ($response === false) {
+            throw new Exception("LLM query failed");
+        }
+
+        echo json_encode([
+            'response' => $response,
+            'model' => $rag->get_current_model(),
+            'timestamp' => time()
+        ]);
+
+    } catch (Exception $e) {
+        $rag->errorlog("RAG ERROR: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'response' => 'System Error: ' . $e->getMessage(),
+            'model' => 'Error',
+            'timestamp' => time()
+        ]);
+    }
+
+    exit;
+}
+
+// Default response for unsupported requests
+header('HTTP/1.1 400 Bad Request');
+echo json_encode(['error' => 'Invalid request']);
+
+
+=== PHP assets/php/show_log.php ===
+<?php
+$logFile = '../../assets/logs/vector_build.log';
+if (!file_exists($logFile)) {
+    echo json_encode(['line' => 'Log file not found.']);
+    exit;
+}
+
+$lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+$lastLine = end($lines);
+echo json_encode(['line' => $lastLine]);
+
+
+=== PHP assets/php/full_builder.php ===
+<?php
+header('Content-Type: application/json');
+
+// Verify AJAX request
+if (
+    empty($_SERVER['HTTP_X_REQUESTED_WITH']) ||
+    strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest'
+) {
+    http_response_code(403);
+    echo json_encode(['error' => 'This endpoint only accepts AJAX requests']);
+    exit;
+}
+
+// Paths - corrected to match actual deployment
+$pythonBinary = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
+$pythonScript = '/var/www/html/doomsteadRAG/assets/py/full_builder.py';
+
+if (!file_exists($pythonScript)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Python script not found at: ' . $pythonScript]);
+    exit;
+}
+
+if (!file_exists($pythonBinary)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Python interpreter not found at: ' . $pythonBinary]);
+    exit;
+}
+
+// Build command with proper environment context
+$command = sprintf(
+    'export PYTHONPATH=%s && %s %s 2>&1',
+    escapeshellarg('/var/www/html/doomsteadRAG/assets/py'),
+    escapeshellcmd($pythonBinary),
+    escapeshellarg($pythonScript)
+);
+
+// Execute command
+$output = [];
+$return_var = 0;
+exec($command, $output, $return_var);
+
+// Format response
+$response = [
+    'success'   => $return_var === 0,
+    'exitCode'  => $return_var,
+    'output'    => implode("\n", $output)
+];
+
+// Verify permissions on generated files
+$dataDir = '/var/www/html/doomsteadRAG/assets/data';
+if (file_exists($dataDir)) {
+    exec("chown -R www-data:www-data " . escapeshellarg($dataDir));
+    exec("chmod -R 775 " . escapeshellarg($dataDir));
+}
+
+echo json_encode($response);
+
+
+=== PHP assets/php/save_config.php ===
+<?php
+
+header('Content-Type: application/json');
+$json = file_get_contents('php://input');
+$configFile = __DIR__ . '/../data/config.json';
+file_put_contents($configFile, $json);
+
+?>
+
+=== PHP assets/php/load_server.php ===
+<?php
+header('Content-Type: application/json');
+
+// Configuration
+$pythonPath = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
+$scriptPath = '/var/www/html/doomsteadRAG/assets/py/load_server.py';
+$webuiDir   = '/home/kdog/text-generation-webui';
+$logPath    = '/var/www/html/doomsteadRAG/assets/logs';
+$logFile    = $logPath . '/doomstead_server.log';
+
+function is_server_running() {
+    $output = shell_exec("pgrep -f 'python.*server.py'");
+    return !empty($output);
+}
+
+try {
+    // Check if server is already running
+    /*if (is_server_running()) {
+        echo json_encode([
+            'success' => false,
+            'error'   => 'Server is already running'
+        ]);
+        exit;
+    }*/
+
+    // Verify critical paths
+    if (!file_exists($pythonPath)) {
+        throw new Exception("Python interpreter missing at {$pythonPath}");
+    }
+    if (!file_exists($scriptPath)) {
+        throw new Exception("Launch script missing at {$scriptPath}");
+    }
+    if (!file_exists($webuiDir)) {
+        throw new Exception("WebUI directory missing at {$webuiDir}");
+    }
+    if (!is_dir($logPath) || !is_writable($logPath)) {
+        throw new Exception("Log path is not writable or doesn't exist: {$logPath}");
+    }
+
+    // Build the launch command with proper environment context
+    $command = sprintf(
+        'cd %s && ' .
+        'export PATH=%s:$PATH && ' .
+        'export VIRTUAL_ENV=%s && ' .
+        'nohup %s %s > %s 2>&1 & echo $!',
+        escapeshellarg($webuiDir),
+        escapeshellarg('/home/kdog/text-generation-webui/venv/bin'),
+        escapeshellarg('/home/kdog/text-generation-webui/venv'),
+        escapeshellcmd($pythonPath),
+        escapeshellarg($scriptPath),
+        escapeshellarg($logFile)
+    );
+
+    // Execute with full environment context
+    $output = shell_exec($command);
+    $pid = trim($output);
+
+    if (empty($pid) || !is_numeric($pid)) {
+        throw new Exception("Failed to launch process. Output: " . var_export($output, true));
+    }
+
+    // Verify process is running
+    sleep(2); // Give it time to start
+    $isRunning = shell_exec("ps -p $pid -o pid=");
+
+    if (empty($isRunning)) {
+        throw new Exception("Process started but died immediately (PID: $pid). Check logs: $logFile");
+    }
+
+    echo json_encode([
+        'success'   => true,
+        'pid'       => $pid,
+        'message'   => 'Server launch initiated',
+        'log_file'  => $logFile
+    ]);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success'    => false,
+        'error'      => $e->getMessage(),
+        'debug_info' => [
+            'current_user' => trim(shell_exec('whoami')),
+            'web_user'     => trim(shell_exec('ps -o user= -p ' . getmypid())),
+            'env_path'     => shell_exec('echo $PATH'),
+            'venv_status'  => file_exists('/home/kdog/text-generation-webui/venv/bin/activate') ? 'exists' : 'missing'
+        ]
+    ]);
+}
+?>
+
+
+=== PHP assets/php/model_api.php ===
+<?php
+
+header('Content-Type: application/json');
+
+$pythonPath = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
+$scriptBasePath = '/var/www/html/doomsteadRAG/assets/py/';
+$action = $_GET['action'] ?? '';
+
+$scriptMap = [
+    'check' => 'model_reader.py',
+    'load'  => 'model_loader.py'
+];
+
+try {
+
+    $scriptPath = $scriptBasePath . $scriptMap[$action];
+
+    $command = escapeshellcmd($pythonPath) . ' ' . escapeshellarg($scriptPath);
+    $output = trim(shell_exec($command));
+    $result = json_decode($output, true);
+
+    echo json_encode([
+        'success' => true,
+        'model' => $result['model'],
+        'status' => $result['status'] ?? 'unknown',
+        'loader' => $result['loader'] ?? 'unknown'
+    ]);
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
+}
+
+
+=== PHP assets/php/test_query.php ===
+<?php
+// Minimal test script that JUST WORKS
+$python = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
+$script = '/var/www/html/doomsteadRAG/assets/py/query_doomstead.py';
+$testQueries = [
+    "How does Trotsky define fascism",
+];
+
+foreach ($testQueries as $query) {
+    echo "\n=== Testing: '$query' ===\n";
+    $output = shell_exec(escapeshellcmd($python).' '.escapeshellarg($script).' --query '.escapeshellarg($query));
+    
+    if (($data = json_decode($output, true)) !== null) {
+        if (isset($data['error'])) {
+            echo "ERROR: ".$data['error'];
+        } elseif (!empty($data)) {
+            foreach ($data as $i => $result) {
+                echo "\nResult ".($i+1).":\n";
+                echo "Score: ".round($result['score'], 3)."\n";
+                echo "Source: ".($result['metadata']['source'] ?? 'unknown')."\n";
+                echo substr($result['content'], 0, 200).(strlen($result['content']) > 200 ? '...' : '')."\n";
+            }
+        } else {
+            echo "No results found\n";
+        }
+    } else {
+        echo "Invalid response\n";
+    }
+}
+
+=== PY assets/py/chunker.py ===
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+def split_documents(docs, chunk_size=1000, chunk_overlap=200):
+    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    return splitter.split_documents(docs)
+
+
+=== PY assets/py/document_loader.py ===
+import os
+from langchain_community.document_loaders import TextLoader
+
+def load_code_documents(root_dir):
+    docs = []
+    for dirpath, _, filenames in os.walk(root_dir):
+        for file in filenames:
+            if file.endswith(('.py', '.js', '.php', '.css', '.html')):
+                path = os.path.join(dirpath, file)
+                try:
+                    loader = TextLoader(path)
+                    docs.extend(loader.load())
+                except Exception as e:
+                    print(f"Error loading {path}: {e}")
+    return docs
+
+
+=== PY assets/py/full_builder.py ===
+#!/usr/bin/env python3
+import os
+import sys
+import logging
+import hashlib
+import sqlite3
+import shutil
+import json
+from pathlib import Path
+from typing import Dict, List
+import yaml
+import chromadb
+from chromadb.config import Settings
+from langchain.schema import Document
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import (
+    TextLoader,
+    PyPDFLoader,
+    DirectoryLoader
+)
+import numpy as np
+np.float_ = np.float64
+
+PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
+SCRIPT_DIR = Path(__file__).parent.resolve()
+LOG_DIR = PROJECT_ROOT / "assets/logs"
+DATA_DIR = PROJECT_ROOT / "assets/data"
+
+def setup_logging():
+    LOG_FILE = LOG_DIR / "vector_build.log"
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        if LOG_FILE.exists():
+            LOG_FILE.unlink()
+        LOG_FILE.touch()
+        os.chmod(LOG_FILE, 0o666)
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(LOG_FILE),
+                logging.StreamHandler()
+            ]
+        )
+        return logging.getLogger("DoomsteadRAG")
+    except Exception as e:
+        print(f"Failed to configure logging: {str(e)}", file=sys.stderr)
+        raise
+
+logger = setup_logging()
+
+class DoomsteadRAG:
+    def __init__(self, config: Dict):
+        self.config = config
+        self.gpu_available = self._verify_gpu()
+        self.embeddings = self._init_embeddings()
+        self.splitter = self._init_splitter()
+        self.vector_db = None
+        
+        config_json_path = DATA_DIR / "config.json"
+        if config_json_path.exists():
+            with open(config_json_path, 'r') as f:
+                json_config = json.load(f)
+                self.filesetconfig = json_config.get('filesetconfig', 'doomstead')
+        else:
+            self.filesetconfig = 'doomstead'
+            
+        self.db_subdir = DATA_DIR / self.filesetconfig
+        self.vector_db_path = self.db_subdir / "vector_db"
+        self.db_file = self.db_subdir / "file_metadata.db"
+        
+        self._verify_directories()
+        self._initialize_database()
+        logger.info(f"Using {'GPU' if self.gpu_available else 'CPU'} for embeddings")
+
+    def _verify_gpu(self) -> bool:
+        try:
+            import torch
+            if torch.cuda.is_available():
+                logger.info("=== Begin Build ===")
+                logger.info(f"GPU: {torch.cuda.get_device_name(0)}")
+                logger.info(f"CUDA: {torch.version.cuda}")
+                logger.info(f"Memory: {torch.cuda.get_device_properties(0).total_memory/1e9:.2f}GB")
+                return True
+        except ImportError:
+            logger.warning("PyTorch not installed, falling back to CPU")
+        except Exception as e:
+            logger.warning(f"GPU verification failed: {str(e)}. Falling back to CPU")
+        return False
+
+    def _verify_directories(self):
+        logger.info("Verifying directories...")
+        required_dirs = [LOG_DIR, self.db_subdir]
+        
+        for dir_path in required_dirs:
+            try:
+                dir_path.mkdir(parents=True, exist_ok=True)
+                os.chmod(dir_path, 0o775)
+                test_file = dir_path / ".permission_test"
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.unlink(test_file)
+                os.system(f"chown -R www-data:www-data {dir_path}")
+                logger.info(f"Verified directory: {dir_path}")
+            except Exception as e:
+                logger.error(f"Directory verification failed for {dir_path}: {str(e)}")
+                raise PermissionError(f"Insufficient permissions for {dir_path}")
+
+    def _ensure_vectorstore_permissions(self, path: Path):
+        try:
+            if not path.exists():
+                path.mkdir(parents=True, exist_ok=True)
+            
+            os.chmod(path, 0o775)
+            
+            for root, dirs, files in os.walk(path):
+                for d in dirs:
+                    os.chmod(os.path.join(root, d), 0o775)
+                for f in files:
+                    try:
+                        os.chmod(os.path.join(root, f), 0o664)
+                    except Exception:
+                        continue
+            
+            os.system(f"chown -R www-data:www-data {path}")
+            return True
+        except Exception as e:
+            logger.error(f"Permission setting failed: {str(e)}")
+            return False
+
+    def _init_embeddings(self):
+        device = "cuda" if self.gpu_available else "cpu"
+        model_name = self.config['embedding_model']
+        logger.info(f"Loading embeddings on {device.upper()}")
+        return HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs={'device': device, 'trust_remote_code': True},
+            encode_kwargs={'batch_size': 32 if device == 'cuda' else 8, 'normalize_embeddings': True}
+        )
+
+    def _init_splitter(self):
+        return RecursiveCharacterTextSplitter(
+            chunk_size=self.config['chunk_size'],
+            chunk_overlap=self.config['chunk_overlap'],
+            separators=['\n\nfunction ', '\nfunction ', '\n\nclass ', '\nclass ', '\n\n', '\n', ' ', '']
+        )
+
+    def _get_extensions(self, file_type: str) -> List[str]:
+        extension_map = {
+        'py': ['.py'],
+        'php': ['.php', '.php3', '.php4', '.php5', '.phtml', '.template.php'],
+        'js': ['.js', '.jsx', '.mjs', '.cjs'],
+        'css': ['.css', '.scss', '.less'],
+        'html': ['.html', '.htm', '.xhtml'],
+        'pdf': ['.pdf'],
+        'text': ['.txt', '.md', '.rst']
+        }
+        return extension_map.get(file_type.lower(), [])
+
+    def _should_skip_file(self, file_path: str) -> bool:
+        filename = os.path.basename(file_path)
+        return (filename.startswith('minified_') and 
+               (filename.endswith('.css') or filename.endswith('.js')))
+
+    def _initialize_database(self):
+        try:
+            self.db_subdir.mkdir(parents=True, exist_ok=True)
+            
+            self.db_conn = sqlite3.connect(self.db_file)
+            self.db_conn.execute("PRAGMA journal_mode=WAL")
+            self.db_conn.execute("PRAGMA synchronous=NORMAL")
+            
+            cursor = self.db_conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS file_metadata (
+                    file_path TEXT PRIMARY KEY,
+                    last_modified REAL,
+                    content_hash TEXT
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS files_embeddings (
+                    chunk_id TEXT PRIMARY KEY,
+                    file_path TEXT
+                )
+            ''')
+            self.db_conn.commit()
+            
+            os.chmod(self.db_file, 0o664)
+            os.system(f"chown www-data:www-data {self.db_file}")
+            
+            logger.info(f"Database initialized at {self.db_file}")
+        except Exception as e:
+            logger.error(f"Cannot access database file at {self.db_file}: {str(e)}")
+            raise
+
+    def _update_file_metadata(self, file_path: str):
+        last_modified = os.path.getmtime(file_path)
+        if file_path.endswith('.pdf'):
+            with open(file_path, 'rb') as f:
+                content_hash = hashlib.md5(f.read()).hexdigest()
+        else:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content_hash = hashlib.md5(f.read().encode()).hexdigest()
+        
+        cursor = self.db_conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO file_metadata 
+            (file_path, last_modified, content_hash)
+            VALUES (?, ?, ?)
+        ''', (file_path, last_modified, content_hash))
+        self.db_conn.commit()
+
+    def _load_code_documents(self) -> List[Document]:
+        documents = []
+        skip_dirs = {"venv", "__pycache__", ".venv"}
+        
+        if 'code_dirs' not in self.config:
+            logger.info("No code directories configured")
+            return documents
+            
+        for file_type, dirs in self.config['code_dirs'].items():
+            logger.info(f"Processing {file_type.upper()} files...")
+            for path in dirs:
+                abs_path = Path(path) if Path(path).is_absolute() else PROJECT_ROOT / path
+                for ext in self._get_extensions(file_type):
+                    for file in abs_path.rglob(f"*{ext}"):
+                        if any(skip_dir in file.parts for skip_dir in skip_dirs):
+                            continue
+                        if self._should_skip_file(str(file)):
+                            continue
+                        
+                        try:
+                            file_path_str = str(file)
+                            with open(file, 'r', encoding='utf-8') as f:
+                                text = f.read()
+                            self._update_file_metadata(file_path_str)
+                            documents.append(Document(
+                                page_content=text,
+                                metadata={'source': file_path_str}
+                            ))
+                        except UnicodeDecodeError:
+                            try:
+                                with open(file, 'r', encoding='latin-1') as f:
+                                    text = f.read()
+                                self._update_file_metadata(file_path_str)
+                                documents.append(Document(
+                                    page_content=text,
+                                    metadata={'source': file_path_str}
+                                ))
+                            except Exception as e:
+                                logger.error(f"Failed to read {file} with fallback encoding: {e}")
+                        except Exception as e:
+                            logger.error(f"Error reading {file}: {str(e)}")
+        return documents
+
+    def _load_pdf_documents(self) -> List[Document]:
+        documents = []
+        
+        if 'pdf' not in self.config:
+            logger.info("No PDF directories configured")
+            return documents
+            
+        for pdf_dir in self.config['pdf']:
+            abs_path = Path(pdf_dir) if Path(pdf_dir).is_absolute() else PROJECT_ROOT / pdf_dir
+            if not abs_path.exists():
+                logger.warning(f"PDF directory not found: {abs_path}")
+                continue
+                
+            logger.info(f"Processing PDF files in {abs_path}")
+            loader = DirectoryLoader(
+                str(abs_path),
+                glob="**/*.pdf",
+                loader_cls=PyPDFLoader,
+                show_progress=True
+            )
+            
+            try:
+                pdf_docs = loader.load()
+                for doc in pdf_docs:
+                    file_path = doc.metadata['source']
+                    self._update_file_metadata(file_path)
+                    documents.append(doc)
+            except Exception as e:
+                logger.error(f"Error loading PDFs from {abs_path}: {str(e)}")
+                
+        return documents
+
+    def _load_text_documents(self) -> List[Document]:
+        documents = []
+        
+        if 'text_dirs' not in self.config or not self.config['text_dirs']:
+            logger.info("No text directories configured")
+            return documents
+            
+        for text_dir in self.config['text_dirs']:
+            abs_path = Path(text_dir) if Path(text_dir).is_absolute() else PROJECT_ROOT / text_dir
+            if not abs_path.exists():
+                logger.warning(f"Text directory not found: {abs_path}")
+                continue
+                
+            logger.info(f"Processing text files in {abs_path}")
+            loader = DirectoryLoader(
+                str(abs_path),
+                glob="**/*.*",
+                loader_kwargs={'autodetect_encoding': True}
+            )
+            
+            try:
+                text_docs = loader.load()
+                for doc in text_docs:
+                    if any(doc.metadata['source'].endswith(ext) for ext in self._get_extensions('text')):
+                        file_path = doc.metadata['source']
+                        self._update_file_metadata(file_path)
+                        documents.append(doc)
+            except Exception as e:
+                logger.error(f"Error loading text files from {abs_path}: {str(e)}")
+                
+        return documents
+
+    def _load_documents(self) -> List[Document]:
+        documents = []
+        documents.extend(self._load_code_documents())
+        documents.extend(self._load_pdf_documents())
+        documents.extend(self._load_text_documents())
+        return documents
+
+    def _split_documents(self, docs: List[Document]) -> List[Document]:
+        chunks = []
+        for doc in docs:
+            split_chunks = self.splitter.split_documents([doc])
+            for chunk in split_chunks:
+                chunk.metadata['source'] = doc.metadata['source']
+                chunks.append(chunk)
+        logger.info(f"Created {len(chunks)} chunks")
+        return chunks
+
+    def _clear_vectorstore(self, path: Path):
+        if path.exists():
+            try:
+                logger.info("Cleaning up existing vector store...")
+                for item in path.iterdir():
+                    try:
+                        if item.is_dir():
+                            shutil.rmtree(item, ignore_errors=True)
+                        else:
+                            item.unlink()
+                    except Exception as e:
+                        logger.warning(f"Could not remove {item}: {str(e)}")
+                logger.info("Vector store cleanup completed")
+            except Exception as e:
+                logger.error(f"Vector store cleanup failed: {str(e)}")
+                raise
+
+    def initialize_vectorstore(self):
+        try:
+            if not self._ensure_vectorstore_permissions(self.vector_db_path):
+                raise RuntimeError("Failed to set vector store permissions")
+
+            self._clear_vectorstore(self.vector_db_path)
+            logger.info("Building vector store...")
+            
+            docs = self._load_documents()
+            if not docs:
+                logger.warning("No documents found to process")
+                return
+
+            chunks = self._split_documents(docs)
+
+            client = chromadb.PersistentClient(
+                path=str(self.vector_db_path),
+                settings=Settings(
+                    allow_reset=True,
+                    anonymized_telemetry=False
+                )
+            )
+            
+            collection = client.create_collection(
+                name=f"{self.filesetconfig}_rag",
+                metadata={"hnsw:space": "cosine"}
+            )
+
+            batch_size = 512
+            for i in range(0, len(chunks), batch_size):
+                batch = chunks[i:i + batch_size]
+                embeddings = self.embeddings.embed_documents(
+                    [chunk.page_content for chunk in batch])
+                
+                collection.add(
+                    embeddings=embeddings,
+                    documents=[chunk.page_content for chunk in batch],
+                    metadatas=[chunk.metadata for chunk in batch],
+                    ids=[f"chunk_{i+j}" for j in range(len(batch))]
+                )
+                logger.info(f"Processed batch {(i//batch_size)+1}/{(len(chunks)-1)//batch_size + 1}")
+
+            logger.info(f"Vector store successfully created at {self.vector_db_path}")
+            self._ensure_vectorstore_permissions(self.vector_db_path)
+            
+        except Exception as e:
+            logger.error(f"Error creating vector store: {str(e)}")
+            raise RuntimeError(f"Failed to create Chroma vector store: {str(e)}")
+
+    def __del__(self):
+        if hasattr(self, 'db_conn'):
+            self.db_conn.close()
+
+def load_config() -> Dict:
+    config_json_path = DATA_DIR / "config.json"
+    config_yaml_file = "ragcode.yaml"
+    
+    if config_json_path.exists():
+        try:
+            with open(config_json_path, 'r') as f:
+                json_config = json.load(f)
+                if isinstance(json_config, dict) and 'filesetconfig' in json_config:
+                    config_yaml_file = f"{json_config['filesetconfig']}.yaml"
+                    logger.info(f"Using config file from config.json: {config_yaml_file}")
+        except Exception as e:
+            logger.warning(f"Could not read config.json: {str(e)}. Falling back to default ragcode.yaml")
+    
+    config_path = PROJECT_ROOT / "assets" / "py" / config_yaml_file
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+        if not config or 'doomsteadRAG' not in config:
+            raise ValueError(f"Invalid or empty config file: {config_yaml_file}")
+        return config['doomsteadRAG']
+
+def main():
+    try:
+        logger.info("=== Starting vector store build ===")
+        config = load_config()
+        rag = DoomsteadRAG(config)
+        rag.initialize_vectorstore()
+        logger.info("Build completed successfully")
+        return 0
+    except Exception as e:
+        logger.critical(f"Build failed: {str(e)}", exc_info=True)
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+=== PY assets/py/listfiles.py ===
+import os
+
+def list_files_to_common_file(input_directory, output_directory, output_file):
+    """
+    Lists all target files (.py, requirements.txt, config.yaml/.yml) in the specified directory
+    and writes their contents to an output file, separated by filename metadata.
+    
+    Args:
+        directory (str): Path to the directory to search for files
+        output_file (str): Path to the output file to be created/overwritten
+    """
+    target_files = []
+    
+    with open(output_file, 'w', encoding='utf-8') as out_f:
+        # Get all files in the directory that match our targets
+        for f in os.listdir(input_directory):
+            lower_f = f.lower()
+            if (lower_f.endswith('.py') or 
+                lower_f == 'requirements.txt' or 
+                lower_f in ('config.yaml', 'config.yml')):
+                target_files.append(f)
+        
+        if not target_files:
+            out_f.write("No target files found in the directory.\n")
+            return
+        
+        for file in sorted(target_files):
+            # Write separator and filename metadata
+            out_f.write(f"\n{'=' * 25} {file} {'=' * 25}\n\n")
+            
+            # Write the content of the file
+            file_path = os.path.join(output_directory, file)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as in_f:
+                    out_f.write(in_f.read())
+                    out_f.write('\n')  # Add a newline after each file's content
+            except Exception as e:
+                out_f.write(f"Error reading {file}: {str(e)}\n")
+
+if __name__ == "__main__":
+    # Example usage - change these paths as needed
+    # input_directory = '.'  # Current directory
+    input_directory = '/home/kdog/text-generation-webui/extensions/simplerag'
+    output_directory = '.'  # Current directory
+    output_filename = 'combined_files.txt'
+    
+    list_files_to_common_file(input_directory, input_directory, output_filename)
+    print(f"All target files in '{input_directory}' have been combined into '{output_filename}'")
+
+=== PY assets/py/load_server.py ===
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import subprocess
+from pathlib import Path
+import logging
+
+WEBUI_DIR = Path("/home/kdog/text-generation-webui")
+VENV_DIR = WEBUI_DIR / "venv"
+LOG_FILE = WEBUI_DIR / "launch.log"
+
+# Set TRITON_CACHE_DIR environment variable
+triton_cache_dir = '/var/www/html/doomsteadRAG/assets/data'
+os.makedirs(triton_cache_dir, exist_ok=True)
+os.environ['TRITON_CACHE_DIR'] = triton_cache_dir
+
+def setup_logging():
+    """Sets up logging to both a file and the console."""
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    fh = logging.FileHandler(LOG_FILE, mode='w')
+    fh.setLevel(logging.INFO)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    return logger
+
+def check_dependencies():
+    """Checks for essential system dependencies, like Python3."""
+    try:
+        subprocess.run(
+            ['python3', '--version'],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+    except subprocess.CalledProcessError as e:
+        logging.error("ERROR: Python3 not found in system PATH. Please ensure Python3 is installed.")
+        sys.exit(1)
+    except FileNotFoundError:
+        logging.error("ERROR: 'python3' command not found. Please ensure Python3 is installed and accessible.")
+        sys.exit(1)
+
+def launch_server():
+    """Launches the text-generation-webui server."""
+    os.chdir(WEBUI_DIR)
+
+    cmd = [
+        str(VENV_DIR / "bin" / "python3"),
+        "server.py",
+        "--listen",
+        "--api",
+        "--trust-remote-code"
+    ]
+
+    logging.info("Starting text-generation-webui server...")
+
+    os.execv(cmd[0], cmd)
+
+def main():
+    """Main execution sequence for launching the web UI."""
+    logger = setup_logging()
+
+    logger.info("=== Launching Text Generation WebUI ===")
+    logger.info(time.ctime())
+    logger.info("----------------------------------------")
+
+    logger.info("Activating virtual environment...")
+
+    os.environ['PATH'] = f"{VENV_DIR}/bin:{os.environ['PATH']}"
+    os.environ['VIRTUAL_ENV'] = str(VENV_DIR)
+
+    logger.info("Checking system requirements...")
+    check_dependencies()
+
+
+
+    launch_server()
+
+if __name__ == "__main__":
+    main()
+
+=== PY assets/py/logger.py ===
+import os
+import datetime
+from pathlib import Path
+
+class Logger:
+    def __init__(self, log_dir="assets/logs"):
+        self.verbose = True
+        self.log_dir = log_dir
+        self._ensure_log_directory_exists()
+        
+    def _ensure_log_directory_exists(self):
+        """Create log directory if it doesn't exist"""
+        path = Path(self.log_dir)
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except PermissionError as e:
+            print(f"Logger error: Cannot create log directory '{self.log_dir}': {e}")
+            raise
+        except Exception as e:
+            print(f"Logger error: Unexpected error creating '{self.log_dir}': {e}")
+            raise
+        
+    def _write_log(self, level, message, log_file):
+        timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S.%f]")
+        log_line = f"{timestamp} {level}: {message}\n"
+        log_path = os.path.join(self.log_dir, log_file)
+        
+        try:
+            with open(log_path, 'a', encoding='utf-8') as f:
+                f.write(log_line)
+        except IOError as e:
+            print(f"Logger error: Failed to write to log file '{log_path}': {e}")
+
+    def event(self, message):
+        self._write_log("EVENT", message, "event.log")
+        
+    def debug(self, message):
+        if self.verbose:
+            self._write_log("DEBUG", message, "debug.log")
+            
+    def error(self, message):
+        self._write_log("ERROR", message, "error.log")
+        
+    def debug_php(self, message):
+        """Special method for PHP debug logs"""
+        if self.verbose:
+            self._write_log("DEBUG_PHP", message, "debug_php.log")
+
+# Initialize logger
+logger = Logger()
+
+
+=== PY assets/py/query_doomstead.py ===
+#!/usr/bin/env python3
+import os
+import sys
+import json
+from pathlib import Path
+from typing import Dict, List, Any
+import yaml
+import argparse
+import logging
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
+SCRIPT_DIR = Path(__file__).parent.resolve()
+LOG_DIR = PROJECT_ROOT / "assets/logs"
+DATA_DIR = PROJECT_ROOT / "assets/data"
+
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+    return logging.getLogger("DoomsteadRAG")
+
+logger = setup_logging()
+
+class VectorSearch:
+    def __init__(self, config: Dict):
+        self.config = config
+        self.embeddings = self._init_embeddings()
+        
+        config_json_path = DATA_DIR / "config.json"
+        if config_json_path.exists():
+            with open(config_json_path, 'r') as f:
+                json_config = json.load(f)
+                self.filesetconfig = json_config.get('filesetconfig', 'doomstead')
+        else:
+            self.filesetconfig = 'doomstead'
+            
+        self.db_subdir = DATA_DIR / self.filesetconfig
+        self.vector_db_path = self.db_subdir / "vector_db"
+        self.vectordb = self._init_vector_db()
+
+    def _init_embeddings(self) -> HuggingFaceEmbeddings:
+        return HuggingFaceEmbeddings(
+            model_name=self.config['embedding_model'],
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+
+    def _init_vector_db(self) -> Chroma:
+        return Chroma(
+            collection_name=f"{self.filesetconfig}_rag",
+            persist_directory=str(self.vector_db_path),
+            embedding_function=self.embeddings
+        )
+
+    def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+        try:
+            # First try exact function name match
+            if '()' in query:
+                func_name = query.split('(')[0]
+                exact_query = f"function {func_name}("
+                docs = self.vectordb.similarity_search_with_relevance_scores(exact_query, k=k)
+            else:
+                docs = self.vectordb.similarity_search_with_relevance_scores(query, k=k*2)  # Get more results
+            
+            min_score = 0.2  # Lower threshold for code searches
+            
+            results = []
+            seen_sources = set()
+            
+            for doc, score in docs:
+                try:
+                    score_float = float(score)
+                    if score_float > min_score:
+                        source = doc.metadata.get('source', '')
+                        
+                        # Skip duplicate sources
+                        if source in seen_sources:
+                            continue
+                        seen_sources.add(source)
+                        
+                        # Boost scores for exact function matches
+                        if '()' in query and f"function {func_name}(" in doc.page_content:
+                            score_float = 1.0  # Max score for exact match
+                            
+                        results.append({
+                            'content': doc.page_content,
+                            'metadata': doc.metadata,
+                            'score': score_float
+                        })
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Invalid score value {score}: {str(e)}")
+                    continue
+            
+            # Sort results by score and return top k
+            results.sort(key=lambda x: x['score'], reverse=True)
+            return results[:k]
+            
+        except Exception as e:
+            logger.error(f"Search failed: {str(e)}")
+            raise RuntimeError(f"Search failed: {str(e)}")
+
+def load_config() -> Dict:
+    config_json_path = DATA_DIR / "config.json"
+    config_yaml_file = "ragcode.yaml"
+    
+    if config_json_path.exists():
+        with open(config_json_path, 'r') as f:
+            json_config = json.load(f)
+            if isinstance(json_config, dict) and 'filesetconfig' in json_config:
+                config_yaml_file = f"{json_config['filesetconfig']}.yaml"
+    
+    config_path = PROJECT_ROOT / "assets" / "py" / config_yaml_file
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+        if not config or 'doomsteadRAG' not in config:
+            raise ValueError("Invalid or empty config file")
+        return config['doomsteadRAG']
+
+def main():
+    try:
+        config = load_config()
+        parser = argparse.ArgumentParser(description='Doomstead RAG Vector Search')
+        parser.add_argument('--query', required=True, help='Search query')
+        parser.add_argument('--k', type=int, default=5, help='Number of results to return')
+        
+        args = parser.parse_args()
+        searcher = VectorSearch(config)
+        results = searcher.search(args.query, args.k)
+        print(json.dumps(results[:args.k]))
+    except Exception as e:
+        print(json.dumps({'error': str(e)}), file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+
+=== PY assets/py/model_reader.py ===
+#!/usr/bin/env python3
+import json
+import requests
+import sys
+from typing import Dict
+
+MODEL_API_URL = "http://localhost:5000/v1/internal/model/info"
+TIMEOUT_SECONDS = 5
+
+def get_model_info() -> Dict[str, str]:
+    """Query text-generation-webui's internal FastAPI endpoint for model info"""
+    try:
+        response = requests.get(
+            MODEL_API_URL,
+            timeout=TIMEOUT_SECONDS,
+            headers={"Accept": "application/json"}
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        if not data or 'model_name' not in data:
+            return {
+                "model": "No model loaded",
+                "status": "error",
+                "loader": "none"
+            }
+
+        return {
+            "model": data.get('model_name', 'Unknown'),
+            "status": "ready",
+            "loader": data.get('loader', 'unknown')
+        }
+
+    except requests.exceptions.ConnectionError:
+        return {
+            "model": "API not reachable",
+            "status": "error",
+            "loader": "none"
+        }
+    except requests.exceptions.Timeout:
+        return {
+            "model": "API timeout",
+            "status": "error", 
+            "loader": "none"
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            "model": f"API Error: {str(e)}",
+            "status": "error",
+            "loader": "none"
+        }
+    except Exception as e:
+        return {
+            "model": f"Unexpected Error: {str(e)}",
+            "status": "error",
+            "loader": "none"
+        }
+
+if __name__ == "__main__":
+    try:
+        model_info = get_model_info()
+        print(json.dumps(model_info, ensure_ascii=False))
+    except Exception as e:
+        print(json.dumps({
+            "model": f"Critical Error: {str(e)}",
+            "status": "error",
+            "loader": "none"
+        }))
+        sys.exit(1)
+
+
+=== PY assets/py/model_loader.py ===
+#!/usr/bin/env python3
+import requests
+import json
+import sys
+import yaml
+import os
+import shutil
+from pathlib import Path
+
+PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
+CONFIG_JSON_PATH = PROJECT_ROOT / "assets" / "data" / "config.json"
+DATA_DIR = PROJECT_ROOT / "assets" / "data"
+
+def get_config_path():
+    """
+    Determines the path to the configuration YAML file.
+    It checks 'filesetconfig' in config.json, defaulting to 'ragcode.yaml'.
+    """
+    try:
+        with open(CONFIG_JSON_PATH, 'r') as f:
+            config = json.load(f)
+            filesetconfig = config.get('filesetconfig', 'ragcode')
+            return PROJECT_ROOT / "assets" / "py" / f"{filesetconfig}.yaml"
+    except Exception:
+        # Fallback if config.json is missing or malformed
+        return PROJECT_ROOT / "assets" / "py" / "ragcode.yaml"
+
+def load_config():
+    """
+    Loads the model name specified in the configuration YAML file.
+    This is the name of the model that *should be* loaded.
+    """
+    config_path = get_config_path()
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            return config['doomsteadRAG']['loaded_model']
+    except FileNotFoundError:
+        print(f"Error: Configuration file not found at {config_path}", file=sys.stderr)
+        sys.exit(1)
+    except KeyError:
+        print(f"Error: 'doomsteadRAG' or 'loaded_model' key not found in {config_path}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error loading configuration from {config_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def clear_awq_data():
+    """
+    Clears the data directory of files added by previous AWQ models.
+    """
+    try:
+        for item in DATA_DIR.iterdir():
+            if item.is_dir():
+                # Skip clearing vector store directories
+                if item.name in ['doomstead', 'ragcode', 'ragdocs']:
+                    continue
+                shutil.rmtree(item)
+            elif item.is_file() and item.name != 'config.json':
+                item.unlink()
+        return True
+    except Exception as e:
+        print(f"Error clearing AWQ data: {str(e)}", file=sys.stderr)
+        return False
+
+# Configuration for API calls
+MODEL_NAME_TO_LOAD = load_config() # This is the *new* model we want to load
+UNLOAD_API_URL = "http://localhost:5000/v1/internal/model/unload"
+LOAD_API_URL = "http://localhost:5000/v1/internal/model/load"
+STATUS_API_URL = "http://localhost:5000/v1/internal/model/status" # Assuming a status endpoint exists
+TIMEOUT_SECONDS = 40
+
+def get_current_loaded_model():
+    """
+    Attempts to get the name of the currently loaded model from the API server's status endpoint.
+    Returns the model name string or None if it cannot be determined.
+    """
+    try:
+        response = requests.get(STATUS_API_URL, timeout=TIMEOUT_SECONDS)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("loaded_model_name") # Adjust key based on your API's response
+    except requests.exceptions.ConnectionError:
+        print("Warning: API status endpoint not reachable. Cannot determine currently loaded model.", file=sys.stderr)
+    except requests.exceptions.Timeout:
+        print("Warning: API status endpoint timed out. Cannot determine currently loaded model.", file=sys.stderr)
+    except requests.exceptions.RequestException as e:
+        print(f"Warning: Request error getting model status: {e}. Cannot determine currently loaded model.", file=sys.stderr)
+    except json.JSONDecodeError:
+        print("Warning: Could not decode JSON from API status endpoint. Cannot determine currently loaded model.", file=sys.stderr)
+    return None
+
+def unload_model(model_name_to_unload):
+    """
+    Attempts to unload a specified model from the API server.
+    Prints the result as JSON and returns a status dict.
+    """
+    if not model_name_to_unload:
+        result = {"model": "None", "status": "unloading_skipped", "message": "No model specified for unloading"}
+        print(json.dumps(result, ensure_ascii=False))
+        return result
+
+    print(f"Attempting to unload model: {model_name_to_unload} via {UNLOAD_API_URL}")
+    try:
+        response = requests.post(
+            UNLOAD_API_URL,
+            json={"model_name": model_name_to_unload},
+            headers={"Content-Type": "application/json"},
+            timeout=TIMEOUT_SECONDS
+        )
+        response.raise_for_status()
+
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            data = {"message": response.text.strip()}
+
+        result = {
+            "model": model_name_to_unload,
+            "status": "unloading_success",
+            "loader": "internal",
+            "api_response": data
+        }
+
+    except requests.exceptions.ConnectionError:
+        result = {
+            "model": model_name_to_unload,
+            "status": "unloading_error",
+            "message": "API not reachable during unload",
+            "loader": "none"
+        }
+    except requests.exceptions.Timeout:
+        result = {
+            "model": model_name_to_unload,
+            "status": "unloading_error",
+            "message": "API timeout during unload",
+            "loader": "none"
+        }
+    except requests.exceptions.RequestException as e:
+        result = {
+            "model": model_name_to_unload,
+            "status": "unloading_error",
+            "message": f"Request error during unload: {str(e)}",
+            "loader": "none"
+        }
+    except Exception as e:
+        result = {
+            "model": model_name_to_unload,
+            "status": "unloading_error",
+            "message": f"Unexpected error during unload: {str(e)}",
+            "loader": "none"
+        }
+    finally:
+        print(json.dumps(result, ensure_ascii=False))
+        return result
+
+def load_model(model_name_to_load):
+    """
+    Attempts to load a specified model to the API server.
+    Prints the result as JSON and returns a status dict.
+    """
+    print(f"Attempting to load model: {model_name_to_load} via {LOAD_API_URL}")
+    try:
+        # Clear AWQ data before loading new model
+        if "AWQ" in model_name_to_load or "awq" in model_name_to_load.lower():
+            print("Clearing previous AWQ model data...")
+            if not clear_awq_data():
+                print("Warning: Failed to clear all AWQ data", file=sys.stderr)
+
+        response = requests.post(
+            LOAD_API_URL,
+            json={"model_name": model_name_to_load},
+            headers={"Content-Type": "application/json"},
+            timeout=TIMEOUT_SECONDS
+        )
+        response.raise_for_status()
+
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            data = {"message": response.text.strip()}
+
+        result = {
+            "model": model_name_to_load,
+            "status": "loading_success",
+            "loader": "internal",
+            "api_response": data
+        }
+
+    except requests.exceptions.ConnectionError:
+        result = {
+            "model": "API not reachable",
+            "status": "loading_error",
+            "loader": "none"
+        }
+    except requests.exceptions.Timeout:
+        result = {
+            "model": "API timeout",
+            "status": "loading_error",
+            "loader": "none"
+        }
+    except requests.exceptions.RequestException as e:
+        result = {
+            "model": f"Request error: {str(e)}",
+            "status": "loading_error",
+            "loader": "none"
+        }
+    except Exception as e:
+        result = {
+            "model": f"Unexpected error: {str(e)}",
+            "status": "loading_error",
+            "loader": "none"
+        }
+    finally:
+        print(json.dumps(result, ensure_ascii=False))
+        return result
+
+if __name__ == "__main__":
+    currently_loaded_model = get_current_loaded_model()
+    if currently_loaded_model and currently_loaded_model == MODEL_NAME_TO_LOAD:
+        print(json.dumps({
+            "model": MODEL_NAME_TO_LOAD,
+            "status": "already_loaded",
+            "message": "The desired model is already loaded. Skipping unload and load operations."
+        }, ensure_ascii=False))
+        sys.exit(0)
+    if currently_loaded_model:
+        print(f"Found {currently_loaded_model} currently loaded. Attempting to unload...")
+        unload_result = unload_model(currently_loaded_model)
+        if unload_result["status"] == "unloading_error":
+            print("Unload failed. Deciding whether to proceed with load or exit.", file=sys.stderr)
+
+    load_result = load_model(MODEL_NAME_TO_LOAD)
+
+    sys.exit(0 if load_result["status"].startswith("loading_success") else 1)
+
+=== PY assets/py/doomstead.yaml ===
+rag_doomstead:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  code_dirs:
+    php:
+      - "/var/www/html/homedog/doomstead/index.php"
+      - "/var/www/html/homedog/doomstead/Sources"
+      - "/var/www/html/homedog/doomstead/Themes/doomstead"
+    js:
+      - "/var/www/html/homedog/doomstead/Themes/doomstead/scripts"
+    css:
+      - "/var/www/html/homedog/doomstead/Themes/doomstead/css"
+
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/doomstead"
+  collection_name: "doomstead"
+  min_score: "0.25"
+
+
+=== PY assets/py/mainpage.yaml ===
+rag_doomstead:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  
+  code_dirs:
+    php:
+      - "/var/www/html/homedog/assets/php"
+      - "/var/www/html/homedog/index.php"
+    js:
+      - "/var/www/html/homedog/assets/js"
+    css:
+      - "/var/www/html/homedog/assets/css"
+
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/mainpage"
+  collection_name: "doomstead"
+  min_score: "0.25"
+
+
+=== PY assets/py/ragcode.yaml ===
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  code_dirs:
+    py:
+      - "/var/www/html/doomsteadRAG/assets/py"
+    php:
+      - "/var/www/html/doomsteadRAG/assets/php"
+    js:
+      - "/var/www/html/doomsteadRAG/assets/js"
+    css:
+      - "/var/www/html/doomsteadRAG/assets/css"
+
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragcode"
+  collection_name: "ragcode"
+  min_score: "0.25"
+  loaded_model: "Deepseek-coder-6.7B/deepseek-coder-6.7b-instruct.Q4_0.gguf"
+
+
+=== PY assets/py/ragdocs.yaml ===
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  text_dirs:
+  pdf:
+      - "/var/www/html/doomsteadRAG/assets/ragdocs/pdf"
+
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs"
+  collection_name: "ragdocs"
+  min_score: "0.25"
+  loaded_model: "solidrust_dolphin-2.8-experiment26-7b-AWQ"
+
+
+

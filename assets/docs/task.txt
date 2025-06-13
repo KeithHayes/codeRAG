@@ -1,27 +1,3 @@
+full_builder.php is not launching full_builder.py
 
-Task :
-
-Below is the output shown in the GUI, it is correct however the gpt-3.5-turbo: does not reflect the name of the model and there is no 
-reason it should.  I want the output to resemble the second results block.
-
-*** actual results *********************************************
-
-You: How does fascism use technique
-Request failed:
-
-The operation timed out.
-You: How does fascism use technique
-gpt-3.5-turbo:
-
-Fascism uses technique to achieve its goal of destroying the working class organization and holding the entire class in a state of forced disunity. It creates special armed bands to fight against the workers and smash their organizations. Fascism also aims to uproot all independent and voluntary organizations of the proletariat and demolish whatever has been achieved by the Social Democracy and trade unions.
-
-*** desired results *********************************************
-
-You: How does fascism use technique
-Request failed:
-
-The operation timed out.
-You: How does fascism use technique
-locaLLM:
-
-Fascism uses technique to achieve its goal of destroying the working class organization and holding the entire class in a state of forced disunity. It creates special armed bands to fight against the workers and smash their organizations. Fascism also aims to uproot all independent and voluntary organizations of the proletariat and demolish whatever has been achieved by the Social Democracy and trade unions.
+It appears to be a permissions issue.  the .yaml file exists and is valid

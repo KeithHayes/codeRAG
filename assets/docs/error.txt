@@ -1,0 +1,9 @@
+2025-06-13 04:47:47,639 - INFO - === Starting vector store build ===
+2025-06-13 04:47:47,639 - INFO - Using config file from config.json: doomstead.yaml
+2025-06-13 04:47:47,640 - CRITICAL - Build failed: Invalid or empty config file: doomstead.yaml
+Traceback (most recent call last):
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 434, in main
+    config = load_config()
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 428, in load_config
+    raise ValueError(f"Invalid or empty config file: {config_yaml_file}")
+ValueError: Invalid or empty config file: doomstead.yaml
