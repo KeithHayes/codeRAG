@@ -1,9 +1,27 @@
-2025-06-13 04:47:47,639 - INFO - === Starting vector store build ===
-2025-06-13 04:47:47,639 - INFO - Using config file from config.json: doomstead.yaml
-2025-06-13 04:47:47,640 - CRITICAL - Build failed: Invalid or empty config file: doomstead.yaml
+2025-06-13 12:41:35,998 - INFO - === Starting vector store build ===
+2025-06-13 12:41:35,999 - INFO - Using config file from config.json: ragcode.yaml
+2025-06-13 12:41:37,137 - INFO - === Begin Build ===
+2025-06-13 12:41:37,152 - INFO - GPU: NVIDIA GeForce RTX 3060
+2025-06-13 12:41:37,152 - INFO - CUDA: 12.6
+2025-06-13 12:41:37,152 - INFO - Memory: 12.62GB
+2025-06-13 12:41:37,152 - INFO - Loading embeddings on CUDA
+2025-06-13 12:41:39,224 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
+2025-06-13 12:41:41,849 - INFO - Verifying directories...
+2025-06-13 12:41:41,851 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
+2025-06-13 12:41:41,851 - ERROR - Directory verification failed for /var/www/html/doomsteadRAG/assets/data/ragcode: [Errno 1] Operation not permitted: '/var/www/html/doomsteadRAG/assets/data/ragcode'
+2025-06-13 12:41:41,851 - CRITICAL - Build failed: Insufficient permissions for /var/www/html/doomsteadRAG/assets/data/ragcode
 Traceback (most recent call last):
-  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 434, in main
-    config = load_config()
-  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 428, in load_config
-    raise ValueError(f"Invalid or empty config file: {config_yaml_file}")
-ValueError: Invalid or empty config file: doomstead.yaml
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 100, in _verify_directories
+    os.chmod(dir_path, 0o775)
+PermissionError: [Errno 1] Operation not permitted: '/var/www/html/doomsteadRAG/assets/data/ragcode'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 435, in main
+    rag = DoomsteadRAG(config)
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 74, in __init__
+    self._verify_directories()
+  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 109, in _verify_directories
+    raise PermissionError(f"Insufficient permissions for {dir_path}")
+PermissionError: Insufficient permissions for /var/www/html/doomsteadRAG/assets/data/ragcode

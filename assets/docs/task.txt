@@ -1,3 +1,2 @@
 full_builder.php is not launching full_builder.py
 
-It appears to be a permissions issue.  the .yaml file exists and is valid
