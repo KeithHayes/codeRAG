@@ -1,60 +1,33 @@
-2025-06-13 12:47:32,827 - INFO - === Starting vector store build ===
-2025-06-13 12:47:32,827 - INFO - Using config file from config.json: doomstead.yaml
-2025-06-13 12:47:33,971 - INFO - === Begin Build ===
-2025-06-13 12:47:33,988 - INFO - GPU: NVIDIA GeForce RTX 3060
-2025-06-13 12:47:33,988 - INFO - CUDA: 12.6
-2025-06-13 12:47:33,988 - INFO - Memory: 12.62GB
-2025-06-13 12:47:33,988 - INFO - Loading embeddings on CUDA
-2025-06-13 12:47:36,022 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
-2025-06-13 12:47:38,626 - INFO - Verifying directories...
-2025-06-13 12:47:38,628 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
-2025-06-13 12:47:38,630 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/data/doomstead
-2025-06-13 12:47:38,650 - INFO - Database initialized at /var/www/html/doomsteadRAG/assets/data/doomstead/file_metadata.db
-2025-06-13 12:47:38,650 - INFO - Using GPU for embeddings
-2025-06-13 12:47:38,651 - INFO - Cleaning up existing vector store...
-2025-06-13 12:47:38,652 - INFO - Vector store cleanup completed
-2025-06-13 12:47:38,652 - INFO - Building vector store...
-2025-06-13 12:47:38,652 - INFO - Processing PHP files...
-2025-06-13 12:47:38,776 - INFO - Processing JS files...
-2025-06-13 12:47:38,787 - INFO - Processing CSS files...
-2025-06-13 12:47:38,791 - INFO - No PDF directories configured
-2025-06-13 12:47:38,791 - INFO - No text directories configured
-2025-06-13 12:47:39,083 - INFO - Created 18039 chunks
-2025-06-13 12:47:45,324 - INFO - Processed batch 1/36
-2025-06-13 12:47:51,390 - INFO - Processed batch 2/36
-2025-06-13 12:47:56,955 - INFO - Processed batch 3/36
-2025-06-13 12:48:02,602 - INFO - Processed batch 4/36
-2025-06-13 12:48:08,403 - INFO - Processed batch 5/36
-2025-06-13 12:48:14,682 - INFO - Processed batch 6/36
-2025-06-13 12:48:20,535 - INFO - Processed batch 7/36
-2025-06-13 12:48:26,163 - INFO - Processed batch 8/36
-2025-06-13 12:48:32,241 - INFO - Processed batch 9/36
-2025-06-13 12:48:38,881 - INFO - Processed batch 10/36
-2025-06-13 12:48:45,328 - INFO - Processed batch 11/36
-2025-06-13 12:48:51,300 - INFO - Processed batch 12/36
-2025-06-13 12:48:57,563 - INFO - Processed batch 13/36
-2025-06-13 12:49:03,356 - INFO - Processed batch 14/36
-2025-06-13 12:49:09,857 - INFO - Processed batch 15/36
-2025-06-13 12:49:15,925 - INFO - Processed batch 16/36
-2025-06-13 12:49:22,164 - INFO - Processed batch 17/36
-2025-06-13 12:49:29,704 - INFO - Processed batch 18/36
-2025-06-13 12:49:37,876 - INFO - Processed batch 19/36
-2025-06-13 12:49:46,236 - INFO - Processed batch 20/36
-2025-06-13 12:49:54,489 - INFO - Processed batch 21/36
-2025-06-13 12:50:00,708 - INFO - Processed batch 22/36
-2025-06-13 12:50:06,143 - INFO - Processed batch 23/36
-2025-06-13 12:50:12,022 - INFO - Processed batch 24/36
-2025-06-13 12:50:17,471 - INFO - Processed batch 25/36
-2025-06-13 12:50:23,551 - INFO - Processed batch 26/36
-2025-06-13 12:50:29,432 - INFO - Processed batch 27/36
-2025-06-13 12:50:34,920 - INFO - Processed batch 28/36
-2025-06-13 12:50:40,442 - INFO - Processed batch 29/36
-2025-06-13 12:50:46,310 - INFO - Processed batch 30/36
-2025-06-13 12:50:51,994 - INFO - Processed batch 31/36
-2025-06-13 12:50:57,562 - INFO - Processed batch 32/36
-2025-06-13 12:51:04,831 - INFO - Processed batch 33/36
-2025-06-13 12:51:12,867 - INFO - Processed batch 34/36
-2025-06-13 12:51:20,408 - INFO - Processed batch 35/36
-2025-06-13 12:51:21,987 - INFO - Processed batch 36/36
-2025-06-13 12:51:21,987 - INFO - Vector store successfully created at /var/www/html/doomsteadRAG/assets/data/doomstead/vector_db
-2025-06-13 12:51:22,000 - INFO - Build completed successfully
+2025-06-15 14:42:00,234 - INFO - === Starting vector store build ===
+2025-06-15 14:42:00,234 - INFO - Using config file from config.json: ragdocs.yaml
+2025-06-15 14:42:01,370 - INFO - === Begin Build ===
+2025-06-15 14:42:01,386 - INFO - GPU: NVIDIA GeForce RTX 3060
+2025-06-15 14:42:01,386 - INFO - CUDA: 12.6
+2025-06-15 14:42:01,386 - INFO - Memory: 12.62GB
+2025-06-15 14:42:01,386 - INFO - Loading embeddings on CUDA
+2025-06-15 14:42:03,479 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
+2025-06-15 14:42:05,764 - INFO - Verifying directories...
+2025-06-15 14:42:05,766 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
+2025-06-15 14:42:05,768 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/data/ragdocs
+2025-06-15 14:42:05,770 - INFO - Database initialized at /var/www/html/doomsteadRAG/assets/data/ragdocs/file_metadata.db
+2025-06-15 14:42:05,770 - INFO - Using GPU for embeddings
+2025-06-15 14:42:05,771 - INFO - Cleaning up existing vector store...
+2025-06-15 14:42:05,777 - INFO - Vector store cleanup completed
+2025-06-15 14:42:05,777 - INFO - Building vector store...
+2025-06-15 14:42:05,778 - INFO - No code directories configured
+2025-06-15 14:42:05,778 - INFO - Processing PDF files in /var/www/html/doomsteadRAG/assets/ragdocs/pdf
+2025-06-15 14:42:40,277 - INFO - No text directories configured
+2025-06-15 14:42:40,415 - INFO - Created 5401 chunks
+2025-06-15 14:42:44,487 - INFO - Processed batch 1/11
+2025-06-15 14:42:50,593 - INFO - Processed batch 2/11
+2025-06-15 14:42:53,961 - INFO - Processed batch 3/11
+2025-06-15 14:42:57,439 - INFO - Processed batch 4/11
+2025-06-15 14:43:00,810 - INFO - Processed batch 5/11
+2025-06-15 14:43:04,344 - INFO - Processed batch 6/11
+2025-06-15 14:43:07,823 - INFO - Processed batch 7/11
+2025-06-15 14:43:11,219 - INFO - Processed batch 8/11
+2025-06-15 14:43:14,882 - INFO - Processed batch 9/11
+2025-06-15 14:43:18,377 - INFO - Processed batch 10/11
+2025-06-15 14:43:20,833 - INFO - Processed batch 11/11
+2025-06-15 14:43:20,833 - INFO - Vector store successfully created at /var/www/html/doomsteadRAG/assets/data/ragdocs/vector_db
+2025-06-15 14:43:20,840 - INFO - Build completed successfully
