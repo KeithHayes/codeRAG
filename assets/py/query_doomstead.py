@@ -69,7 +69,7 @@ class VectorSearch:
             else:
                 docs = self.vectordb.similarity_search_with_relevance_scores(query, k=k*2)  # Get more results
             
-            min_score = 0.2  # Lower threshold for code searches
+            min_score = 0.1  # Lower threshold for better recall
             
             results = []
             seen_sources = set()
@@ -85,7 +85,7 @@ class VectorSearch:
                             continue
                         seen_sources.add(source)
                         
-                        # Boost scores for exact function matches
+                        # Boost scores for exact matches
                         if '()' in query and f"function {func_name}(" in doc.page_content:
                             score_float = 1.0  # Max score for exact match
                             
