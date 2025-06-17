@@ -1,0 +1,22 @@
+What is Peak Oil?
+
+Peak oil refers to the point in time when the maximum rate of global crude oil extraction is reached. After this peak, oil production is expected to enter an irreversible decline. This concept is based on the idea that oil is a finite resource, and once extraction surpasses a certain point, production will naturally wane due to decreased reserves and increased challenges in extracting the remaining resources.
+Key Aspects and Related Concepts:
+
+    Hubbert's Peak Theory: Introduced by geologist M. King Hubbert in 1956, this theory initially predicted that U.S. oil production would follow a bell-shaped curve and peak between 1965 and 1971, which proved to be accurate for conventional oil at the time. He also made predictions for global peak oil, though these were revised over time due to new discoveries and technological advancements like fracking.
+    Oil Depletion vs. Economic Viability: While petroleum reserves are finite, the core issue of peak oil is often tied to the economic viability of extraction at current prices, rather than a complete exhaustion of reserves.
+    Peak Oil Demand: More recently, the concept of "peak oil demand" has gained prominence. This theory suggests that global oil demand will decline before supply issues become critical, largely driven by efforts to address climate change, the proliferation of electric vehicles, and the development of alternative energy sources. Organizations like the International Energy Agency (IEA) predict peak oil demand before 2030, while others suggest it may be later.
+    Economic Implications: The economic consequences of peak oil are significant. As a key input across many sectors, a decline in oil production could lead to price volatility, supply chain disruptions, increased extraction costs, and broader macroeconomic challenges. It may also ignite geopolitical tensions as countries compete for dwindling reserves.
+    Energy Transition: Peak oil highlights the imperative for a global energy transition towards renewable sources. It emphasizes the need for energy efficiency improvements, green taxation, and funding for innovative renewable technologies to ensure continued energy availability and reduce market volatility.
+    Technological Impact: Advances in extraction technologies, such as fracking, have significantly altered peak oil predictions by making previously inaccessible reserves economically viable. This has led to shifts in production, for instance, enabling the U.S. to surpass its 1970s peak oil production.
+
+Diverging Perspectives:
+
+    There are varying views on when global oil production will peak, ranging from some believing it has already passed to others suggesting it is still decades away (e.g., 2028-2050 forecasts).
+    Some analysts argue that technological advancements and market dynamics will lead to an "undulating plateau" rather than a sharp decline, with increasing production from unconventional sources.
+
+Test Data:
+
+There is an elephant named Fred in the room.
+
+

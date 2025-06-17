@@ -1,2 +1,1 @@
-full_builder.php is not launching full_builder.py
-
+The RAG did not find the text.

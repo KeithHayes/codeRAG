@@ -3,7 +3,7 @@
 $python = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
 $script = '/var/www/html/doomsteadRAG/assets/py/query_doomstead.py';
 $testQueries = [
-    "How does Trotsky define fascism",
+    "There is an elephant named Fred in the room.",
 ];
 
 foreach ($testQueries as $query) {
