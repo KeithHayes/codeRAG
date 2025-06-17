@@ -304,7 +304,7 @@ class DoomsteadRAG:
                 
             logger.info(f"Processing text files in {abs_path}")
             try:
-                # Try with simple text loader first
+                # Use simple text loader for all .txt files
                 for file in abs_path.glob("**/*.txt"):
                     try:
                         with open(file, 'r', encoding='utf-8') as f:
@@ -316,7 +316,7 @@ class DoomsteadRAG:
                                     'file_type': 'text'
                                 }
                             ))
-                            logger.info(f"Loaded text file: {file}")
+                            logger.info(f"Successfully loaded text file: {file}")
                     except UnicodeDecodeError:
                         try:
                             with open(file, 'r', encoding='latin-1') as f:

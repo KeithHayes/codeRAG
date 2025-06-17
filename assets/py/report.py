@@ -84,6 +84,10 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'ragdocs.yaml')
     ]
 
+    txt_files = [
+        os.path.join(base_path, 'assets', 'ragdocs', 'txt', 'peakoiltext2.txt'),
+    ]
+
     # Report file path
     report_file = os.path.join(base_path, 'assets', 'logs', 'report.txt')
 
@@ -136,6 +140,14 @@ def create_report():
                 if os.path.exists(py_file):
                     with open(py_file, 'r', encoding='utf-8') as f:
                         report.write(f"=== PY assets/py/{os.path.basename(py_file)} ===\n")
+                        report.write(f.read())
+                        report.write("\n\n")
+
+            # Python section
+            for txt_file in txt_files:
+                if os.path.exists(txt_file):
+                    with open(txt_file, 'r', encoding='utf-8') as f:
+                        report.write(f"=== PY assets/ragdocs/txt/{os.path.basename(py_file)} ===\n")
                         report.write(f.read())
                         report.write("\n\n")
 

@@ -11,6 +11,6 @@ doomsteadRAG:
 
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs"
   collection_name: "ragdocs"
-  min_score: "0.25"
+  min_score: "0.1"
   loaded_model: "solidrust_dolphin-2.8-experiment26-7b-AWQ"
 
