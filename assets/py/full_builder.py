@@ -326,11 +326,15 @@ class DoomsteadRAG:
                     # If unstructured not available, use simple text loader
                     logger.info("unstructured package not available, using simple text loader")
                     for file in abs_path.glob("**/*.txt"):
-                        with open(file, 'r', encoding='utf-8') as f:
-                            documents.append(Document(
-                                page_content=f.read(),
-                                metadata={'source': str(file)}
-                            ))
+                        try:
+                            with open(file, 'r', encoding='utf-8') as f:
+                                documents.append(Document(
+                                    page_content=f.read(),
+                                    metadata={'source': str(file)}
+                                ))
+                        except Exception as e:
+                            logger.error(f"Error loading text file {file}: {str(e)}")
+                            continue
             except Exception as e:
                 logger.error(f"Error loading text files from {abs_path}: {str(e)}")
                 
@@ -393,6 +397,14 @@ class DoomsteadRAG:
                 )
             )
             
+            # Check if collection exists first
+            try:
+                existing_collection = client.get_collection(f"{self.filesetconfig}_rag")
+                client.delete_collection(f"{self.filesetconfig}_rag")
+                logger.info("Deleted existing collection")
+            except Exception as e:
+                logger.info("No existing collection found, creating new one")
+
             collection = client.create_collection(
                 name=f"{self.filesetconfig}_rag",
                 metadata={"hnsw:space": "cosine"}
