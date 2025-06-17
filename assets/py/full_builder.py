@@ -304,17 +304,16 @@ class DoomsteadRAG:
             logger.info(f"Processing text files in {abs_path}")
             loader = DirectoryLoader(
                 str(abs_path),
-                glob="**/*.*",
+                glob="**/*.txt",  # Focus on TXT files
                 loader_kwargs={'autodetect_encoding': True}
             )
             
             try:
                 text_docs = loader.load()
                 for doc in text_docs:
-                    if any(doc.metadata['source'].endswith(ext) for ext in self._get_extensions('text')):
-                        file_path = doc.metadata['source']
-                        self._update_file_metadata(file_path)
-                        documents.append(doc)
+                    file_path = doc.metadata['source']
+                    self._update_file_metadata(file_path)
+                    documents.append(doc)
             except Exception as e:
                 logger.error(f"Error loading text files from {abs_path}: {str(e)}")
                 

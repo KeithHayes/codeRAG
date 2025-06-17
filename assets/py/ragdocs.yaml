@@ -4,6 +4,8 @@ doomsteadRAG:
   chunk_overlap: 150
   
   text_dirs:
+    - "/var/www/html/doomsteadRAG/assets/ragdocs/txt"
+    
   pdf:
       - "/var/www/html/doomsteadRAG/assets/ragdocs/pdf"
 
