@@ -302,18 +302,35 @@ class DoomsteadRAG:
                 continue
                 
             logger.info(f"Processing text files in {abs_path}")
-            loader = DirectoryLoader(
-                str(abs_path),
-                glob="**/*.txt",  # Focus on TXT files
-                loader_kwargs={'autodetect_encoding': True}
-            )
-            
             try:
-                text_docs = loader.load()
-                for doc in text_docs:
-                    file_path = doc.metadata['source']
-                    self._update_file_metadata(file_path)
-                    documents.append(doc)
+                # First try with unstructured if available
+                try:
+                    from unstructured.partition.text import partition_text
+                    for file in abs_path.glob("**/*.txt"):
+                        try:
+                            elements = partition_text(filename=str(file))
+                            text = "\n\n".join([str(el) for el in elements])
+                            documents.append(Document(
+                                page_content=text,
+                                metadata={'source': str(file)}
+                            ))
+                        except Exception as e:
+                            logger.warning(f"Failed to process {file} with unstructured: {e}")
+                            # Fallback to simple text loader
+                            with open(file, 'r', encoding='utf-8') as f:
+                                documents.append(Document(
+                                    page_content=f.read(),
+                                    metadata={'source': str(file)}
+                                ))
+                except ImportError:
+                    # If unstructured not available, use simple text loader
+                    logger.info("unstructured package not available, using simple text loader")
+                    for file in abs_path.glob("**/*.txt"):
+                        with open(file, 'r', encoding='utf-8') as f:
+                            documents.append(Document(
+                                page_content=f.read(),
+                                metadata={'source': str(file)}
+                            ))
             except Exception as e:
                 logger.error(f"Error loading text files from {abs_path}: {str(e)}")
                 
