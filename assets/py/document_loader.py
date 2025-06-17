@@ -5,7 +5,7 @@ def load_code_documents(root_dir):
     docs = []
     for dirpath, _, filenames in os.walk(root_dir):
         for file in filenames:
-            if file.endswith(('.py', '.js', '.php', '.css', '.html')):
+            if file.endswith(('.py', '.js', '.php', '.css', '.html', '.txt')):
                 path = os.path.join(dirpath, file)
                 try:
                     loader = TextLoader(path)
