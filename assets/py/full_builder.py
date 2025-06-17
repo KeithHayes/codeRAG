@@ -288,6 +288,7 @@ class DoomsteadRAG:
                 
         return documents
 
+
     def _load_text_documents(self) -> List[Document]:
         documents = []
         
@@ -303,38 +304,35 @@ class DoomsteadRAG:
                 
             logger.info(f"Processing text files in {abs_path}")
             try:
-                # First try with unstructured if available
-                try:
-                    from unstructured.partition.text import partition_text
-                    for file in abs_path.glob("**/*.txt"):
-                        try:
-                            elements = partition_text(filename=str(file))
-                            text = "\n\n".join([str(el) for el in elements])
+                # Try with simple text loader first
+                for file in abs_path.glob("**/*.txt"):
+                    try:
+                        with open(file, 'r', encoding='utf-8') as f:
+                            content = f.read()
                             documents.append(Document(
-                                page_content=text,
-                                metadata={'source': str(file)}
+                                page_content=content,
+                                metadata={
+                                    'source': str(file),
+                                    'file_type': 'text'
+                                }
                             ))
-                        except Exception as e:
-                            logger.warning(f"Failed to process {file} with unstructured: {e}")
-                            # Fallback to simple text loader
-                            with open(file, 'r', encoding='utf-8') as f:
-                                documents.append(Document(
-                                    page_content=f.read(),
-                                    metadata={'source': str(file)}
-                                ))
-                except ImportError:
-                    # If unstructured not available, use simple text loader
-                    logger.info("unstructured package not available, using simple text loader")
-                    for file in abs_path.glob("**/*.txt"):
+                            logger.info(f"Loaded text file: {file}")
+                    except UnicodeDecodeError:
                         try:
-                            with open(file, 'r', encoding='utf-8') as f:
+                            with open(file, 'r', encoding='latin-1') as f:
+                                content = f.read()
                                 documents.append(Document(
-                                    page_content=f.read(),
-                                    metadata={'source': str(file)}
+                                    page_content=content,
+                                    metadata={
+                                        'source': str(file),
+                                        'file_type': 'text'
+                                    }
                                 ))
+                                logger.info(f"Loaded text file with fallback encoding: {file}")
                         except Exception as e:
-                            logger.error(f"Error loading text file {file}: {str(e)}")
-                            continue
+                            logger.error(f"Failed to read {file} with fallback encoding: {e}")
+                    except Exception as e:
+                        logger.error(f"Error reading text file {file}: {str(e)}")
             except Exception as e:
                 logger.error(f"Error loading text files from {abs_path}: {str(e)}")
                 
