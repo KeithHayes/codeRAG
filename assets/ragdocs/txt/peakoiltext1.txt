@@ -1,0 +1,67 @@
+Key Data Points from "Peak Oil Production in the US: Implications for the Oil Market" 1
+1. US Oil Production Trends
+
+    Current Production (2023–2024):
+
+        2023 average: 12.9 million barrels per day (b/d) (breaking the 2019 record of 12.3 million b/d).
+
+        2024 average: 13.2 million b/d (surpassing 2023 levels).
+
+    Historical Peaks:
+
+        1970: Peaked at 9.6 million b/d, then declined to 5.0 million b/d by 2008.
+
+        Shale revolution (2009 onward) reversed the decline, with tight oil (LTO) driving growth.
+
+    2027 Projection: Expected to peak at ~14 million b/d, then decline to 13.8 million b/d by 2030 and 11.9 million b/d by 2040.
+
+2. Global Context
+
+    Top Producers (2023):
+
+        US, Russia, and Saudi Arabia accounted for 42% (33 million b/d) of global production.
+
+        Next-largest producers (Canada, Iraq, China) combined: 13.4 million b/d (slightly more than the US alone).
+
+    Saudi Arabia and Russia: Only countries with potential to match US output, but market prices may not incentivize increased production.
+
+3. Permian Basin Dominance
+
+    2024 Share: 48% of total US crude production (all growth since 2020).
+
+    Technology Impact: AI, automated drilling, and hydraulic fracturing improved well productivity despite lower rig counts.
+
+    Breakeven Prices: $61–$62/barrel (including debt/dividends).
+
+4. Demand and Market Dynamics
+
+    Demand Growth: Peaked in the Global North; EV adoption and fuel efficiency curb oil demand.
+
+    Price Sensitivity: EIA predicts prices below $60/barrel in 2026, potentially forcing high-cost US producers to reduce drilling.
+
+    OPEC+ Cuts: Saudi Arabia reduced output by 900,000 b/d in 2023; Russia cut 500,000 b/d (sanctions/Ukraine conflict).
+
+5. Geopolitical and Economic Implications
+
+    US as Swing Producer: Replaced Saudi Arabia in responding to market signals, but financial/geological constraints limit responsiveness.
+
+    Volatility Risks: Declining US output could increase price volatility, disproportionately affecting oil-importing Global South nations.
+
+    EV Competition: Low oil prices could undermine EV competitiveness.
+
+6. Long-Term Forecasts
+
+    IEA Scenario: Global oil demand to peak by 2030, then decline 2% by 2035.
+
+    EIA Reference Case: No demand peak; 0.7% annual growth through 2050.
+
+Structured for RAG Use
+
+    Metadata: Source: ORF Online (2025-04-23), Authors: Lydia Powell, Akhilesh Sati, Vinod Kumar Tomar.
+
+    Keywords: Peak oil, US shale, Permian Basin, OPEC+, demand volatility, breakeven prices.
+
+    Citations: Embed as :cite[1] for attribution.
+
+
+

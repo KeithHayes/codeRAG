@@ -1,33 +1,35 @@
-2025-06-15 14:42:00,234 - INFO - === Starting vector store build ===
-2025-06-15 14:42:00,234 - INFO - Using config file from config.json: ragdocs.yaml
-2025-06-15 14:42:01,370 - INFO - === Begin Build ===
-2025-06-15 14:42:01,386 - INFO - GPU: NVIDIA GeForce RTX 3060
-2025-06-15 14:42:01,386 - INFO - CUDA: 12.6
-2025-06-15 14:42:01,386 - INFO - Memory: 12.62GB
-2025-06-15 14:42:01,386 - INFO - Loading embeddings on CUDA
-2025-06-15 14:42:03,479 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
-2025-06-15 14:42:05,764 - INFO - Verifying directories...
-2025-06-15 14:42:05,766 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
-2025-06-15 14:42:05,768 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/data/ragdocs
-2025-06-15 14:42:05,770 - INFO - Database initialized at /var/www/html/doomsteadRAG/assets/data/ragdocs/file_metadata.db
-2025-06-15 14:42:05,770 - INFO - Using GPU for embeddings
-2025-06-15 14:42:05,771 - INFO - Cleaning up existing vector store...
-2025-06-15 14:42:05,777 - INFO - Vector store cleanup completed
-2025-06-15 14:42:05,777 - INFO - Building vector store...
-2025-06-15 14:42:05,778 - INFO - No code directories configured
-2025-06-15 14:42:05,778 - INFO - Processing PDF files in /var/www/html/doomsteadRAG/assets/ragdocs/pdf
-2025-06-15 14:42:40,277 - INFO - No text directories configured
-2025-06-15 14:42:40,415 - INFO - Created 5401 chunks
-2025-06-15 14:42:44,487 - INFO - Processed batch 1/11
-2025-06-15 14:42:50,593 - INFO - Processed batch 2/11
-2025-06-15 14:42:53,961 - INFO - Processed batch 3/11
-2025-06-15 14:42:57,439 - INFO - Processed batch 4/11
-2025-06-15 14:43:00,810 - INFO - Processed batch 5/11
-2025-06-15 14:43:04,344 - INFO - Processed batch 6/11
-2025-06-15 14:43:07,823 - INFO - Processed batch 7/11
-2025-06-15 14:43:11,219 - INFO - Processed batch 8/11
-2025-06-15 14:43:14,882 - INFO - Processed batch 9/11
-2025-06-15 14:43:18,377 - INFO - Processed batch 10/11
-2025-06-15 14:43:20,833 - INFO - Processed batch 11/11
-2025-06-15 14:43:20,833 - INFO - Vector store successfully created at /var/www/html/doomsteadRAG/assets/data/ragdocs/vector_db
-2025-06-15 14:43:20,840 - INFO - Build completed successfully
+2025-06-17 00:38:36,538 - INFO - === Starting vector store build ===
+2025-06-17 00:38:36,538 - INFO - Using config file from config.json: ragdocs.yaml
+2025-06-17 00:38:37,700 - INFO - === Begin Build ===
+2025-06-17 00:38:37,715 - INFO - GPU: NVIDIA GeForce RTX 3060
+2025-06-17 00:38:37,716 - INFO - CUDA: 12.6
+2025-06-17 00:38:37,716 - INFO - Memory: 12.62GB
+2025-06-17 00:38:37,716 - INFO - Loading embeddings on CUDA
+2025-06-17 00:38:39,871 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
+2025-06-17 00:38:43,833 - INFO - Verifying directories...
+2025-06-17 00:38:43,835 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
+2025-06-17 00:38:43,836 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/data/ragdocs
+2025-06-17 00:38:43,838 - INFO - Database initialized at /var/www/html/doomsteadRAG/assets/data/ragdocs/file_metadata.db
+2025-06-17 00:38:43,838 - INFO - Using GPU for embeddings
+2025-06-17 00:38:43,840 - INFO - Cleaning up existing vector store...
+2025-06-17 00:38:43,847 - INFO - Vector store cleanup completed
+2025-06-17 00:38:43,847 - INFO - Building vector store...
+2025-06-17 00:38:43,847 - INFO - No code directories configured
+2025-06-17 00:38:43,848 - INFO - Processing PDF files in /var/www/html/doomsteadRAG/assets/ragdocs/pdf
+2025-06-17 00:38:50,922 - WARNING - Ignoring wrong pointing object 8 0 (offset 0)
+2025-06-17 00:38:50,922 - WARNING - Ignoring wrong pointing object 10 0 (offset 0)
+2025-06-17 00:38:50,922 - WARNING - Ignoring wrong pointing object 12 0 (offset 0)
+2025-06-17 00:38:52,510 - WARNING - Ignoring wrong pointing object 0 0 (offset 0)
+2025-06-17 00:39:19,160 - INFO - Processing text files in /var/www/html/doomsteadRAG/assets/ragdocs/txt
+2025-06-17 00:39:19,160 - INFO - Successfully loaded text file: /var/www/html/doomsteadRAG/assets/ragdocs/txt/peakoiltext1.txt
+2025-06-17 00:39:19,160 - INFO - Successfully loaded text file: /var/www/html/doomsteadRAG/assets/ragdocs/txt/peakoiltext2.txt
+2025-06-17 00:39:19,371 - INFO - Created 3008 chunks
+2025-06-17 00:39:19,627 - INFO - No existing collection found, creating new one
+2025-06-17 00:39:26,435 - INFO - Processed batch 1/6
+2025-06-17 00:39:32,954 - INFO - Processed batch 2/6
+2025-06-17 00:39:40,351 - INFO - Processed batch 3/6
+2025-06-17 00:39:47,265 - INFO - Processed batch 4/6
+2025-06-17 00:39:53,704 - INFO - Processed batch 5/6
+2025-06-17 00:39:59,503 - INFO - Processed batch 6/6
+2025-06-17 00:39:59,503 - INFO - Vector store successfully created at /var/www/html/doomsteadRAG/assets/data/ragdocs/vector_db
+2025-06-17 00:39:59,511 - INFO - Build completed successfully

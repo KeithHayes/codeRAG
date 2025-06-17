@@ -1,27 +1,41 @@
-2025-06-13 12:41:35,998 - INFO - === Starting vector store build ===
-2025-06-13 12:41:35,999 - INFO - Using config file from config.json: ragcode.yaml
-2025-06-13 12:41:37,137 - INFO - === Begin Build ===
-2025-06-13 12:41:37,152 - INFO - GPU: NVIDIA GeForce RTX 3060
-2025-06-13 12:41:37,152 - INFO - CUDA: 12.6
-2025-06-13 12:41:37,152 - INFO - Memory: 12.62GB
-2025-06-13 12:41:37,152 - INFO - Loading embeddings on CUDA
-2025-06-13 12:41:39,224 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
-2025-06-13 12:41:41,849 - INFO - Verifying directories...
-2025-06-13 12:41:41,851 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
-2025-06-13 12:41:41,851 - ERROR - Directory verification failed for /var/www/html/doomsteadRAG/assets/data/ragcode: [Errno 1] Operation not permitted: '/var/www/html/doomsteadRAG/assets/data/ragcode'
-2025-06-13 12:41:41,851 - CRITICAL - Build failed: Insufficient permissions for /var/www/html/doomsteadRAG/assets/data/ragcode
-Traceback (most recent call last):
-  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 100, in _verify_directories
-    os.chmod(dir_path, 0o775)
-PermissionError: [Errno 1] Operation not permitted: '/var/www/html/doomsteadRAG/assets/data/ragcode'
+2025-06-16 23:52:49,663 - INFO - === Starting vector store build ===
+2025-06-16 23:52:49,663 - INFO - Using config file from config.json: ragdocs.yaml
+2025-06-16 23:52:50,821 - INFO - === Begin Build ===
+2025-06-16 23:52:50,836 - INFO - GPU: NVIDIA GeForce RTX 3060
+2025-06-16 23:52:50,837 - INFO - CUDA: 12.6
+2025-06-16 23:52:50,837 - INFO - Memory: 12.62GB
+2025-06-16 23:52:50,837 - INFO - Loading embeddings on CUDA
+2025-06-16 23:52:53,115 - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-mpnet-base-v2
+2025-06-16 23:52:55,703 - INFO - Verifying directories...
+2025-06-16 23:52:55,705 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/logs
+2025-06-16 23:52:55,707 - INFO - Verified directory: /var/www/html/doomsteadRAG/assets/data/ragdocs
+2025-06-16 23:52:55,709 - INFO - Database initialized at /var/www/html/doomsteadRAG/assets/data/ragdocs/file_metadata.db
+2025-06-16 23:52:55,709 - INFO - Using GPU for embeddings
+2025-06-16 23:52:55,710 - INFO - Cleaning up existing vector store...
+2025-06-16 23:52:55,717 - INFO - Vector store cleanup completed
+2025-06-16 23:52:55,717 - INFO - Building vector store...
+2025-06-16 23:52:55,717 - INFO - No code directories configured
+2025-06-16 23:52:55,717 - INFO - Processing PDF files in /var/www/html/doomsteadRAG/assets/ragdocs/pdf
+2025-06-16 23:53:02,387 - WARNING - Ignoring wrong pointing object 8 0 (offset 0)
+2025-06-16 23:53:02,388 - WARNING - Ignoring wrong pointing object 10 0 (offset 0)
+2025-06-16 23:53:02,388 - WARNING - Ignoring wrong pointing object 12 0 (offset 0)
+2025-06-16 23:53:03,938 - WARNING - Ignoring wrong pointing object 0 0 (offset 0)
+2025-06-16 23:53:29,945 - INFO - Processing text files in /var/www/html/doomsteadRAG/assets/ragdocs/txt
+2025-06-16 23:53:29,945 - INFO - Successfully loaded text file: /var/www/html/doomsteadRAG/assets/ragdocs/txt/peakoiltext1.txt
+2025-06-16 23:53:29,945 - INFO - Successfully loaded text file: /var/www/html/doomsteadRAG/assets/ragdocs/txt/peakoiltext2.txt
+2025-06-16 23:53:30,160 - INFO - Created 3008 chunks
+2025-06-16 23:53:30,411 - INFO - No existing collection found, creating new one
+2025-06-16 23:53:37,190 - INFO - Processed batch 1/6
+2025-06-16 23:53:43,692 - INFO - Processed batch 2/6
+2025-06-16 23:53:51,071 - INFO - Processed batch 3/6
+2025-06-16 23:53:57,993 - INFO - Processed batch 4/6
+2025-06-16 23:54:04,409 - INFO - Processed batch 5/6
+2025-06-16 23:54:10,195 - INFO - Processed batch 6/6
+2025-06-16 23:54:10,195 - INFO - Vector store successfully created at /var/www/html/doomsteadRAG/assets/data/ragdocs/vector_db
+2025-06-16 23:54:10,201 - INFO - Build completed successfully
 
-During handling of the above exception, another exception occurred:
 
-Traceback (most recent call last):
-  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 435, in main
-    rag = DoomsteadRAG(config)
-  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 74, in __init__
-    self._verify_directories()
-  File "/var/www/html/doomsteadRAG/assets/py/full_builder.py", line 109, in _verify_directories
-    raise PermissionError(f"Insufficient permissions for {dir_path}")
-PermissionError: Insufficient permissions for /var/www/html/doomsteadRAG/assets/data/ragcode
+You: Is There is an elephant named Fred in the room.
+locaLLM:
+
+No, there is no mention of an elephant named Fred in the provided context.
