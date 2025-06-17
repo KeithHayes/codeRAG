@@ -77,6 +77,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'query_doomstead.py'),
         os.path.join(base_path, 'assets', 'py', 'model_reader.py'),
         os.path.join(base_path, 'assets', 'py', 'model_loader.py'),
+        os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'doomstead.yaml'),
         os.path.join(base_path, 'assets', 'py', 'mainpage.yaml'),
         os.path.join(base_path, 'assets', 'py', 'ragcode.yaml'),
