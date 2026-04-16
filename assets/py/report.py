@@ -32,15 +32,16 @@ def create_report():
     # Paths to include in the report
     boilerplate_files = [
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'error.txt'),
+        #os.path.join(base_path, 'assets', 'docs', 'error.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'requirements.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
+        #os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'README.md'),
+        os.path.join(base_path, 'index.php'),
     ]
 
     css_files = [
-        #os.path.join(base_path, 'assets', 'css', 'rag.css'),
-        #os.path.join(base_path, 'assets', 'css', 'toolbar.css')
+        os.path.join(base_path, 'assets', 'css', 'rag.css'),
+        os.path.join(base_path, 'assets', 'css', 'toolbar.css')
     ]
 
     log_files = [
@@ -52,14 +53,14 @@ def create_report():
     js_files = [
         os.path.join(base_path, 'assets', 'js', 'rag.js'),
         os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
-        #os.path.join(base_path, 'assets', 'js', 'build_modal.js')
+        os.path.join(base_path, 'assets', 'js', 'build_modal.js')
     ]
 
     php_files = [
         os.path.join(base_path, 'assets', 'php', 'rag.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
-        #os.path.join(base_path, 'assets', 'php', 'incremental_builder.php'),
+        os.path.join(base_path, 'assets', 'php', 'incremental_builder.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
         os.path.join(base_path, 'assets', 'php', 'load_server.php'),
         os.path.join(base_path, 'assets', 'php', 'model_api.php'),
@@ -70,7 +71,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'chunker.py'),
         os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'full_builder.py'),
-        #os.path.join(base_path, 'assets', 'py', 'incremental_builder.py'),
+        os.path.join(base_path, 'assets', 'py', 'incremental_builder.py'),
         os.path.join(base_path, 'assets', 'py', 'listfiles.py'),
         os.path.join(base_path, 'assets', 'py', 'load_server.py'),
         os.path.join(base_path, 'assets', 'py', 'logger.py'),
