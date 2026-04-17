@@ -1,10 +1,8 @@
 document.addEventListener("DOMContentLoaded", function () {
-    // Elements
     const sendBtn = document.getElementById("sendButton")
     const promptInput = document.getElementById("userInput")
     const chatbox = document.getElementById("chatbox")
 
-    // Formatting functions
     function escapeHTML(str) {
         const div = document.createElement('div')
         div.textContent = str
@@ -19,7 +17,6 @@ document.addEventListener("DOMContentLoaded", function () {
             .replace(/\n/g, '<br>')
     }
 
-    // Message display
     function addMessage(text, sender = "user") {
         const msg = document.createElement("div")
         msg.className = `message ${sender}`
@@ -27,22 +24,14 @@ document.addEventListener("DOMContentLoaded", function () {
         if (sender === "user") {
             msg.innerHTML = `<strong>You:</strong> ${formatMessage(text)}`
         } else {
-            const separatorIdx = text.indexOf(':')
-            const prefix = separatorIdx > 0 
-                ? `<strong>${text.substring(0, separatorIdx)}:</strong> `
-                : ''
-            const content = separatorIdx > 0 
-                ? text.substring(separatorIdx + 1) 
-                : text
-                
-            msg.innerHTML = prefix + `<p>${formatMessage(content)}</p>`
+            const prefix = '<strong>Assistant:</strong> '
+            msg.innerHTML = prefix + `<p>${formatMessage(text)}</p>`
         }
         
         chatbox.appendChild(msg)
         chatbox.scrollTop = chatbox.scrollHeight
     }
 
-    // API communication
     async function sendPrompt() {
         const prompt = promptInput.value.trim()
         if (!prompt) return
@@ -57,12 +46,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: new URLSearchParams({ message: prompt }),
-                signal: AbortSignal.timeout(360000) // 360 second timeout
+                signal: AbortSignal.timeout(120000)
             })
             
             const data = await res.json()
             if (data.response) {
-                addMessage(`locaLLM: ${data.response}`, "bot")
+                addMessage(data.response, "bot")
             } else if (data.error) {
                 addMessage(`Error: ${data.error}`, "bot")
             }
@@ -75,59 +64,55 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Model status check
-    async function updateModelStatus() {
+    async function loadModelFromConfig() {
+        if (window.updatestatus) {
+            window.updatestatus("Loading model from config...")
+        }
+        
         try {
-            const res = await fetch("assets/php/rag.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "message=status_check"
-            })
+            const res = await fetch("assets/php/auto_load_model.php")
+            const data = await res.json()
             
-            let data = await res.json()
-
-            if (data.status === "loading") {
-                window.updatestatus('Server for model not found.  Load server.')
-            }
-            
-            if (data.status === "ready") {
+            if (data.success && data.status === "loaded") {
+                if (window.updatestatus) {
+                    window.updatestatus(`Model ready: ${data.model}`)
+                }
+                // Enable chat
                 promptInput.disabled = false
                 sendBtn.disabled = false
                 promptInput.focus()
-                
-                const response = await fetch(`assets/php/model_api.php?action=check`)
-                data = await response.json()
-                if (data.success) {
-                    if (data.model === 'None') {
-                        window.updatestatus('The server does not have a model loaded.')
-                    } else {
-                        console.log(`${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-                        const choplength = 30
-                        if (data.model.length > choplength) {
-                            data.model = data.model.substring(0, choplength) + '...'
-                        }
-                        window.updatestatus(`Using model: ${data.model}`)
-                    }
-                }
+                return true
             } else {
-                setTimeout(updateModelStatus, 3000)
+                if (window.updatestatus) {
+                    window.updatestatus(`Failed to load model. Check Ollama.`)
+                }
+                return false
             }
         } catch (err) {
-            window.updatestatus("Model: Offline (retrying...)")
-            setTimeout(updateModelStatus, 5000)
+            console.error("Auto-load failed:", err)
+            if (window.updatestatus) {
+                window.updatestatus("Click 'Load Model' button")
+            }
+            return false
         }
     }
-
-    window.updateModelStatus = updateModelStatus
-
-    // Event listeners
-    sendBtn.addEventListener("click", sendPrompt)
-    promptInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") sendPrompt()
-    })
     
-    // Initialize
-    promptInput.disabled = true
-    sendBtn.disabled = true
-    updateModelStatus()
+    // Event listeners
+    if (sendBtn) sendBtn.addEventListener("click", sendPrompt)
+    if (promptInput) {
+        promptInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendPrompt()
+        })
+        promptInput.disabled = true
+        sendBtn.disabled = true
+    }
+    
+    // Load model from config when page loads
+    loadModelFromConfig()
 })
+
+// Make sure updatestatus is available
+window.updatestatus = window.updatestatus || function(text) {
+    const statusDiv = document.getElementById('status');
+    if (statusDiv) statusDiv.textContent = text;
+}

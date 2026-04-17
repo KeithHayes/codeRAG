@@ -1,0 +1,153 @@
+document.addEventListener("DOMContentLoaded", function () {
+    // Elements
+    const sendBtn = document.getElementById("sendButton")
+    const promptInput = document.getElementById("userInput")
+    const chatbox = document.getElementById("chatbox")
+
+    // Formatting functions
+    function escapeHTML(str) {
+        const div = document.createElement('div')
+        div.textContent = str
+        return div.innerHTML
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    }
+
+    function formatMessage(text) {
+        return escapeHTML(text)
+            .replace(/\n\n+/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+    }
+
+    // Message display
+    function addMessage(text, sender = "user") {
+        const msg = document.createElement("div")
+        msg.className = `message ${sender}`
+        
+        if (sender === "user") {
+            msg.innerHTML = `<strong>You:</strong> ${formatMessage(text)}`
+        } else {
+            // Check if the response contains a model name prefix
+            const separatorIdx = text.indexOf(':')
+            const prefix = separatorIdx > 0 && text.substring(0, separatorIdx).toLowerCase().includes('model')
+                ? `<strong>${text.substring(0, separatorIdx)}:</strong> `
+                : '<strong>Assistant:</strong> '
+            const content = separatorIdx > 0 && text.substring(0, separatorIdx).toLowerCase().includes('model')
+                ? text.substring(separatorIdx + 1)
+                : text
+                
+            msg.innerHTML = prefix + `<p>${formatMessage(content)}</p>`
+        }
+        
+        chatbox.appendChild(msg)
+        chatbox.scrollTop = chatbox.scrollHeight
+    }
+
+    // API communication
+    async function sendPrompt() {
+        const prompt = promptInput.value.trim()
+        if (!prompt) return
+        
+        addMessage(prompt, "user")
+        promptInput.value = ""
+        promptInput.disabled = true
+        sendBtn.disabled = true
+
+        try {
+            const res = await fetch("assets/php/rag.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ message: prompt }),
+                signal: AbortSignal.timeout(360000) // 360 second timeout
+            })
+            
+            const data = await res.json()
+            if (data.response) {
+                const modelInfo = data.model ? ` (${data.model})` : ''
+                addMessage(`Assistant${modelInfo}: ${data.response}`, "bot")
+            } else if (data.error) {
+                addMessage(`Error: ${data.error}`, "bot")
+            }
+        } catch (err) {
+            addMessage(`Request failed: ${err.message}`, "bot")
+        } finally {
+            promptInput.disabled = false
+            sendBtn.disabled = false
+            promptInput.focus()
+        }
+    }
+
+    // Model status check for Ollama
+    async function updateModelStatus() {
+        try {
+            // Check Ollama API status
+            const res = await fetch("assets/php/rag.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "message=status_check"
+            })
+            
+            let data = await res.json()
+
+            if (data.status === "loading") {
+                if (window.updatestatus) {
+                    window.updatestatus('Ollama service not ready. Loading...')
+                }
+            }
+            
+            if (data.status === "ready") {
+                promptInput.disabled = false
+                sendBtn.disabled = false
+                promptInput.focus()
+                
+                // Get detailed model info from Ollama
+                try {
+                    const response = await fetch(`assets/php/ollama_api.php?action=list`)
+                    const modelData = await response.json()
+                    
+                    if (modelData.success && modelData.models && modelData.models.length > 0) {
+                        const modelNames = modelData.models.map(m => m.name).join(', ')
+                        if (window.updatestatus) {
+                            window.updatestatus(`Ollama ready | Models: ${modelNames.substring(0, 50)}...`)
+                        }
+                    } else {
+                        if (window.updatestatus) {
+                            window.updatestatus('Ollama ready - no models loaded')
+                        }
+                    }
+                } catch (e) {
+                    if (window.updatestatus) {
+                        window.updatestatus('Ollama service ready')
+                    }
+                }
+            } else {
+                if (window.updatestatus) {
+                    window.updatestatus('Ollama: Waiting for service...')
+                }
+                setTimeout(updateModelStatus, 3000)
+            }
+        } catch (err) {
+            if (window.updatestatus) {
+                window.updatestatus("Ollama: Offline (retrying...)")
+            }
+            setTimeout(updateModelStatus, 5000)
+        }
+    }
+
+    // Expose functions globally
+    window.updateModelStatus = updateModelStatus
+    window.addMessage = addMessage
+
+    // Event listeners
+    if (sendBtn) sendBtn.addEventListener("click", sendPrompt)
+    if (promptInput) {
+        promptInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendPrompt()
+        })
+    }
+    
+    // Initialize
+    if (promptInput) promptInput.disabled = true
+    if (sendBtn) sendBtn.disabled = true
+    updateModelStatus()
+})

@@ -2,15 +2,15 @@ doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   chunk_size: 800
   chunk_overlap: 150
+  vector_db_type: "faiss"
   
   text_dirs:
-      - "/var/www/html/doomsteadRAG/assets/ragdocs/txt"
-
+    - "/var/www/html/doomsteadRAG/assets/ragdocs/txt"
+  
   pdf:
-      - "/var/www/html/doomsteadRAG/assets/ragdocs/pdf"
+    - "/var/www/html/doomsteadRAG/assets/ragdocs/pdf"
 
-  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs"
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs/faiss_index"
   collection_name: "ragdocs"
   min_score: "0.1"
-  loaded_model: "solidrust_dolphin-2.8-experiment26-7b-AWQ"
-
+  ollama_model: "mistral:7b"

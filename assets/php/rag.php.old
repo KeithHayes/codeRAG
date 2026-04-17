@@ -3,8 +3,8 @@
 
 class RAGSystem {
     private $ollama_url = "http://localhost:11434";
-    private $current_model = "deepseek-coder:6.7b";
-    private $model_ready = true;
+    private $current_model = 'Unknown';
+    private $model_ready = false;
     private $python_path = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
     private $current_profile = 'ragcode';
     
@@ -23,34 +23,73 @@ class RAGSystem {
     public function errorlog($message) {
         $logfile = __DIR__ . '/../logs/php_error.log';
         $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logfile, "[$timestamp] $message\n", FILE_APPEND | LOCK_EX);
+        $entry = "[$timestamp] $message\n";
+        file_put_contents($logfile, $entry, FILE_APPEND | LOCK_EX);
+    }
+    
+    public function statuslog($message) {
+        $logfile = __DIR__ . '/../logs/php_status.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $entry = "[$timestamp] $message\n";
+        file_put_contents($logfile, $entry, FILE_APPEND | LOCK_EX);
+    }
+    
+    public function is_model_ready() {
+        // Check if Ollama is running and has models
+        $output = shell_exec('curl -s http://localhost:11434/api/tags 2>/dev/null');
+        if (!$output) {
+            return ['ready' => false, 'model' => 'Ollama service not running'];
+        }
+        
+        $data = json_decode($output, true);
+        if (isset($data['models']) && count($data['models']) > 0) {
+            $this->model_ready = true;
+            $this->current_model = $data['models'][0]['name'];
+            return ['ready' => true, 'model' => $this->current_model];
+        }
+        
+        return ['ready' => false, 'model' => 'No models loaded in Ollama'];
     }
     
     public function search_vector_store($query, $k = 5) {
+        // Check if Python script exists
         $python_script = realpath(__DIR__ . '/../py/faiss_query.py');
         
+        if (!file_exists($this->python_path)) {
+            throw new Exception("Python interpreter not found at {$this->python_path}");
+        }
+        
+        if (!file_exists($python_script)) {
+            throw new Exception("FAISS query script not found at {$python_script}");
+        }
+        
+        // Build command
         $cmd = escapeshellcmd($this->python_path) . ' ' . escapeshellarg($python_script) .
                ' --profile ' . escapeshellarg($this->current_profile) .
                ' --query ' . escapeshellarg($query) .
                ' --k ' . (int)$k;
         
-        $output = shell_exec($cmd . ' 2>/dev/null');  // Suppress stderr
+        $this->statuslog("Executing FAISS search: " . $cmd);
+        $output = shell_exec($cmd . ' 2>&1');
         
         if (!$output) {
             throw new Exception("FAISS search returned no output");
         }
         
+        // Parse JSON output
         $results = json_decode($output, true);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("Failed to decode search results: " . json_last_error_msg());
+            $this->errorlog("JSON decode error: " . json_last_error_msg());
+            $this->errorlog("Raw output: " . substr($output, 0, 500));
+            throw new Exception("Failed to decode search results");
         }
         
         if (isset($results['error'])) {
             throw new Exception("Search error: " . $results['error']);
         }
         
-        return $results ?: [];
+        return $results;
     }
     
     public function build_rag_context($vector_results) {
@@ -58,38 +97,55 @@ class RAGSystem {
             return "No relevant documents found.\n\n";
         }
         
-        $context = "Relevant code context:\n\n";
+        $context = "📄 Retrieved Context:\n" . str_repeat("-", 40) . "\n\n";
         
         foreach ($vector_results as $i => $doc) {
             $source = basename($doc['metadata']['source'] ?? 'unknown');
+            $chunk = $doc['metadata']['chunk'] ?? 'N/A';
             $content = $doc['content'] ?? '';
-            $score = $doc['score'] ?? 0;
             
-            if (strlen($content) > 800) {
-                $content = substr($content, 0, 800) . "...";
+            // Truncate very long content
+            if (strlen($content) > 500) {
+                $content = substr($content, 0, 500) . "...";
             }
             
             $context .= sprintf(
-                "[%d] File: %s (relevance: %.2f)\n%s\n\n",
+                "%d. [Source: %s | Chunk: %s]\n%s\n\n",
                 $i + 1,
                 $source,
-                $score,
+                $chunk,
                 $content
             );
         }
         
+        $context .= str_repeat("-", 40) . "\n";
         return $context;
     }
     
     public function query_ollama($prompt) {
+        $status = $this->is_model_ready();
+        if (!$status['ready']) {
+            throw new Exception("Ollama not ready: " . $status['model']);
+        }
+        
+        // Prepare request for Ollama
         $data = [
             'model' => $this->current_model,
             'messages' => [
-                ['role' => 'system', 'content' => 'You are a helpful coding assistant. Answer based on the provided context. Be concise.'],
-                ['role' => 'user', 'content' => $prompt]
+                [
+                    'role' => 'system',
+                    'content' => 'You are a helpful assistant. Answer questions based on the provided context. Be concise and accurate.'
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $prompt
+                ]
             ],
             'stream' => false,
-            'options' => ['temperature' => 0.3, 'num_predict' => 500]
+            'options' => [
+                'temperature' => 0.3,
+                'num_predict' => 1000
+            ]
         ];
         
         $ch = curl_init($this->ollama_url . '/api/chat');
@@ -97,7 +153,7 @@ class RAGSystem {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 360);
         
         $response = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -111,20 +167,18 @@ class RAGSystem {
         curl_close($ch);
         
         if ($http_code !== 200) {
+            $this->errorlog("Ollama API returned HTTP $http_code: $response");
             throw new Exception("Ollama API returned error code $http_code");
         }
         
         $result = json_decode($response, true);
         
         if (!isset($result['message']['content'])) {
+            $this->errorlog("Unexpected Ollama response: " . $response);
             throw new Exception("Invalid response from Ollama");
         }
         
         return $result['message']['content'];
-    }
-    
-    public function is_model_ready() {
-        return ['ready' => $this->model_ready, 'model' => $this->current_model];
     }
     
     public function get_current_model() {
@@ -139,6 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
     try {
         $rag = new RAGSystem();
         
+        // Handle status check
         if ($_POST['message'] === 'status_check') {
             $status = $rag->is_model_ready();
             echo json_encode([
@@ -149,16 +204,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
             exit;
         }
         
+        // Process RAG query
         $query = $_POST['message'];
+        $rag->statuslog("Processing query: " . substr($query, 0, 100));
         
-        // Search vector store
+        // 1. Search vector store
         $searchResults = $rag->search_vector_store($query);
         
-        // Build context
+        // 2. Build context
         $context = $rag->build_rag_context($searchResults);
-        $prompt = "Context:\n{$context}\n\nQuestion: {$query}\n\nAnswer based on the code context above:";
+        $prompt = "Context:\n{$context}\n\nQuestion: {$query}\n\nAnswer based on the context above. If the context doesn't contain the answer, say so.";
         
-        // Query Ollama
+        // 3. Query Ollama
         $response = $rag->query_ollama($prompt);
         
         echo json_encode([
@@ -169,6 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
         
     } catch (Exception $e) {
         $rag->errorlog("RAG ERROR: " . $e->getMessage());
+        http_response_code(500);
         echo json_encode([
             'response' => 'Error: ' . $e->getMessage(),
             'model' => 'Error',
@@ -179,5 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
     exit;
 }
 
+// Default response
 header('HTTP/1.1 400 Bad Request');
 echo json_encode(['error' => 'Invalid request']);
+?>

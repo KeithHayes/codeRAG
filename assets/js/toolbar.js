@@ -28,7 +28,7 @@
 
     statusDiv.id = 'status'
     statusDiv.className = 'status'
-    statusDiv.textContent = 'Checking model status...'
+    statusDiv.textContent = 'Checking Ollama status...'
 
     statusLi.appendChild(statusDiv)
 
@@ -42,21 +42,37 @@
     bar.appendChild(buttonlist)
     loadtooltips()
 
-    const toolbarfunctions = {
-      dbuploadBTN: rebuild_vectorstore,
-      dbrefreshBTN: refresh_vectorstore,
-      homeserverBTN: load_server,
-      dogrunBTN: loadmodel,
-      sailboatBTN: checkmodel,
-      horuseyeBTN: fastapi,
-      bookBTN: book,
-      targetBTN: homepage
+    // Direct button binding - MORE RELIABLE
+    const runButton = document.querySelector('#loadmodel.dogrunBTN');
+    if (runButton) {
+      runButton.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        loadmodel();
+        return false;
+      };
     }
 
-    buttonlist.onclick = (e) => {
-      e.preventDefault()
-      toolbarfunctions[e.target.innerHTML]()
+    const checkButton = document.querySelector('#checkmodel.sailboatBTN');
+    if (checkButton) {
+      checkButton.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        checkmodel();
+        return false;
+      };
     }
+
+    const fullBuildButton = document.querySelector('#full_build.dbuploadBTN');
+    if (fullBuildButton) {
+      fullBuildButton.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        rebuild_vectorstore();
+        return false;
+      };
+    }
+
     ragcode()
   }
 
@@ -119,12 +135,14 @@
       e.preventDefault()
       const target = e.target
       if (target.tagName === 'A') {
-        dropdownfunctions[target.textContent.trim()]?.()
+        const func = dropdownfunctions[target.textContent.trim()]
+        if (func) func()
       }
     })
 
     content.appendChild(ul)
     document.body.appendChild(content)
+    
     a.addEventListener('mouseenter', () => {
       const rect = a.getBoundingClientRect()
       content.style.left = `${rect.left}px`
@@ -150,60 +168,19 @@
     return li
   }
 
-  function addtablearrow(id, className, text) {
-    const bar = document.getElementById("coderagtoolbar")
-    const list = bar.querySelector('.coderag-menu')
-    const ref = list.querySelector('#button_book')
-
-    const li = document.createElement('li')
-    li.style.float = 'right'
-    li.id = id
-    li.innerHTML = `<a id="${className}" class="${className}" href="#">${text}</a>`
-
-    ref?.insertAdjacentElement('beforebegin', li) || list.appendChild(li)
-  }
-
-  function addarrowleft() {
-    addtablearrow('button_left', 'leftBTN', 'leftBTN')
-  }
-
-  function addarrowright() {
-    addtablearrow('button_right', 'rightBTN', 'rightBTN')
-  }
-
-  function addpagescroll() {
-    const list = document.getElementById("coderagtoolbar").querySelector('.coderag-menu')
-    if (!list.querySelector('#button_up')) {
-      const ref = list.querySelector('#button_book')
-      ['down', 'up'].forEach(dir => {
-        const li = document.createElement('li')
-        li.style.float = 'right'
-        li.id = `button_${dir}`
-        li.innerHTML = `<a id="page${dir}" class="page${dir === 'up' ? 'in' : 'out'}BTN" href="#">page${dir === 'up' ? 'in' : 'out'}BTN</a>`
-        ref.insertAdjacentElement('afterend', li)
-      })
-    }
-  }
-
   function loadtooltips() {
     const tooltips = {
       fileload: 'File Set',
-      full_build: 'Rebuild Vector Store',
+      full_build: 'Rebuild Vector Store (FAISS)',
       vectordb: 'Refresh Vector Store',
-      homeserver: 'Load Server',
-      loadmodel: 'Load Model',
-      checkmodel: 'Check Model',
-      fastapi: 'Documentation',
+      homeserver: 'Check Ollama Service',
+      loadmodel: 'Load Model (Ollama)',
+      checkmodel: 'Check Model (Ollama)',
+      fastapi: 'Ollama API Docs',
     }
     for (const id in tooltips) {
-      document.getElementById(id)?.setAttribute('title', tooltips[id])
-    }
-  }
-
-  function statusColor(StatusID, shift) {
-    const el = document.getElementById(StatusID)
-    if (el) {
-      el.style.backgroundPosition = `0 ${shift}px`
+      const el = document.getElementById(id)
+      if (el) el.setAttribute('title', tooltips[id])
     }
   }
 
@@ -231,6 +208,7 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGcode")
       clearchatbox()
+      updatestatus('Switched to RAGcode profile. Click Run button to load model.')
     })
   }
 
@@ -245,6 +223,7 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Doomstead")
       clearchatbox()
+      updatestatus('Switched to Doomstead profile. Click Run button to load model.')
     })
   }
 
@@ -259,6 +238,7 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Mainpage")
       clearchatbox()
+      updatestatus('Switched to Mainpage profile. Click Run button to load model.')
     })
   }
 
@@ -273,14 +253,17 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGdocs")
       clearchatbox()
+      updatestatus('Switched to RAGdocs profile. Click Run button to load model.')
     })
   }
 
   function clearchatbox() {
-    document.getElementById("chatbox").innerHTML = ""
+    const chatbox = document.getElementById("chatbox")
+    if (chatbox) chatbox.innerHTML = ""
   }
 
   function rebuild_vectorstore() {
+    updatestatus('Building FAISS vector store...')
     const modal = new BuildModal()
     modal.startPolling()
 
@@ -290,96 +273,137 @@
         'X-Requested-With': 'XMLHttpRequest',
         'Content-Type': 'application/json'
       }
-    }).catch(() => {
-      // Ignore fetch errors completely
+    }).catch((error) => {
+      console.error('Build error:', error)
+      updatestatus('Build failed - check logs')
     })
   }
 
   function refresh_vectorstore() {
-
-  }
-
-  function test() {
-    const modal = new BuildModal()
-    modal.startPolling()
-
-    fetch('assets/php/test_query.php', {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json'
-      }
-    }).catch(() => {
-      // Ignore fetch errors completely
-    })
+    updatestatus('Refresh not implemented - use Full Build')
+    alert('Use "Full Build" to rebuild the vector store completely.')
   }
 
   function load_server() {
-    fetch('assets/php/load_server.php')
+    updatestatus('Checking Ollama service...')
+    fetch('http://localhost:11434/api/tags')
       .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok')
+        if (response.ok) {
+          updatestatus('Ollama service is running')
+          return response.json()
         }
-        return response.json()
+        throw new Error('Ollama not running')
       })
       .then(data => {
-        if (data.success) {
-          launcherPID = data.pid
-          alert('Server started successfully with PID: ' + launcherPID)
-        } else {
-          alert('Error starting server: ' + (data.error || 'Unknown error'))
-        }
+        const modelCount = data.models ? data.models.length : 0
+        alert(`Ollama is running with ${modelCount} model(s) available.\n\nTo pull a new model:\nollama pull <model-name>`)
       })
       .catch(error => {
-        alert('Error: ' + error.message)
+        alert('Ollama service is not running.\n\nStart it with:\nsudo systemctl start ollama')
+        updatestatus('Ollama not running')
       })
   }
 
-async function modelapi(action) {
+  async function getCurrentProfile() {
     try {
-      const response = await fetch(`assets/php/model_api.php?action=${action}`)
-      const data = await response.json()
-
-      if (data.success) {
-        console.log(`Model ${action}: ${data.model} (Status: ${data.status}, Loader: ${data.loader})`)
-        if (action === 'check') {
-          alert(`Model ${action}:\nModel: ${data.model}\nStatus: ${data.status}\nLoader: ${data.loader}`)
-        } else {
-           modelapi('check')
-        }
-      } else {
-        console.error(`Error in ${action}:`, data.error)
-        alert(`Error in ${action}: ${data.error}`)
-      }
-      updateModelStatus()
+      const response = await fetch('assets/data/config.json')
+      const config = await response.json()
+      return config.filesetconfig || 'ragcode'
     } catch (error) {
-      console.error(`Failed to ${action} model:`, error)
-      alert(`Failed to ${action} model - see console for details`)
+      return 'ragcode'
     }
   }
 
+  // MAIN LOAD MODEL FUNCTION - This is the Run button handler
   async function loadmodel() {
-    modelapi('load')
+    const statusDiv = document.getElementById('status');
+    const promptInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendButton');
+    
+    if (statusDiv) statusDiv.textContent = "Loading model from config...";
+    
+    try {
+      const response = await fetch('assets/php/force_reload_model.php');
+      const data = await response.json();
+      
+      if (data.success) {
+        if (statusDiv) statusDiv.textContent = `Model ready: ${data.new_model}`;
+        if (promptInput) promptInput.disabled = false;
+        if (sendBtn) sendBtn.disabled = false;
+        console.log(`✓ Model loaded: ${data.new_model}`);
+      } else {
+        if (statusDiv) statusDiv.textContent = "Failed to load model";
+        alert("Failed to load model. Check Ollama service.");
+      }
+    } catch (error) {
+      console.error("Load model error:", error);
+      if (statusDiv) statusDiv.textContent = "Error loading model";
+      alert("Error: " + error.message);
+    }
   }
 
   async function checkmodel() {
-    modelapi('check')
+    updatestatus('Checking Ollama models...')
+    
+    try {
+      const response = await fetch('assets/php/ollama_api.php?action=list')
+      const data = await response.json()
+      
+      if (data.success && data.models) {
+        if (data.models.length === 0) {
+          alert('No models found in Ollama.\n\nPull a model first:\nollama pull deepseek-coder:6.7b')
+          updatestatus('No models available')
+        } else {
+          const modelList = data.models.map(m => `${m.name} (${(m.size / 1024 / 1024 / 1024).toFixed(1)} GB)`).join('\n')
+          alert(`Available Ollama models:\n\n${modelList}\n\nTo load a model, click the Run button.`)
+          updatestatus(`${data.models.length} model(s) available`)
+        }
+      } else {
+        updatestatus('Could not fetch models')
+        alert('Error connecting to Ollama API')
+      }
+    } catch (error) {
+      console.error('Check model error:', error)
+      updatestatus('Ollama API error')
+      alert('Could not connect to Ollama. Is it running?\n\nsudo systemctl start ollama')
+    }
   }
 
   function fastapi() {
-    window.open('http://localhost:5000/docs', '_blank', 'noopener,noreferrer')
+    window.open('https://github.com/ollama/ollama/blob/main/docs/api.md', '_blank', 'noopener,noreferrer')
   }
 
   function homepage() {
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
   }
 
+  function book() {
+    updatestatus('Documentation feature coming soon')
+    alert('Documentation viewer will be implemented in future version')
+  }
+
   function updatestatus(text) {
-    statusDiv.textContent = text
+    if (statusDiv) {
+      statusDiv.textContent = text
+    }
   }
 
   window.loadtoolbar = loadtoolbar
   window.updatestatus = updatestatus
+  window.rebuild_vectorstore = rebuild_vectorstore
+  window.loadmodel = loadmodel
+  window.checkmodel = checkmodel
 })()
 
-window.loadtoolbar()
+// Initialize toolbar when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.loadtoolbar === 'function') {
+      window.loadtoolbar()
+    }
+  })
+} else {
+  if (typeof window.loadtoolbar === 'function') {
+    window.loadtoolbar()
+  }
+}

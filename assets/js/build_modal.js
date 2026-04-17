@@ -37,7 +37,7 @@ class BuildModal {
         this.modalContent.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
 
         this.title = document.createElement('h3');
-        this.title.textContent = 'Rebuilding Vector Store';
+        this.title.textContent = 'Building FAISS Vector Store';
         this.title.style.color = '#964B00';
         this.title.style.marginTop = '0';
         this.title.style.textAlign = 'center';
@@ -80,7 +80,13 @@ class BuildModal {
 
     startPolling() {
         this.pollInterval = setInterval(() => {
-            fetch('assets/php/show_log.php')
+            // Get current profile to fetch correct log
+            fetch('assets/data/config.json')
+                .then(res => res.json())
+                .then(config => {
+                    const profile = config.filesetconfig || 'ragcode';
+                    return fetch(`assets/php/show_log.php?profile=${profile}`);
+                })
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok');
                     return response.json();
@@ -130,26 +136,33 @@ class BuildModal {
             this.statusText.textContent = infoMatch[1];
         }
 
-        switch (this.currentState) {
-            case 'processing':
-                const batchMatch = line.match(/Processed batch (\d+)\/(\d+)/);
-                if (batchMatch) {
-                    const currentBatch = parseInt(batchMatch[1]);
-                    const totalBatches = parseInt(batchMatch[2]);
-                    const percent = Math.min(Math.ceil((currentBatch / totalBatches) * 100), 100);
-                    this.updateProgress(percent, `Processing batch ${currentBatch} of ${totalBatches}`);
-                }
-                
-                if (line.includes('Build completed successfully')) {
-                    this.updateProgress(100, 'Build completed successfully');
-                    this.currentState = 'complete';
-                    this.progressBar.style.backgroundColor = '#0f5e02';
-                    
-                    setTimeout(() => {
-                        this.close();
-                    }, 3000);
-                }
-                break;
+        // Parse batch progress
+        const batchMatch = line.match(/Processed batch (\d+)\/(\d+)/);
+        if (batchMatch) {
+            const currentBatch = parseInt(batchMatch[1]);
+            const totalBatches = parseInt(batchMatch[2]);
+            const percent = Math.min(Math.ceil((currentBatch / totalBatches) * 100), 100);
+            this.updateProgress(percent, `Processing batch ${currentBatch} of ${totalBatches}`);
+        }
+        
+        // Check for completion
+        if (line.includes('Build completed successfully')) {
+            this.updateProgress(100, 'Build completed successfully');
+            this.currentState = 'complete';
+            this.progressBar.style.backgroundColor = '#0f5e02';
+            
+            setTimeout(() => {
+                this.close();
+            }, 3000);
+        }
+        
+        // Check for errors
+        if (line.includes('ERROR') || line.includes('failed')) {
+            this.statusText.style.color = '#b90E0A';
+            this.updateProgress(0, 'Build failed - check logs');
+            setTimeout(() => {
+                this.close();
+            }, 5000);
         }
     }
 
@@ -168,3 +181,6 @@ class BuildModal {
         }
     }
 }
+
+// Make BuildModal available globally
+window.BuildModal = BuildModal;
