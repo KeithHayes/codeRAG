@@ -1,1 +1,0 @@
-This code was working when I had oogabooga loaden for A.I work.  I no longer am using oogabooga and want to port this project but I do not know what I did as it has been months since I looked at this code.  I do not show you all the files but can you document what all the controls are supposed to do.

@@ -12,4 +12,6 @@ Do not explain anything inside code blocks.  Only make file changes related to t
 
 All code for a revised file will be shown in a single download box, One box for each file.
 
+Do not use terminating ';' at the end of javascript lines.
+
 ******************************************************************************************************************

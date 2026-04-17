@@ -1,35 +1,161 @@
-# Doomstead RAG
-A code assistant.
+================================================================================
+                            DOOMSTEAD RAG SYSTEM
+================================================================================
 
-<img src="assets/img/bg/gui.png" alt="RAG GUI" width="800" style="margin-left: 110px;">
+A code-aware Retrieval-Augmented Generation (RAG) assistant for querying your 
+codebase. The assistant provides context-aware answers based on your actual 
+source code.
 
+================================================================================
+                                OVERVIEW
+================================================================================
 
-* The second result is not absolutely correct, but rhymes with it.
+Doomstead RAG allows you to ask natural language questions about your codebase 
+and receive intelligent answers based on semantic search of your actual source 
+code. The system combines:
 
+- FAISS vector store for efficient similarity search
+- Ollama for local LLM inference
+- LangChain for document processing and embeddings
+- PHP/JavaScript web interface for easy interaction
 
-# Requirements
+================================================================================
+                                OPERATION
+================================================================================
 
-This local web app requires 'oobabooga' [text-generation-webui](https://github.com/oobabooga/text-generation-webui).  
+Web Interface Controls:
 
-configure oobabooga permissions on the server.py file and text-generation-webui/launch.log so that the 
-web app can launch the server with the home server button.
+| Button        | Icon              | Function                                      |
+|---------------|-------------------|-----------------------------------------------|
+| File Load     | Floppy disk       | Select configuration profile                  |
+| Full Build    | Database upload   | Rebuild FAISS vector store from source code   |
+| Load Model    | Leaping dog       | Load the model specified in current profile   |
+| Check Model   | Sailboat          | List available Ollama models                  |
+| Home Server   | House             | Check Ollama service status                   |
+| FastAPI       | Eye               | Open Ollama API documentation                 |
 
-A model also must be available to oobabooga server in the appropriate text-generation-webui folder.  
-It can be loaded with the leaping dog. 
+Workflow:
 
-The sailboat verifies the model has been loaded.
+1. Select a profile from the File Load dropdown
+2. Click the Run button (leaping dog) to load the model from the profile config
+3. Type your question in the chat input
+4. Receive context-aware answers based on your codebase
 
-# Operation
+================================================================================
+                                ARCHITECTURE
+================================================================================
 
-Understanding the Operation of the RAG System
+System Components:
 
-The Retrieval-Augmented Generation (RAG) system described here integrates a clean, interactive web interface with a backend pipeline that connects to a local Large Language Model (LLM). 
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Browser   │────▶│   PHP       │────▶│   Python    │
+│   (JS/HTML) │◀────│   Backend   │◀────│   Scripts   │
+└─────────────┘     └─────────────┘     └─────────────┘
+                           │                    │
+                           ▼                    ▼
+                    ┌─────────────┐     ┌─────────────┐
+                    │   Ollama    │     │   FAISS     │
+                    │   LLM API   │     │  Vector DB  │
+                    └─────────────┘     └─────────────┘
 
-This web app is designed to allow users to ask technical questions about application source code by combining semantic search with generative AI. The system builds a context from code snippets stored in a vector store created from the application source code and augments user queries with source code context before sending an enhanced query it to the loaded llm.  Simple formatting of results makes the results usefull. 
+Data Flow:
 
+1. User query → JavaScript → PHP backend
+2. Vector search → Python FAISS query → Relevant code chunks
+3. Context building → PHP formats chunks with source attribution
+4. LLM generation → Ollama API generates answer
+5. Response → Displayed in chat interface
 
-# Design
+================================================================================
+                              FILE STRUCTURE
+================================================================================
 
-More documentation will be written as the project develops.  Basic operation is achieved.  Two code databases are 'available' under the floppy disk.  One of them is proprietary (mine) so I did not put the .yaml file for it in the archive.  The other database which can be selected is the source code for this application, and 'ragcode.yaml' specifies source code locations.  The application can examine it's own code.
+doomsteadRAG/
+├── index.php                 # Main web interface
+├── assets/
+│   ├── css/                  # Stylesheets
+│   ├── js/
+│   │   ├── rag.js           # Chat interface
+│   │   ├── toolbar.js       # Toolbar controls
+│   │   └── build_modal.js   # Build progress modal
+│   ├── php/
+│   │   ├── rag.php          # Main RAG handler
+│   │   ├── force_reload_model.php  # Model loader
+│   │   ├── ollama_api.php   # Ollama management
+│   │   └── full_builder.php # FAISS builder trigger
+│   ├── py/
+│   │   ├── faiss_builder.py # FAISS index builder
+│   │   ├── faiss_query.py   # FAISS search
+│   │   ├── *.yaml           # Profile configurations
+│   │   └── venv/            # Python virtual environment
+│   ├── data/                # Vector stores and metadata
+│   └── logs/                # Application logs
 
-Structurally application code javascript calls PHP.  PHP interfaces with python.
+================================================================================
+                          CONFIGURATION PROFILES
+================================================================================
+
+Each profile (ragcode, doomstead, mainpage, ragdocs) has a corresponding YAML 
+file defining:
+
+- embedding_model: Model used for generating embeddings
+- chunk_size: Size of text chunks for vector storage
+- chunk_overlap: Overlap between chunks
+- code_dirs: Directories containing source code
+- text_dirs: Directories containing text documents
+- pdf: Directories containing PDF files
+- ollama_model: LLM model to load for this profile
+
+Example YAML configuration:
+
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  vector_db_type: "faiss"
+  
+  code_dirs:
+    php:
+      - "/path/to/php/files"
+    js:
+      - "/path/to/js/files"
+    py:
+      - "/path/to/python/files"
+
+  ollama_model: "deepseek-coder:6.7b"
+
+================================================================================
+                            BUILDING VECTOR STORES
+================================================================================
+
+Click the Full Build button (database upload icon) to:
+- Scan all directories specified in the current profile
+- Load code, PDF, and text documents
+- Split documents into chunks (800 chars, 150 overlap)
+- Generate embeddings using sentence-transformers
+- Create FAISS index for similarity search
+
+A modal dialog displays build progress in real-time.
+
+================================================================================
+                            TECHNOLOGY STACK
+================================================================================
+
+| Component          | Technology                                      |
+|--------------------|-------------------------------------------------|
+| Vector Database    | FAISS                                           |
+| LLM Server         | Ollama                                          |
+| Embeddings         | sentence-transformers/all-mpnet-base-v2         |
+| Document Processing| LangChain                                       |
+| Backend            | PHP                                             |
+| Frontend           | HTML5/CSS3/JavaScript                           |
+
+================================================================================
+                                  LOGS
+================================================================================
+
+- PHP errors:     assets/logs/php_error.log
+- PHP status:     assets/logs/php_status.log
+- Build logs:     assets/logs/faiss_build_[profile].log
+
+================================================================================
