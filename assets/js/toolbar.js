@@ -1,5 +1,32 @@
+// JS assets/js/toolbar.js - Modified version with visibility control
+
 (function () {
   const statusDiv = document.createElement('div')
+  
+  // Track current profile
+  let currentProfile = 'ragcode';
+  
+  /**
+   * @function updateButtonVisibility
+   * @description Sets button visibility based on current profile
+   * Buttons hidden for Transcripts profile: Rebuild Vector Store (FAISS) and Refresh Vector Store
+   */
+  function updateButtonVisibility() {
+    // Buttons to hide when processing transcripts
+    const hiddenForTranscripts = ['full_build', 'vectordb'];
+    
+    hiddenForTranscripts.forEach(buttonId => {
+      const button = document.getElementById(`button_${buttonId}`);
+      if (button) {
+        if (currentProfile === 'transcript') {
+          button.style.display = 'none';
+        } else {
+          button.style.display = '';
+        }
+      }
+    });
+  }
+  
   /**
    * @function loadtoolbar
    * @description Initializes the application toolbar.
@@ -11,11 +38,11 @@
     buttonlist.id = 'coderag_menu_buttons'
     buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','Mainpage','RAGdocs']))
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','Mainpage','RAGdocs','Transcripts']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
+    buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
     buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
-    buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
     buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
     buttonlist.appendChild(addbutton('fastapi', 'horuseyeBTN', 'left', false))
@@ -41,6 +68,9 @@
 
     bar.appendChild(buttonlist)
     loadtooltips()
+    
+    // Start Ollama service checker
+    startOllamaChecker();
 
     // Direct button binding - MORE RELIABLE
     const runButton = document.querySelector('#loadmodel.dogrunBTN');
@@ -72,8 +102,19 @@
         return false;
       };
     }
+    
+    const refreshButton = document.querySelector('#vectordb.dbrefreshBTN');
+    if (refreshButton) {
+      refreshButton.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        refresh_vectorstore();
+        return false;
+      };
+    }
 
-    ragcode()
+    // Initial visibility setup
+    updateButtonVisibility();
   }
 
   function addbutton(id, className, side, isIndicator) {
@@ -99,7 +140,8 @@
       RAGcode: ragcode,
       Doomstead: doomsteadcode,
       Mainpage: mainpagecode,
-      RAGdocs: ragdocs
+      RAGdocs: ragdocs,
+      Transcripts: transcripts
     }
     const li = document.createElement('li')
     li.style.float = side
@@ -177,6 +219,8 @@
       loadmodel: 'Load Model (Ollama)',
       checkmodel: 'Check Model (Ollama)',
       fastapi: 'Ollama API Docs',
+      homepage: 'Homepage',
+      book: 'Documentation'
     }
     for (const id in tooltips) {
       const el = document.getElementById(id)
@@ -208,6 +252,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGcode")
       clearchatbox()
+      currentProfile = 'ragcode';
+      updateButtonVisibility();
       updatestatus('Switched to RAGcode profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
     })
@@ -224,6 +270,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Doomstead")
       clearchatbox()
+      currentProfile = 'doomstead';
+      updateButtonVisibility();
       updatestatus('Switched to Doomstead profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
     })
@@ -240,6 +288,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Mainpage")
       clearchatbox()
+      currentProfile = 'mainpage';
+      updateButtonVisibility();
       updatestatus('Switched to Mainpage profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
     })
@@ -256,8 +306,28 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGdocs")
       clearchatbox()
+      currentProfile = 'ragdocs';
+      updateButtonVisibility();
       updatestatus('Switched to RAGdocs profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
+    })
+  }
+
+  function transcripts() {
+    const content = { "filesetconfig": "transcript" }
+    fetch('assets/php/save_config.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("Transcripts")
+      clearchatbox()
+      currentProfile = 'transcript';
+      updateButtonVisibility();
+      updatestatus('Switched to Transcript profile. Click Run button to load model.')
+      updatetooltitle('Transcript Processor')
     })
   }
 
@@ -288,24 +358,80 @@
     alert('Use "Full Build" to rebuild the vector store completely.')
   }
 
-  function load_server() {
-    updatestatus('Checking Ollama service...')
-    fetch('http://localhost:11434/api/tags')
+  /**
+   * @function startOllamaChecker
+   * @description Starts scheduled task to check Ollama service every second
+   */
+  let ollamaOnline = false;
+  let checkerInterval = null;
+  
+  function startOllamaChecker() {
+    if (checkerInterval) {
+      clearInterval(checkerInterval);
+    }
+    
+    checkerInterval = setInterval(() => {
+      checkOllamaService();
+    }, 1000);
+  }
+  
+  function checkOllamaService() {
+    const homeserverBtn = document.getElementById('homeserver');
+    
+    fetch('http://localhost:11434/api/tags', {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    })
       .then(response => {
         if (response.ok) {
-          updatestatus('Ollama service is running')
-          return response.json()
+          // Service is running
+          if (!ollamaOnline && homeserverBtn) {
+            homeserverBtn.classList.remove('homeservershift');
+            ollamaOnline = true;
+          }
+          return response.json();
         }
-        throw new Error('Ollama not running')
+        throw new Error('Service not responding');
       })
-      .then(data => {
-        const modelCount = data.models ? data.models.length : 0
-        alert(`Ollama is running with ${modelCount} model(s) available.\n\nTo pull a new model:\nollama pull <model-name>`)
+      .catch(() => {
+        // Service is not running
+        if (ollamaOnline || (!ollamaOnline && homeserverBtn && !homeserverBtn.classList.contains('homeservershift'))) {
+          if (homeserverBtn) {
+            homeserverBtn.classList.add('homeservershift');
+          }
+          ollamaOnline = false;
+        }
+      });
+  }
+
+  function load_server() {
+    updatestatus('Checking Ollama service...')
+    
+    const homeserverBtn = document.getElementById('homeserver');
+    const isShifted = homeserverBtn && homeserverBtn.classList.contains('homeservershift');
+    
+    if (ollamaOnline) {
+      // Service is running, stop it
+      updatestatus('Stopping Ollama service...');
+      
+      fetch('http://localhost:11434/api/tags', {
+        method: 'GET'
       })
-      .catch(error => {
-        alert('Ollama service is not running.\n\nStart it with:\nsudo systemctl start ollama')
-        updatestatus('Ollama not running')
-      })
+        .then(() => {
+          // Can't stop via API, need systemctl
+          alert('Please stop Ollama service with:\nsudo systemctl stop ollama');
+          updatestatus('Ollama service running - use systemctl stop to stop');
+        })
+        .catch(() => {
+          alert('Ollama service is not responding properly');
+        });
+    } else {
+      // Service is not running, start it
+      updatestatus('Starting Ollama service...');
+      alert('Start Ollama service with:\nsudo systemctl start ollama\n\nOr use the start.sh script from the documentation.');
+      updatestatus('Start it with: sudo systemctl start ollama');
+    }
   }
 
   async function getCurrentProfile() {
@@ -390,6 +516,11 @@
     if (statusDiv) {
       statusDiv.textContent = text
     }
+  }
+
+  function updatetooltitle(text) {
+    let banner = document.getElementById("tooltitle");
+    if (banner) banner.textContent = text;
   }
 
   window.loadtoolbar = loadtoolbar

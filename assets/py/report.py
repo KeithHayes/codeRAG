@@ -47,14 +47,15 @@ def create_report():
     # Paths to include in the report
     boilerplate_files = [
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
+        os.path.join(base_path, 'assets', 'docs', 'start.sh'),
+        os.path.join(base_path, 'assets', 'docs', 'specification.txt'),
     ]
 
     css_files = [
-        #os.path.join(base_path, 'assets', 'css', 'rag.css'),
-        #rag.css  toolbarbuttons.css  toolbar.css  w3.css
+        os.path.join(base_path, 'assets', 'css', 'rag.css'),
         os.path.join(base_path, 'assets', 'css', 'toolbar.css'),
-        #os.path.join(base_path, 'assets', 'css', 'toolbarbuttons.css'),
-        #os.path.join(base_path, 'assets', 'css', 'w3.css'),
+        os.path.join(base_path, 'assets', 'css', 'toolbarbuttons.css'),
+        os.path.join(base_path, 'assets', 'css', 'w3.css'),
     ]
 
     log_files = [
@@ -62,38 +63,38 @@ def create_report():
     ]
 
     js_files = [
-        #os.path.join(base_path, 'assets', 'js', 'build_modal.js'),
-        #os.path.join(base_path, 'assets', 'js', 'fix_load_button.js'),
-        #os.path.join(base_path, 'assets', 'js', 'fix_run_button.js'),
-        #os.path.join(base_path, 'assets', 'js', 'rag.js'),
+        os.path.join(base_path, 'assets', 'js', 'build_modal.js'),
+        os.path.join(base_path, 'assets', 'js', 'fix_load_button.js'),
+        os.path.join(base_path, 'assets', 'js', 'fix_run_button.js'),
+        os.path.join(base_path, 'assets', 'js', 'rag.js'),
         os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
     ]
 
     php_files = [
-        #os.path.join(base_path, 'index.php'),
-        #os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
-        #os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
-        #os.path.join(base_path, 'assets', 'php', 'rag.php'),
-        #os.path.join(base_path, 'assets', 'php', 'show_log.php'),
-        #os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
-        #os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
+        os.path.join(base_path, 'index.php'),
+        os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
+        os.path.join(base_path, 'assets', 'php', 'rag.php'),
+        os.path.join(base_path, 'assets', 'php', 'show_log.php'),
+        os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
-        #os.path.join(base_path, 'assets', 'php', 'update_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'update_model.php'),
     ]
 
     py_files = [
-        #os.path.join(base_path, 'assets', 'py', 'chunker.py'),
-        #os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
-        #os.path.join(base_path, 'assets', 'py', 'faiss_builder.py'),
-        #os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
-        #os.path.join(base_path, 'assets', 'py', 'logger.py'),
-        #os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
-        #os.path.join(base_path, 'assets', 'py', 'report.py'),
-        #os.path.join(base_path, 'assets', 'py', 'doomstead.yaml'),
-        #os.path.join(base_path, 'assets', 'py', 'mainpage.yaml'),
-        #os.path.join(base_path, 'assets', 'py', 'ragcode.yaml'),
-        #os.path.join(base_path, 'assets', 'py', 'ragdocs.yaml '),
-        #os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
+        os.path.join(base_path, 'assets', 'py', 'chunker.py'),
+        os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
+        os.path.join(base_path, 'assets', 'py', 'faiss_builder.py'),
+        os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
+        os.path.join(base_path, 'assets', 'py', 'logger.py'),
+        os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
+        os.path.join(base_path, 'assets', 'py', 'report.py'),
+        os.path.join(base_path, 'assets', 'py', 'doomstead.yaml'),
+        os.path.join(base_path, 'assets', 'py', 'mainpage.yaml'),
+        os.path.join(base_path, 'assets', 'py', 'ragcode.yaml'),
+        os.path.join(base_path, 'assets', 'py', 'ragdocs.yaml '),
+        os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
     ]
 
     file_files = [

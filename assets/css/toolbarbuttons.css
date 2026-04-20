@@ -267,3 +267,7 @@
   background-size: 30px 90px;
   background-repeat: no-repeat;
 }
+
+.homeservershift {
+  background-position: 0 -60px;
+}
