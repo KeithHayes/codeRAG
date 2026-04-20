@@ -1,16 +1,4 @@
-The code will be modified to match the specification.
-
-## Check Ollama Service Button (title="Check Ollama Service") code will be modified.
-
-No other code will be modified at this time.
-
-/home/kdog/openwebui/stop.sh and /home/kdog/openwebui/start.sh must be used to sttart and stop the ollama Service
-
-modify the js and php and py files to accomplish this.
-
-Adjust the specification to reflect the manditory use of start and stop .sh files.
-
-hovering over the button does not change from the existing -30ppx color.
+A button has been added and visibility of buttons is changed.  Make no other changes.
 
 
 Note: No terminating ';' in JavaScript and provide complete files for drop-in replacement.

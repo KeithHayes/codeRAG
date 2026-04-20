@@ -14,22 +14,36 @@
   /**
    * @function updateButtonVisibility
    * @description Sets button visibility based on current profile
-   * Buttons hidden for Transcripts profile: Rebuild Vector Store (FAISS) and Refresh Vector Store
+   * Rebuild Vector Store (FAISS) button hidden for Transcripts profile
+   * Refresh Vector Store button is ALWAYS hidden per specification
+   * Paste Transcript button only shown for Transcripts profile
    */
   function updateButtonVisibility() {
-    // Buttons to hide when processing transcripts
-    const hiddenForTranscripts = ['full_build', 'vectordb'];
-    
-    hiddenForTranscripts.forEach(buttonId => {
-      const button = document.getElementById(`button_${buttonId}`);
-      if (button) {
-        if (currentProfile === 'transcript') {
-          button.style.display = 'none';
-        } else {
-          button.style.display = '';
-        }
+    // Rebuild Vector Store button - hide when processing transcripts
+    const fullBuildButton = document.getElementById('button_full_build');
+    if (fullBuildButton) {
+      if (currentProfile === 'transcript') {
+        fullBuildButton.style.display = 'none';
+      } else {
+        fullBuildButton.style.display = '';
       }
-    });
+    }
+    
+    // Refresh Vector Store button - ALWAYS hidden (per specification)
+    const refreshButton = document.getElementById('button_vectordb');
+    if (refreshButton) {
+      refreshButton.style.display = 'none';
+    }
+    
+    // Paste Transcript button - only shown when processing transcripts
+    const pasteButton = document.getElementById('button_pastetranscript');
+    if (pasteButton) {
+      if (currentProfile === 'transcript') {
+        pasteButton.style.display = '';
+      } else {
+        pasteButton.style.display = 'none';
+      }
+    }
   }
   
   /**
@@ -168,6 +182,55 @@
   }
 
   /**
+   * @function handlePasteTranscriptClick
+   * @description Handles click on Paste Transcript button
+   * Reads from clipboard and sends to PHP stub
+   */
+  function handlePasteTranscriptClick() {
+    updatestatus('Reading clipboard...');
+    
+    // Read from clipboard
+    navigator.clipboard.readText()
+      .then(text => {
+        if (!text || text.trim() === '') {
+          updatestatus('Clipboard is empty');
+          alert('Clipboard is empty. Copy some text first.');
+          return;
+        }
+        
+        updatestatus('Sending transcript to server...');
+        
+        // Send to PHP stub
+        fetch('assets/php/process_transcript.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ transcript: text })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            updatestatus('Transcript saved');
+          } else {
+            updatestatus('Failed to save transcript');
+            alert('Error: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          updatestatus('Error saving transcript');
+          alert('Error: ' + error.message);
+        });
+      })
+      .catch(err => {
+        console.error('Clipboard read error:', err);
+        updatestatus('Cannot read clipboard - permission denied');
+        alert('Unable to read clipboard. Please check browser permissions.');
+      });
+  }
+
+  /**
    * @function loadtoolbar
    * @description Initializes the application toolbar.
    */
@@ -181,6 +244,7 @@
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
+    buttonlist.appendChild(addbutton('pastetranscript', 'pasteBTN', 'left', false))
     buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
     buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
     buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
@@ -257,6 +321,16 @@
         e.preventDefault();
         e.stopPropagation();
         handleOllamaButtonClick();
+        return false;
+      };
+    }
+    
+    const pasteTranscriptButton = document.querySelector('#pastetranscript.pasteBTN');
+    if (pasteTranscriptButton) {
+      pasteTranscriptButton.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        handlePasteTranscriptClick();
         return false;
       };
     }
@@ -365,6 +439,7 @@
       homeserver: 'Check Ollama Service',
       loadmodel: 'Load Model (Ollama)',
       checkmodel: 'Check Model (Ollama)',
+      pastetranscript: 'Paste Transcript',
       fastapi: 'Ollama API Docs',
       homepage: 'Homepage',
       book: 'Documentation'

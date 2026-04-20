@@ -82,6 +82,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
         os.path.join(base_path, 'assets', 'php', 'update_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'process_transcript.php'),
     ]
 
     py_files = [
