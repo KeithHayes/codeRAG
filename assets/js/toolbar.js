@@ -1,10 +1,15 @@
-// JS assets/js/toolbar.js - Modified version with visibility control
+// JS assets/js/toolbar.js - Complete implementation
+// MODIFIED: Ollama service button uses start.sh/stop.sh, hover unchanged
 
 (function () {
   const statusDiv = document.createElement('div')
   
   // Track current profile
   let currentProfile = 'ragcode';
+  
+  // Track Ollama service state
+  let ollamaServiceRunning = false;
+  let ollamaCheckInterval = null;
   
   /**
    * @function updateButtonVisibility
@@ -28,11 +33,145 @@
   }
   
   /**
+   * @function checkOllamaService
+   * @description Scheduled task that runs every second to check Ollama service status
+   * If service responds successfully: button is NOT shifted (no class)
+   * If service fails: button IS shifted -60px (adds homeservershift class)
+   * NOTE: Hover effect unchanged - CSS already defines hover at background-position: 0 -30px
+   */
+  function checkOllamaService() {
+    const homeserverBtn = document.getElementById('homeserver');
+    
+    fetch('assets/php/ollama_api.php?action=status', {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.running) {
+          // Service is running successfully - remove shift class
+          if (!ollamaServiceRunning && homeserverBtn) {
+            homeserverBtn.classList.remove('homeservershift');
+            ollamaServiceRunning = true;
+          }
+        } else {
+          // Service is not running - add shift class
+          if (ollamaServiceRunning || (!ollamaServiceRunning && homeserverBtn && !homeserverBtn.classList.contains('homeservershift'))) {
+            if (homeserverBtn) {
+              homeserverBtn.classList.add('homeservershift');
+            }
+            ollamaServiceRunning = false;
+          }
+        }
+      })
+      .catch(() => {
+        // Service is not running or failed - add shift class
+        if (ollamaServiceRunning || (!ollamaServiceRunning && homeserverBtn && !homeserverBtn.classList.contains('homeservershift'))) {
+          if (homeserverBtn) {
+            homeserverBtn.classList.add('homeservershift');
+          }
+          ollamaServiceRunning = false;
+        }
+      });
+  }
+  
+  /**
+   * @function startOllamaChecker
+   * @description Starts the scheduled task to check Ollama service every second
+   */
+  function startOllamaChecker() {
+    if (ollamaCheckInterval) {
+      clearInterval(ollamaCheckInterval);
+    }
+    
+    ollamaCheckInterval = setInterval(() => {
+      checkOllamaService();
+    }, 1000);
+  }
+  
+  /**
+   * @function stopOllamaChecker
+   * @description Stops the scheduled checker
+   */
+  function stopOllamaChecker() {
+    if (ollamaCheckInterval) {
+      clearInterval(ollamaCheckInterval);
+      ollamaCheckInterval = null;
+    }
+  }
+  
+  /**
+   * @function handleOllamaButtonClick
+   * @description Handles click on Check Ollama Service button
+   * If button is shifted (service not running): starts the full stack via start.sh
+   * If button is unshifted (service running): stops the stack via stop.sh
+   * Uses the mandatory start.sh and stop.sh scripts per specification
+   */
+  function handleOllamaButtonClick() {
+    const homeserverBtn = document.getElementById('homeserver');
+    const isShifted = homeserverBtn && homeserverBtn.classList.contains('homeservershift');
+    
+    if (isShifted) {
+      // Service is not running - start it using start.sh
+      updatestatus('Starting Ollama service...');
+      
+      fetch('assets/php/ollama_api.php?action=start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          updatestatus('Ollama service started');
+          // Force a status check after start
+          setTimeout(() => checkOllamaService(), 3000);
+        } else {
+          updatestatus('Failed to start Ollama service');
+          alert('Failed to start Ollama service: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        console.error('Error starting Ollama:', error);
+        updatestatus('Error starting Ollama service');
+        alert('Error starting Ollama service. Check that start.sh exists and is executable.');
+      });
+    } else {
+      // Service is running - stop it using stop.sh
+      updatestatus('Stopping Ollama service...');
+      
+      fetch('assets/php/ollama_api.php?action=stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          updatestatus('Ollama service stopped');
+          // Force a status check after stop
+          setTimeout(() => checkOllamaService(), 2000);
+        } else {
+          updatestatus('Failed to stop Ollama service');
+          alert('Failed to stop Ollama service: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        console.error('Error stopping Ollama:', error);
+        updatestatus('Error stopping Ollama service');
+        alert('Error stopping Ollama service. Check that stop.sh exists and is executable.');
+      });
+    }
+  }
+
+  /**
    * @function loadtoolbar
    * @description Initializes the application toolbar.
    */
   function loadtoolbar() {
-    let launcherPID = null
     const bar = document.getElementById("coderagtoolbar")
     const buttonlist = document.createElement('ul')
     buttonlist.id = 'coderag_menu_buttons'
@@ -69,10 +208,9 @@
     bar.appendChild(buttonlist)
     loadtooltips()
     
-    // Start Ollama service checker
     startOllamaChecker();
 
-    // Direct button binding - MORE RELIABLE
+    // Direct button binding
     const runButton = document.querySelector('#loadmodel.dogrunBTN');
     if (runButton) {
       runButton.onclick = function(e) {
@@ -112,8 +250,17 @@
         return false;
       };
     }
+    
+    const ollamaServiceButton = document.querySelector('#homeserver.homeserverBTN');
+    if (ollamaServiceButton) {
+      ollamaServiceButton.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOllamaButtonClick();
+        return false;
+      };
+    }
 
-    // Initial visibility setup
     updateButtonVisibility();
   }
 
@@ -358,93 +505,6 @@
     alert('Use "Full Build" to rebuild the vector store completely.')
   }
 
-  /**
-   * @function startOllamaChecker
-   * @description Starts scheduled task to check Ollama service every second
-   */
-  let ollamaOnline = false;
-  let checkerInterval = null;
-  
-  function startOllamaChecker() {
-    if (checkerInterval) {
-      clearInterval(checkerInterval);
-    }
-    
-    checkerInterval = setInterval(() => {
-      checkOllamaService();
-    }, 1000);
-  }
-  
-  function checkOllamaService() {
-    const homeserverBtn = document.getElementById('homeserver');
-    
-    fetch('http://localhost:11434/api/tags', {
-      method: 'GET',
-      mode: 'cors',
-      cache: 'no-cache'
-    })
-      .then(response => {
-        if (response.ok) {
-          // Service is running
-          if (!ollamaOnline && homeserverBtn) {
-            homeserverBtn.classList.remove('homeservershift');
-            ollamaOnline = true;
-          }
-          return response.json();
-        }
-        throw new Error('Service not responding');
-      })
-      .catch(() => {
-        // Service is not running
-        if (ollamaOnline || (!ollamaOnline && homeserverBtn && !homeserverBtn.classList.contains('homeservershift'))) {
-          if (homeserverBtn) {
-            homeserverBtn.classList.add('homeservershift');
-          }
-          ollamaOnline = false;
-        }
-      });
-  }
-
-  function load_server() {
-    updatestatus('Checking Ollama service...')
-    
-    const homeserverBtn = document.getElementById('homeserver');
-    const isShifted = homeserverBtn && homeserverBtn.classList.contains('homeservershift');
-    
-    if (ollamaOnline) {
-      // Service is running, stop it
-      updatestatus('Stopping Ollama service...');
-      
-      fetch('http://localhost:11434/api/tags', {
-        method: 'GET'
-      })
-        .then(() => {
-          // Can't stop via API, need systemctl
-          alert('Please stop Ollama service with:\nsudo systemctl stop ollama');
-          updatestatus('Ollama service running - use systemctl stop to stop');
-        })
-        .catch(() => {
-          alert('Ollama service is not responding properly');
-        });
-    } else {
-      // Service is not running, start it
-      updatestatus('Starting Ollama service...');
-      alert('Start Ollama service with:\nsudo systemctl start ollama\n\nOr use the start.sh script from the documentation.');
-      updatestatus('Start it with: sudo systemctl start ollama');
-    }
-  }
-
-  async function getCurrentProfile() {
-    try {
-      const response = await fetch('assets/data/config.json')
-      const config = await response.json()
-      return config.filesetconfig || 'ragcode'
-    } catch (error) {
-      return 'ragcode'
-    }
-  }
-
-  // MAIN LOAD MODEL FUNCTION - This is the Run button handler
   async function loadmodel() {
     const statusDiv = document.getElementById('status');
     const promptInput = document.getElementById('userInput');
@@ -495,7 +555,7 @@
     } catch (error) {
       console.error('Check model error:', error)
       updatestatus('Ollama API error')
-      alert('Could not connect to Ollama. Is it running?\n\nsudo systemctl start ollama')
+      alert('Could not connect to Ollama. Is it running?')
     }
   }
 
@@ -523,6 +583,10 @@
     if (banner) banner.textContent = text;
   }
 
+  window.addEventListener('beforeunload', function() {
+    stopOllamaChecker();
+  });
+
   window.loadtoolbar = loadtoolbar
   window.updatestatus = updatestatus
   window.rebuild_vectorstore = rebuild_vectorstore
@@ -530,7 +594,6 @@
   window.checkmodel = checkmodel
 })()
 
-// Initialize toolbar when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.loadtoolbar === 'function') {

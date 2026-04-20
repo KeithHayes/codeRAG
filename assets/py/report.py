@@ -42,13 +42,15 @@ def git_save_changes(commit_message="dev code saved"):
 def create_report():
     # Base directory for the project
     base_path = '/var/www/html/doomsteadRAG'
-    download_path = '/home/kdog/Downloads'
+    ollama_path = '/home/kdog/openwebui'
 
     # Paths to include in the report
     boilerplate_files = [
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'start.sh'),
+        os.path.join(ollama_path, 'start.sh'),
+        os.path.join(ollama_path, 'stop.sh'),
         os.path.join(base_path, 'assets', 'docs', 'specification.txt'),
+        
     ]
 
     css_files = [

@@ -1,11 +1,18 @@
 The code will be modified to match the specification.
 
-## File Set Dropdown Button (title="File Set") code will be modified.
 ## Check Ollama Service Button (title="Check Ollama Service") code will be modified.
 
 No other code will be modified at this time.
 
-A significant change will be to make toolbar button visibility dependent on the dropdown selection.  
-This should be done in a function where  each button visibility will be set.  
-This will allow the control to be expaned to new buttons and changes can be more easily implemented.
+/home/kdog/openwebui/stop.sh and /home/kdog/openwebui/start.sh must be used to sttart and stop the ollama Service
+
+modify the js and php and py files to accomplish this.
+
+Adjust the specification to reflect the manditory use of start and stop .sh files.
+
+hovering over the button does not change from the existing -30ppx color.
+
+
+Note: No terminating ';' in JavaScript and provide complete files for drop-in replacement.
+
 
