@@ -209,6 +209,7 @@
       colordropdowntext("RAGcode")
       clearchatbox()
       updatestatus('Switched to RAGcode profile. Click Run button to load model.')
+      updatetooltitle('Retrieval Argumentation Generation for Code')
     })
   }
 
@@ -224,6 +225,7 @@
       colordropdowntext("Doomstead")
       clearchatbox()
       updatestatus('Switched to Doomstead profile. Click Run button to load model.')
+      updatetooltitle('Retrieval Argumentation Generation for Code')
     })
   }
 
@@ -239,6 +241,7 @@
       colordropdowntext("Mainpage")
       clearchatbox()
       updatestatus('Switched to Mainpage profile. Click Run button to load model.')
+      updatetooltitle('Retrieval Argumentation Generation for Code')
     })
   }
 
@@ -254,6 +257,7 @@
       colordropdowntext("RAGdocs")
       clearchatbox()
       updatestatus('Switched to RAGdocs profile. Click Run button to load model.')
+      updatetooltitle('Retrieval Argumentation Generation for Code')
     })
   }
 

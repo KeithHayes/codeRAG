@@ -9,7 +9,7 @@
 </head>
 <body>
 <div id="main_content" class="w3-threequarter w3-panel">
-    <h1>Retrieval Argumentation Generation for Code</h1>
+    <h1 id="tooltitle">Retrieval Argumentation Generation for Code</h1>
     <div id="coderagtoolbar"></div>
     <div id="chatbox"></div>
     <div id="inputContainer">
