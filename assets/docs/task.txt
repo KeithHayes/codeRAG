@@ -1,9 +1,13 @@
 
-specification.txt is out of date and should be rebuilt.  We want to have the specification changed to agree with the code.  No code will be changed.
+toolbar.js will handle the 
 
-The specification must match the code as the code is before it can be changed.
+<li style="float: left;" id="button_pastetranscript"><a id="pastetranscript" class="pasteBTN" href="#" title="Paste Transcript">pasteBTN</a></li>
 
+button as follows.
 
+read the clipboard and send it to the server to the rag.php file.
 
+The php will save the file to ../data/transcripts/rawtranscript.txt
 
-Complete files will be given for drop in replacement.  No terminating ';' in javascript.
+Existing functionality in the two files will be refactored so that the php uses a switch statement  to discriminate between ajax requests.
+
