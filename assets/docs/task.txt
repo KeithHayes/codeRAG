@@ -1,7 +1,7 @@
-'Loading may take longer'
 
-should not show in a pop up, instead that message should be placed on status and we continue to poll and wait.
+specification.txt is out of date and should be rebuilt.  We want to have the specification changed to agree with the code.  No code will be changed.
 
+The specification must match the code as the code is before it can be changed.
 
 
 
