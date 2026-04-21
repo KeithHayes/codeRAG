@@ -1,5 +1,5 @@
 <?php
-// assets/php/ollama_api.php - Optimized fast responses
+// assets/php/ollama_api.php - Optimized fast responses with running_model action
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
@@ -45,6 +45,20 @@ function get_available_models() {
     return $models;
 }
 
+function get_running_model() {
+    $output = shell_exec('docker exec ollama ollama ps 2>&1');
+    if ($output && trim($output) !== '' && trim($output) !== 'NAME') {
+        $lines = explode("\n", trim($output));
+        foreach ($lines as $line) {
+            if (strpos($line, 'NAME') === false && !empty(trim($line))) {
+                $parts = preg_split('/\s+/', $line);
+                return $parts[0];
+            }
+        }
+    }
+    return null;
+}
+
 try {
     switch ($action) {
         case 'status':
@@ -53,6 +67,15 @@ try {
                 'running' => is_stack_running(),
                 'timestamp' => time()
             ]);
+            break;
+            
+        case 'running_model':
+            if (!is_ollama_running()) {
+                echo json_encode(['success' => false, 'model' => null]);
+                break;
+            }
+            $model = get_running_model();
+            echo json_encode(['success' => true, 'model' => $model]);
             break;
             
         case 'start':

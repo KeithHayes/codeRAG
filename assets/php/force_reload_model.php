@@ -1,5 +1,5 @@
 <?php
-// assets/php/force_reload_model.php - Optimized fast model loading
+// assets/php/force_reload_model.php - No alerts, just status updates
 header('Content-Type: application/json');
 
 function ollama_docker($cmd) {
@@ -83,9 +83,11 @@ if (!$check_model || trim($check_model) === '') {
 // Load the model
 ollama_docker("run " . escapeshellarg($model) . " > /dev/null 2>&1 &");
 
-// Quick wait for model to load
+// Wait for model to load - no popup, just status via polling
 $loaded = false;
-for ($i = 0; $i < 15; $i++) {
+$max_attempts = 60;
+
+for ($i = 0; $i < $max_attempts; $i++) {
     usleep(500000);
     $ps_output = ollama_docker("ps");
     if ($ps_output && strpos($ps_output, $model) !== false && strpos($ps_output, 'Stopping') === false) {
@@ -99,7 +101,7 @@ echo json_encode([
     'profile' => $profile,
     'old_model' => $current_model,
     'new_model' => $model,
-    'status' => $loaded ? 'loaded' : 'timeout',
-    'message' => $loaded ? "Model loaded" : "Loading may take longer"
+    'status' => $loaded ? 'loaded' : 'loading',
+    'message' => $loaded ? "Model loaded" : "Loading model, please wait..."
 ]);
 ?>

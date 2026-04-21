@@ -1,4 +1,4 @@
-// JS assets/js/toolbar.js - Fixed status preservation
+// JS assets/js/toolbar.js - Fixed status preservation, no alerts for model loading
 (function () {
   const statusDiv = document.createElement('div')
   
@@ -8,9 +8,10 @@
   let isUpdatingStack = false
   let lastStatusCheck = 0
   let cachedStatus = false
-  let modelLoadStatus = null // Track model load status separately
+  let modelLoadStatus = null
   let lastStatusUpdateTime = 0
-  let statusLock = false // Prevent status from being overwritten temporarily
+  let statusLock = false
+  let modelPollingInterval = null
   
   function updateButtonVisibility() {
     const fullBuildButton = document.getElementById('button_full_build')
@@ -39,9 +40,8 @@
       }
       stackRunning = true
       cachedStatus = true
-      // Only update status if no model load status is active and not locked
       if (!modelLoadStatus && !statusLock) {
-        updatestatus('Service accessible')
+        updatestatus('Ollama ready')
       }
     } else {
       if (!homeserverBtn.classList.contains('homeservershift')) {
@@ -49,17 +49,14 @@
       }
       stackRunning = false
       cachedStatus = false
-      // Only update status if no model load status is active and not locked
       if (!modelLoadStatus && !statusLock) {
-        updatestatus('Starting service...')
+        updatestatus('Waiting for service...')
       }
     }
   }
   
   function checkStackStatus() {
     if (isUpdatingStack) return
-    
-    // Don't check if status is locked (e.g., showing model loaded message)
     if (statusLock) return
     
     const now = Date.now()
@@ -92,9 +89,7 @@
       clearInterval(stackCheckInterval)
     }
     
-    // Set initial status
-    updatestatus('Checking Ollama status...')
-    
+    updatestatus('Checking Ollama...')
     checkStackStatus()
     
     stackCheckInterval = setInterval(() => {
@@ -109,20 +104,63 @@
     }
   }
   
-  // Lock status for a period of time (e.g., to show model loaded message)
   function lockStatus(ms) {
     statusLock = true
     setTimeout(() => {
       statusLock = false
-      // After lock expires, refresh the status based on current state
       if (!modelLoadStatus) {
         if (stackRunning) {
-          updatestatus('Service accessible')
+          updatestatus('Ollama ready')
         } else {
-          updatestatus('Starting service...')
+          updatestatus('Waiting for service...')
         }
       }
     }, ms)
+  }
+  
+  // Poll for model loading status
+  function pollModelStatus(expectedModel, profile) {
+    if (modelPollingInterval) {
+      clearInterval(modelPollingInterval)
+    }
+    
+    let attempts = 0
+    const maxAttempts = 30 // 30 seconds max
+    
+    modelPollingInterval = setInterval(async () => {
+      attempts++
+      
+      try {
+        const response = await fetch(`assets/php/ollama_api.php?action=running_model`)
+        const data = await response.json()
+        
+        if (data.success && data.model === expectedModel) {
+          // Model is loaded
+          clearInterval(modelPollingInterval)
+          modelPollingInterval = null
+          modelLoadStatus = null
+          updatestatus(`Model ready: ${expectedModel}`)
+          lockStatus(5000)
+          
+          // Enable input
+          const promptInput = document.getElementById('userInput')
+          const sendBtn = document.getElementById('sendButton')
+          if (promptInput) promptInput.disabled = false
+          if (sendBtn) sendBtn.disabled = false
+        } else if (attempts >= maxAttempts) {
+          // Timeout
+          clearInterval(modelPollingInterval)
+          modelPollingInterval = null
+          modelLoadStatus = null
+          updatestatus('Model load timeout')
+        } else {
+          updatestatus(`Loading model: ${expectedModel}...`)
+        }
+      } catch (error) {
+        // Still loading, continue polling
+        updatestatus(`Loading model: ${expectedModel}...`)
+      }
+    }, 1000)
   }
   
   function handleStackButtonClick() {
@@ -136,7 +174,6 @@
     
     if (isShifted) {
       isUpdatingStack = true
-      // Clear model load status when starting/stopping
       modelLoadStatus = null
       updatestatus('Starting stack...')
       if (homeserverBtn) homeserverBtn.style.pointerEvents = 'none'
@@ -162,7 +199,6 @@
       })
     } else {
       isUpdatingStack = true
-      // Clear model load status when starting/stopping
       modelLoadStatus = null
       updatestatus('Stopping stack...')
       if (homeserverBtn) homeserverBtn.style.pointerEvents = 'none'
@@ -213,13 +249,11 @@
             updatestatus('Transcript saved')
           } else {
             updatestatus('Failed to save transcript')
-            alert('Error: ' + (data.error || 'Unknown error'))
           }
         })
         .catch(error => {
           console.error('Error:', error)
           updatestatus('Error saving transcript')
-          alert('Error: ' + error.message)
         })
       })
       .catch(err => {
@@ -253,7 +287,7 @@
 
     statusDiv.id = 'status'
     statusDiv.className = 'status'
-    statusDiv.textContent = 'Checking status...'
+    statusDiv.textContent = 'Checking Ollama...'
 
     statusLi.appendChild(statusDiv)
 
@@ -279,7 +313,6 @@
         const promptInput = document.getElementById('userInput')
         const sendBtn = document.getElementById('sendButton')
         
-        // Clear previous model load status
         modelLoadStatus = null
         
         if (statusDivElem) statusDivElem.textContent = "Loading model..."
@@ -294,15 +327,17 @@
             if (statusDivElem) statusDivElem.textContent = successMsg
             if (promptInput) promptInput.disabled = false
             if (sendBtn) sendBtn.disabled = false
-            // Lock status for 10 seconds to show the model loaded message
             lockStatus(10000)
+          } else if (data.status === 'loading') {
+            // Model is still loading, start polling
+            if (statusDivElem) statusDivElem.textContent = `Loading model: ${data.new_model}...`
+            pollModelStatus(data.new_model, data.profile)
           } else {
             modelLoadStatus = null
             if (statusDivElem) statusDivElem.textContent = data.message || "Failed to load"
+            // Only show alert for non-loading failures (like stack not running)
             if (data.message && data.message.includes('not running')) {
               alert('Stack not running. Click homeserver button to start.')
-            } else {
-              alert(data.message || "Failed to load model")
             }
           }
         } catch (error) {
@@ -608,7 +643,6 @@
 
   function refresh_vectorstore() {
     updatestatus('Refresh not implemented - use Full Build')
-    alert('Use "Full Build" to rebuild the vector store completely.')
   }
 
   async function checkmodel() {
@@ -648,7 +682,6 @@
 
   function book() {
     updatestatus('Documentation coming soon')
-    alert('Documentation viewer will be implemented in future version')
   }
 
   function updatestatus(text) {
@@ -664,6 +697,9 @@
 
   window.addEventListener('beforeunload', function() {
     stopStackChecker()
+    if (modelPollingInterval) {
+      clearInterval(modelPollingInterval)
+    }
   })
 
   window.loadtoolbar = loadtoolbar
