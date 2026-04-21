@@ -1,5 +1,10 @@
+// assets/php/rag.php
 <?php
 // assets/php/rag.php — Doomstead RAG Backend with FAISS + Ollama (Docker fixed)
+
+// Disable error output to prevent breaking JSON
+error_reporting(0);
+ini_set('display_errors', 0);
 
 class RAGSystem {
     private $ollama_url = "http://localhost:11434";
@@ -36,7 +41,7 @@ class RAGSystem {
     public function errorlog($message) {
         $logfile = __DIR__ . '/../logs/php_error.log';
         $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logfile, "[$timestamp] $message\n", FILE_APPEND | LOCK_EX);
+        @file_put_contents($logfile, "[$timestamp] $message\n", FILE_APPEND | LOCK_EX);
     }
     
     public function search_vector_store($query, $k = 5) {
@@ -137,7 +142,6 @@ class RAGSystem {
     }
     
     public function is_model_ready() {
-        // Check via Docker
         $ps_output = shell_exec("docker exec ollama ollama ps 2>/dev/null");
         $this->model_ready = ($ps_output && strpos($ps_output, $this->current_model) !== false);
         return ['ready' => $this->model_ready, 'model' => $this->current_model];
@@ -146,54 +150,140 @@ class RAGSystem {
     public function get_current_model() {
         return $this->current_model;
     }
+    
+    public function save_transcript($transcript) {
+        $transcript_dir = __DIR__ . '/../data/transcripts';
+        if (!is_dir($transcript_dir)) {
+            if (!mkdir($transcript_dir, 0755, true)) {
+                throw new Exception("Failed to create transcripts directory");
+            }
+        }
+        
+        $file_path = $transcript_dir . '/rawtranscript.txt';
+        $result = file_put_contents($file_path, $transcript);
+        
+        if ($result === false) {
+            throw new Exception("Failed to save transcript file");
+        }
+        
+        return ['success' => true, 'path' => $file_path, 'size' => $result];
+    }
 }
 
-// Handle requests
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
+// Clear any output buffers to prevent corruption
+if (ob_get_level()) ob_end_clean();
+ob_start();
+
+// Handle requests with switch statement
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
+    header('Cache-Control: no-cache, must-revalidate');
     
-    try {
-        $rag = new RAGSystem();
-        
-        if ($_POST['message'] === 'status_check') {
+    // Get JSON input
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    // If JSON parsing failed, try form data
+    if ($input === null && json_last_error() !== JSON_ERROR_NONE) {
+        $action = $_POST['action'] ?? '';
+        $message = $_POST['message'] ?? '';
+        $transcript = $_POST['transcript'] ?? '';
+        $input = ['action' => $action, 'message' => $message, 'transcript' => $transcript];
+    }
+    
+    $action = $input['action'] ?? '';
+    $rag = new RAGSystem();
+    
+    switch ($action) {
+        case 'save_transcript':
+            $transcript = $input['transcript'] ?? '';
+            
+            if (empty($transcript)) {
+                echo json_encode(['success' => false, 'error' => 'No transcript content provided']);
+                break;
+            }
+            
+            try {
+                $result = $rag->save_transcript($transcript);
+                echo json_encode($result);
+            } catch (Exception $e) {
+                $rag->errorlog("TRANSCRIPT ERROR: " . $e->getMessage());
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            break;
+            
+        case 'chat':
+            $message = $input['message'] ?? '';
+            
+            if (empty($message)) {
+                echo json_encode(['error' => 'No message provided']);
+                break;
+            }
+            
+            try {
+                $searchResults = $rag->search_vector_store($message);
+                $context = $rag->build_rag_context($searchResults);
+                $prompt = "Context:\n{$context}\n\nQuestion: {$message}\n\nAnswer based on the code context above:";
+                $response = $rag->query_ollama($prompt);
+                
+                echo json_encode([
+                    'response' => $response,
+                    'model' => $rag->get_current_model(),
+                    'timestamp' => time()
+                ]);
+            } catch (Exception $e) {
+                $rag->errorlog("RAG ERROR: " . $e->getMessage());
+                echo json_encode([
+                    'response' => 'Error: ' . $e->getMessage(),
+                    'model' => 'Error',
+                    'timestamp' => time()
+                ]);
+            }
+            break;
+            
+        case 'status_check':
             $status = $rag->is_model_ready();
             echo json_encode([
                 'status' => $status['ready'] ? 'ready' : 'loading',
                 'model' => $status['model'],
                 'timestamp' => time()
             ]);
-            exit;
-        }
-        
-        $query = $_POST['message'];
-        
-        // Search vector store
-        $searchResults = $rag->search_vector_store($query);
-        
-        // Build context
-        $context = $rag->build_rag_context($searchResults);
-        $prompt = "Context:\n{$context}\n\nQuestion: {$query}\n\nAnswer based on the code context above:";
-        
-        // Query Ollama
-        $response = $rag->query_ollama($prompt);
-        
-        echo json_encode([
-            'response' => $response,
-            'model' => $rag->get_current_model(),
-            'timestamp' => time()
-        ]);
-        
-    } catch (Exception $e) {
-        $rag->errorlog("RAG ERROR: " . $e->getMessage());
-        echo json_encode([
-            'response' => 'Error: ' . $e->getMessage(),
-            'model' => 'Error',
-            'timestamp' => time()
-        ]);
+            break;
+            
+        default:
+            // Legacy support - if no action specified, treat as chat message
+            $message = $input['message'] ?? $_POST['message'] ?? '';
+            
+            if (!empty($message)) {
+                try {
+                    $searchResults = $rag->search_vector_store($message);
+                    $context = $rag->build_rag_context($searchResults);
+                    $prompt = "Context:\n{$context}\n\nQuestion: {$message}\n\nAnswer based on the code context above:";
+                    $response = $rag->query_ollama($prompt);
+                    
+                    echo json_encode([
+                        'response' => $response,
+                        'model' => $rag->get_current_model(),
+                        'timestamp' => time()
+                    ]);
+                } catch (Exception $e) {
+                    $rag->errorlog("RAG ERROR: " . $e->getMessage());
+                    echo json_encode([
+                        'response' => 'Error: ' . $e->getMessage(),
+                        'model' => 'Error',
+                        'timestamp' => time()
+                    ]);
+                }
+            } else {
+                echo json_encode(['error' => 'Invalid request - missing action or message']);
+            }
+            break;
     }
     
+    ob_end_flush();
     exit;
 }
 
 header('HTTP/1.1 400 Bad Request');
-echo json_encode(['error' => 'Invalid request']);
+echo json_encode(['error' => 'Invalid request method']);
+ob_end_flush();
+?>

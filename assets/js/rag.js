@@ -1,3 +1,4 @@
+// JS assets/js/rag.js
 document.addEventListener("DOMContentLoaded", function () {
     const sendBtn = document.getElementById("sendButton")
     const promptInput = document.getElementById("userInput")
@@ -44,8 +45,11 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             const res = await fetch("assets/php/rag.php", {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ message: prompt }),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    action: "chat",
+                    message: prompt 
+                }),
                 signal: AbortSignal.timeout(120000)
             })
             
@@ -77,7 +81,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (window.updatestatus) {
                     window.updatestatus(`Model ready: ${data.model}`)
                 }
-                // Enable chat
                 promptInput.disabled = false
                 sendBtn.disabled = false
                 promptInput.focus()
@@ -97,7 +100,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
     
-    // Event listeners
     if (sendBtn) sendBtn.addEventListener("click", sendPrompt)
     if (promptInput) {
         promptInput.addEventListener("keypress", (e) => {
@@ -107,11 +109,9 @@ document.addEventListener("DOMContentLoaded", function () {
         sendBtn.disabled = true
     }
     
-    // Load model from config when page loads
     loadModelFromConfig()
 })
 
-// Make sure updatestatus replaces content, not appends
 window.updatestatus = window.updatestatus || function(text) {
     const statusDiv = document.getElementById('status');
     if (statusDiv) statusDiv.textContent = text;
