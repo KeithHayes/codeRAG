@@ -118,14 +118,13 @@
     }, ms)
   }
   
-  // Poll for model loading status
   function pollModelStatus(expectedModel, profile) {
     if (modelPollingInterval) {
       clearInterval(modelPollingInterval)
     }
     
     let attempts = 0
-    const maxAttempts = 30 // 30 seconds max
+    const maxAttempts = 30
     
     modelPollingInterval = setInterval(async () => {
       attempts++
@@ -135,20 +134,17 @@
         const data = await response.json()
         
         if (data.success && data.model === expectedModel) {
-          // Model is loaded
           clearInterval(modelPollingInterval)
           modelPollingInterval = null
           modelLoadStatus = null
           updatestatus(`Model ready: ${expectedModel}`)
           lockStatus(5000)
           
-          // Enable input
           const promptInput = document.getElementById('userInput')
           const sendBtn = document.getElementById('sendButton')
           if (promptInput) promptInput.disabled = false
           if (sendBtn) sendBtn.disabled = false
         } else if (attempts >= maxAttempts) {
-          // Timeout
           clearInterval(modelPollingInterval)
           modelPollingInterval = null
           modelLoadStatus = null
@@ -157,7 +153,6 @@
           updatestatus(`Loading model: ${expectedModel}...`)
         }
       } catch (error) {
-        // Still loading, continue polling
         updatestatus(`Loading model: ${expectedModel}...`)
       }
     }, 1000)
@@ -269,7 +264,7 @@
     buttonlist.id = 'coderag_menu_buttons'
     buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','Mainpage','RAGdocs','Transcripts']))
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','Mainpage','RAGdocs','Transcripts','PlantDiseases']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
@@ -292,7 +287,7 @@
     statusLi.appendChild(statusDiv)
 
     const bookButton = buttonlist.querySelector('#button_book')
-    if (bookButton?.parentNode?.nextSibling) {
+    if (bookButton && bookButton.parentNode && bookButton.parentNode.nextSibling) {
       buttonlist.insertBefore(statusLi, bookButton.parentNode.nextSibling)
     } else {
       buttonlist.appendChild(statusLi)
@@ -329,13 +324,11 @@
             if (sendBtn) sendBtn.disabled = false
             lockStatus(10000)
           } else if (data.status === 'loading') {
-            // Model is still loading, start polling
             if (statusDivElem) statusDivElem.textContent = `Loading model: ${data.new_model}...`
             pollModelStatus(data.new_model, data.profile)
           } else {
             modelLoadStatus = null
             if (statusDivElem) statusDivElem.textContent = data.message || "Failed to load"
-            // Only show alert for non-loading failures (like stack not running)
             if (data.message && data.message.includes('not running')) {
               alert('Stack not running. Click homeserver button to start.')
             }
@@ -428,7 +421,8 @@
       Doomstead: doomsteadcode,
       Mainpage: mainpagecode,
       RAGdocs: ragdocs,
-      Transcripts: transcripts
+      Transcripts: transcripts,
+      PlantDiseases: plantdiseases
     }
     const li = document.createElement('li')
     li.style.float = side
@@ -616,6 +610,24 @@
       updateButtonVisibility()
       updatestatus('Switched to Transcript profile. Click Run button to load model.')
       updatetooltitle('Transcript Processor')
+    })
+  }
+
+  function plantdiseases() {
+    const content = { "filesetconfig": "plantdiseases" }
+    fetch(`assets/php/save_config.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext("PlantDiseases")
+      clearchatbox()
+      currentProfile = 'plantdiseases'
+      updateButtonVisibility()
+      updatestatus('Switched to PlantDiseases profile. Click Run button to load model.')
+      updatetooltitle('Plant Diseases RAG - Based on 11pests1disease.pdf')
     })
   }
 

@@ -1,0 +1,33 @@
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 1000
+  chunk_overlap: 200
+  vector_db_type: "faiss"
+  
+  text_parsing:
+    strategy: "document"
+    preserve_comments: false
+    detect_headers: true
+    preserve_formatting: true
+    respect_page_breaks: true
+    separators:
+      - "\n\n## "
+      - "\n## "
+      - "\n\n### "
+      - "\n### "
+      - "\n\n"
+      - "\n"
+      - ". "
+      - " "
+  
+  pdf:
+    - "/var/www/html/doomsteadRAG/assets/data/pdf"
+  
+  code_dirs: {}
+  
+  text_dirs: {}
+  
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/plantdiseases/faiss_index"
+  collection_name: "plantdiseases"
+  min_score: "0.25"
+  ollama_model: "mistral:7b-instruct-v0.3-q4_0"
