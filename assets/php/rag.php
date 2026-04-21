@@ -1,5 +1,5 @@
 <?php
-// assets/php/rag.php — Doomstead RAG Backend with FAISS + Ollama
+// assets/php/rag.php — Doomstead RAG Backend with FAISS + Ollama (Docker fixed)
 
 class RAGSystem {
     private $ollama_url = "http://localhost:11434";
@@ -18,6 +18,19 @@ class RAGSystem {
             $config = json_decode(file_get_contents($config_file), true);
             $this->current_profile = $config['filesetconfig'] ?? 'ragcode';
         }
+        
+        // Load model from profile config
+        $this->load_model_from_profile();
+    }
+    
+    private function load_model_from_profile() {
+        $yaml_file = __DIR__ . "/../py/{$this->current_profile}.yaml";
+        if (file_exists($yaml_file)) {
+            $content = file_get_contents($yaml_file);
+            if (preg_match('/ollama_model:\s*["\']?([^"\'\n]+)["\']?/', $content, $matches)) {
+                $this->current_model = trim($matches[1]);
+            }
+        }
     }
     
     public function errorlog($message) {
@@ -34,7 +47,7 @@ class RAGSystem {
                ' --query ' . escapeshellarg($query) .
                ' --k ' . (int)$k;
         
-        $output = shell_exec($cmd . ' 2>/dev/null');  // Suppress stderr
+        $output = shell_exec($cmd . ' 2>&1');
         
         if (!$output) {
             throw new Exception("FAISS search returned no output");
@@ -124,6 +137,9 @@ class RAGSystem {
     }
     
     public function is_model_ready() {
+        // Check via Docker
+        $ps_output = shell_exec("docker exec ollama ollama ps 2>/dev/null");
+        $this->model_ready = ($ps_output && strpos($ps_output, $this->current_model) !== false);
         return ['ready' => $this->model_ready, 'model' => $this->current_model];
     }
     

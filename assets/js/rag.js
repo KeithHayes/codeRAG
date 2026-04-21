@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
     loadModelFromConfig()
 })
 
-// Make sure updatestatus is available
+// Make sure updatestatus replaces content, not appends
 window.updatestatus = window.updatestatus || function(text) {
     const statusDiv = document.getElementById('status');
     if (statusDiv) statusDiv.textContent = text;

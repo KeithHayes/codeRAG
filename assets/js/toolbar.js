@@ -1,239 +1,234 @@
-// JS assets/js/toolbar.js - Complete implementation
-// MODIFIED: Ollama service button uses start.sh/stop.sh, hover unchanged
-
+// JS assets/js/toolbar.js - Fixed status preservation
 (function () {
   const statusDiv = document.createElement('div')
   
-  // Track current profile
-  let currentProfile = 'ragcode';
+  let currentProfile = 'ragcode'
+  let stackRunning = false
+  let stackCheckInterval = null
+  let isUpdatingStack = false
+  let lastStatusCheck = 0
+  let cachedStatus = false
+  let modelLoadStatus = null // Track model load status separately
+  let lastStatusUpdateTime = 0
+  let statusLock = false // Prevent status from being overwritten temporarily
   
-  // Track Ollama service state
-  let ollamaServiceRunning = false;
-  let ollamaCheckInterval = null;
-  
-  /**
-   * @function updateButtonVisibility
-   * @description Sets button visibility based on current profile
-   * Rebuild Vector Store (FAISS) button hidden for Transcripts profile
-   * Refresh Vector Store button is ALWAYS hidden per specification
-   * Paste Transcript button only shown for Transcripts profile
-   */
   function updateButtonVisibility() {
-    // Rebuild Vector Store button - hide when processing transcripts
-    const fullBuildButton = document.getElementById('button_full_build');
+    const fullBuildButton = document.getElementById('button_full_build')
     if (fullBuildButton) {
-      if (currentProfile === 'transcript') {
-        fullBuildButton.style.display = 'none';
-      } else {
-        fullBuildButton.style.display = '';
-      }
+      fullBuildButton.style.display = currentProfile === 'transcript' ? 'none' : ''
     }
     
-    // Refresh Vector Store button - ALWAYS hidden (per specification)
-    const refreshButton = document.getElementById('button_vectordb');
+    const refreshButton = document.getElementById('button_vectordb')
     if (refreshButton) {
-      refreshButton.style.display = 'none';
+      refreshButton.style.display = 'none'
     }
     
-    // Paste Transcript button - only shown when processing transcripts
-    const pasteButton = document.getElementById('button_pastetranscript');
+    const pasteButton = document.getElementById('button_pastetranscript')
     if (pasteButton) {
-      if (currentProfile === 'transcript') {
-        pasteButton.style.display = '';
-      } else {
-        pasteButton.style.display = 'none';
+      pasteButton.style.display = currentProfile === 'transcript' ? '' : 'none'
+    }
+  }
+  
+  function updateStackButtonShift(isRunning) {
+    const homeserverBtn = document.getElementById('homeserver')
+    if (!homeserverBtn) return
+    
+    if (isRunning) {
+      if (homeserverBtn.classList.contains('homeservershift')) {
+        homeserverBtn.classList.remove('homeservershift')
+      }
+      stackRunning = true
+      cachedStatus = true
+      // Only update status if no model load status is active and not locked
+      if (!modelLoadStatus && !statusLock) {
+        updatestatus('Service accessible')
+      }
+    } else {
+      if (!homeserverBtn.classList.contains('homeservershift')) {
+        homeserverBtn.classList.add('homeservershift')
+      }
+      stackRunning = false
+      cachedStatus = false
+      // Only update status if no model load status is active and not locked
+      if (!modelLoadStatus && !statusLock) {
+        updatestatus('Starting service...')
       }
     }
   }
   
-  /**
-   * @function checkOllamaService
-   * @description Scheduled task that runs every second to check Ollama service status
-   * If service responds successfully: button is NOT shifted (no class)
-   * If service fails: button IS shifted -60px (adds homeservershift class)
-   * NOTE: Hover effect unchanged - CSS already defines hover at background-position: 0 -30px
-   */
-  function checkOllamaService() {
-    const homeserverBtn = document.getElementById('homeserver');
+  function checkStackStatus() {
+    if (isUpdatingStack) return
     
-    fetch('assets/php/ollama_api.php?action=status', {
+    // Don't check if status is locked (e.g., showing model loaded message)
+    if (statusLock) return
+    
+    const now = Date.now()
+    if (now - lastStatusCheck < 2000) {
+      updateStackButtonShift(cachedStatus)
+      return
+    }
+    
+    lastStatusCheck = now
+    
+    fetch(`assets/php/ollama_api.php?action=status&_=${now}`, {
       method: 'GET',
-      mode: 'cors',
-      cache: 'no-cache'
+      cache: 'no-cache',
+      headers: { 'Cache-Control': 'no-cache' }
     })
       .then(response => response.json())
       .then(data => {
-        if (data.success && data.running) {
-          // Service is running successfully - remove shift class
-          if (!ollamaServiceRunning && homeserverBtn) {
-            homeserverBtn.classList.remove('homeservershift');
-            ollamaServiceRunning = true;
-          }
-        } else {
-          // Service is not running - add shift class
-          if (ollamaServiceRunning || (!ollamaServiceRunning && homeserverBtn && !homeserverBtn.classList.contains('homeservershift'))) {
-            if (homeserverBtn) {
-              homeserverBtn.classList.add('homeservershift');
-            }
-            ollamaServiceRunning = false;
-          }
-        }
+        const isRunning = !!(data.success && data.running)
+        cachedStatus = isRunning
+        updateStackButtonShift(isRunning)
       })
       .catch(() => {
-        // Service is not running or failed - add shift class
-        if (ollamaServiceRunning || (!ollamaServiceRunning && homeserverBtn && !homeserverBtn.classList.contains('homeservershift'))) {
-          if (homeserverBtn) {
-            homeserverBtn.classList.add('homeservershift');
-          }
-          ollamaServiceRunning = false;
-        }
-      });
+        updateStackButtonShift(false)
+        cachedStatus = false
+      })
   }
   
-  /**
-   * @function startOllamaChecker
-   * @description Starts the scheduled task to check Ollama service every second
-   */
-  function startOllamaChecker() {
-    if (ollamaCheckInterval) {
-      clearInterval(ollamaCheckInterval);
+  function startStackChecker() {
+    if (stackCheckInterval) {
+      clearInterval(stackCheckInterval)
     }
     
-    ollamaCheckInterval = setInterval(() => {
-      checkOllamaService();
-    }, 1000);
+    // Set initial status
+    updatestatus('Checking Ollama status...')
+    
+    checkStackStatus()
+    
+    stackCheckInterval = setInterval(() => {
+      checkStackStatus()
+    }, 3000)
   }
   
-  /**
-   * @function stopOllamaChecker
-   * @description Stops the scheduled checker
-   */
-  function stopOllamaChecker() {
-    if (ollamaCheckInterval) {
-      clearInterval(ollamaCheckInterval);
-      ollamaCheckInterval = null;
+  function stopStackChecker() {
+    if (stackCheckInterval) {
+      clearInterval(stackCheckInterval)
+      stackCheckInterval = null
     }
   }
   
-  /**
-   * @function handleOllamaButtonClick
-   * @description Handles click on Check Ollama Service button
-   * If button is shifted (service not running): starts the full stack via start.sh
-   * If button is unshifted (service running): stops the stack via stop.sh
-   * Uses the mandatory start.sh and stop.sh scripts per specification
-   */
-  function handleOllamaButtonClick() {
-    const homeserverBtn = document.getElementById('homeserver');
-    const isShifted = homeserverBtn && homeserverBtn.classList.contains('homeservershift');
+  // Lock status for a period of time (e.g., to show model loaded message)
+  function lockStatus(ms) {
+    statusLock = true
+    setTimeout(() => {
+      statusLock = false
+      // After lock expires, refresh the status based on current state
+      if (!modelLoadStatus) {
+        if (stackRunning) {
+          updatestatus('Service accessible')
+        } else {
+          updatestatus('Starting service...')
+        }
+      }
+    }, ms)
+  }
+  
+  function handleStackButtonClick() {
+    const homeserverBtn = document.getElementById('homeserver')
+    const isShifted = homeserverBtn && homeserverBtn.classList.contains('homeservershift')
+    
+    if (isUpdatingStack) {
+      updatestatus('Operation already in progress...')
+      return
+    }
     
     if (isShifted) {
-      // Service is not running - start it using start.sh
-      updatestatus('Starting Ollama service...');
+      isUpdatingStack = true
+      // Clear model load status when starting/stopping
+      modelLoadStatus = null
+      updatestatus('Starting stack...')
+      if (homeserverBtn) homeserverBtn.style.pointerEvents = 'none'
       
-      fetch('assets/php/ollama_api.php?action=start', {
+      fetch(`assets/php/ollama_api.php?action=start`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          updatestatus('Ollama service started');
-          // Force a status check after start
-          setTimeout(() => checkOllamaService(), 3000);
-        } else {
-          updatestatus('Failed to start Ollama service');
-          alert('Failed to start Ollama service: ' + (data.error || 'Unknown error'));
-        }
+        updatestatus(data.message || (data.success ? 'Stack started' : 'Start initiated'))
+        setTimeout(() => {
+          checkStackStatus()
+          isUpdatingStack = false
+          if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+        }, 3000)
       })
       .catch(error => {
-        console.error('Error starting Ollama:', error);
-        updatestatus('Error starting Ollama service');
-        alert('Error starting Ollama service. Check that start.sh exists and is executable.');
-      });
+        console.error('Start error:', error)
+        updatestatus('Error starting stack')
+        isUpdatingStack = false
+        if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+      })
     } else {
-      // Service is running - stop it using stop.sh
-      updatestatus('Stopping Ollama service...');
+      isUpdatingStack = true
+      // Clear model load status when starting/stopping
+      modelLoadStatus = null
+      updatestatus('Stopping stack...')
+      if (homeserverBtn) homeserverBtn.style.pointerEvents = 'none'
       
-      fetch('assets/php/ollama_api.php?action=stop', {
+      fetch(`assets/php/ollama_api.php?action=stop`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          updatestatus('Ollama service stopped');
-          // Force a status check after stop
-          setTimeout(() => checkOllamaService(), 2000);
-        } else {
-          updatestatus('Failed to stop Ollama service');
-          alert('Failed to stop Ollama service: ' + (data.error || 'Unknown error'));
-        }
+        updatestatus('Stack stopped')
+        setTimeout(() => {
+          checkStackStatus()
+          isUpdatingStack = false
+          if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+        }, 2000)
       })
       .catch(error => {
-        console.error('Error stopping Ollama:', error);
-        updatestatus('Error stopping Ollama service');
-        alert('Error stopping Ollama service. Check that stop.sh exists and is executable.');
-      });
+        console.error('Stop error:', error)
+        updatestatus('Error stopping stack')
+        isUpdatingStack = false
+        if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+      })
     }
   }
 
-  /**
-   * @function handlePasteTranscriptClick
-   * @description Handles click on Paste Transcript button
-   * Reads from clipboard and sends to PHP stub
-   */
   function handlePasteTranscriptClick() {
-    updatestatus('Reading clipboard...');
+    updatestatus('Reading clipboard...')
     
-    // Read from clipboard
     navigator.clipboard.readText()
       .then(text => {
         if (!text || text.trim() === '') {
-          updatestatus('Clipboard is empty');
-          alert('Clipboard is empty. Copy some text first.');
-          return;
+          updatestatus('Clipboard is empty')
+          alert('Clipboard is empty. Copy some text first.')
+          return
         }
         
-        updatestatus('Sending transcript to server...');
+        updatestatus('Sending transcript...')
         
-        // Send to PHP stub
-        fetch('assets/php/process_transcript.php', {
+        fetch(`assets/php/process_transcript.php`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transcript: text })
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            updatestatus('Transcript saved');
+            updatestatus('Transcript saved')
           } else {
-            updatestatus('Failed to save transcript');
-            alert('Error: ' + (data.error || 'Unknown error'));
+            updatestatus('Failed to save transcript')
+            alert('Error: ' + (data.error || 'Unknown error'))
           }
         })
         .catch(error => {
-          console.error('Error:', error);
-          updatestatus('Error saving transcript');
-          alert('Error: ' + error.message);
-        });
+          console.error('Error:', error)
+          updatestatus('Error saving transcript')
+          alert('Error: ' + error.message)
+        })
       })
       .catch(err => {
-        console.error('Clipboard read error:', err);
-        updatestatus('Cannot read clipboard - permission denied');
-        alert('Unable to read clipboard. Please check browser permissions.');
-      });
+        console.error('Clipboard read error:', err)
+        updatestatus('Cannot read clipboard')
+        alert('Unable to read clipboard. Please check browser permissions.')
+      })
   }
 
-  /**
-   * @function loadtoolbar
-   * @description Initializes the application toolbar.
-   */
   function loadtoolbar() {
     const bar = document.getElementById("coderagtoolbar")
     const buttonlist = document.createElement('ul')
@@ -258,7 +253,7 @@
 
     statusDiv.id = 'status'
     statusDiv.className = 'status'
-    statusDiv.textContent = 'Checking Ollama status...'
+    statusDiv.textContent = 'Checking status...'
 
     statusLi.appendChild(statusDiv)
 
@@ -272,70 +267,106 @@
     bar.appendChild(buttonlist)
     loadtooltips()
     
-    startOllamaChecker();
+    startStackChecker()
 
-    // Direct button binding
-    const runButton = document.querySelector('#loadmodel.dogrunBTN');
+    const runButton = document.querySelector('#button_loadmodel a')
     if (runButton) {
-      runButton.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        loadmodel();
-        return false;
-      };
+      runButton.onclick = async function(e) {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        const statusDivElem = document.getElementById('status')
+        const promptInput = document.getElementById('userInput')
+        const sendBtn = document.getElementById('sendButton')
+        
+        // Clear previous model load status
+        modelLoadStatus = null
+        
+        if (statusDivElem) statusDivElem.textContent = "Loading model..."
+        
+        try {
+          const response = await fetch(`assets/php/force_reload_model.php`)
+          const data = await response.json()
+          
+          if (data.success) {
+            const successMsg = `Model ready: ${data.new_model}`
+            modelLoadStatus = successMsg
+            if (statusDivElem) statusDivElem.textContent = successMsg
+            if (promptInput) promptInput.disabled = false
+            if (sendBtn) sendBtn.disabled = false
+            // Lock status for 10 seconds to show the model loaded message
+            lockStatus(10000)
+          } else {
+            modelLoadStatus = null
+            if (statusDivElem) statusDivElem.textContent = data.message || "Failed to load"
+            if (data.message && data.message.includes('not running')) {
+              alert('Stack not running. Click homeserver button to start.')
+            } else {
+              alert(data.message || "Failed to load model")
+            }
+          }
+        } catch (error) {
+          console.error("Load model error:", error)
+          modelLoadStatus = null
+          if (statusDivElem) statusDivElem.textContent = "Error loading"
+          alert("Error: " + error.message)
+        }
+        
+        return false
+      }
     }
 
-    const checkButton = document.querySelector('#checkmodel.sailboatBTN');
+    const checkButton = document.querySelector('#button_checkmodel a')
     if (checkButton) {
       checkButton.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        checkmodel();
-        return false;
-      };
+        e.preventDefault()
+        e.stopPropagation()
+        checkmodel()
+        return false
+      }
     }
 
-    const fullBuildButton = document.querySelector('#full_build.dbuploadBTN');
+    const fullBuildButton = document.querySelector('#button_full_build a')
     if (fullBuildButton) {
       fullBuildButton.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        rebuild_vectorstore();
-        return false;
-      };
+        e.preventDefault()
+        e.stopPropagation()
+        rebuild_vectorstore()
+        return false
+      }
     }
     
-    const refreshButton = document.querySelector('#vectordb.dbrefreshBTN');
+    const refreshButton = document.querySelector('#button_vectordb a')
     if (refreshButton) {
       refreshButton.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        refresh_vectorstore();
-        return false;
-      };
+        e.preventDefault()
+        e.stopPropagation()
+        refresh_vectorstore()
+        return false
+      }
     }
     
-    const ollamaServiceButton = document.querySelector('#homeserver.homeserverBTN');
-    if (ollamaServiceButton) {
-      ollamaServiceButton.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleOllamaButtonClick();
-        return false;
-      };
+    const stackButton = document.querySelector('#button_homeserver a')
+    if (stackButton) {
+      stackButton.onclick = function(e) {
+        e.preventDefault()
+        e.stopPropagation()
+        handleStackButtonClick()
+        return false
+      }
     }
     
-    const pasteTranscriptButton = document.querySelector('#pastetranscript.pasteBTN');
+    const pasteTranscriptButton = document.querySelector('#button_pastetranscript a')
     if (pasteTranscriptButton) {
       pasteTranscriptButton.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        handlePasteTranscriptClick();
-        return false;
-      };
+        e.preventDefault()
+        e.stopPropagation()
+        handlePasteTranscriptClick()
+        return false
+      }
     }
 
-    updateButtonVisibility();
+    updateButtonVisibility()
   }
 
   function addbutton(id, className, side, isIndicator) {
@@ -434,11 +465,11 @@
   function loadtooltips() {
     const tooltips = {
       fileload: 'File Set',
-      full_build: 'Rebuild Vector Store (FAISS)',
+      full_build: 'Rebuild Vector Store',
       vectordb: 'Refresh Vector Store',
-      homeserver: 'Check Ollama Service',
-      loadmodel: 'Load Model (Ollama)',
-      checkmodel: 'Check Model (Ollama)',
+      homeserver: 'Start/Stop Stack',
+      loadmodel: 'Load Model',
+      checkmodel: 'Check Models',
       pastetranscript: 'Paste Transcript',
       fastapi: 'Ollama API Docs',
       homepage: 'Homepage',
@@ -465,7 +496,7 @@
 
   function ragcode() {
     const content = { "filesetconfig": "ragcode" }
-    fetch('assets/php/save_config.php', {
+    fetch(`assets/php/save_config.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content)
@@ -474,8 +505,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGcode")
       clearchatbox()
-      currentProfile = 'ragcode';
-      updateButtonVisibility();
+      currentProfile = 'ragcode'
+      updateButtonVisibility()
       updatestatus('Switched to RAGcode profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
     })
@@ -483,7 +514,7 @@
 
   function doomsteadcode() {
     const content = { "filesetconfig": "doomstead" }
-    fetch('assets/php/save_config.php', {
+    fetch(`assets/php/save_config.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content)
@@ -492,8 +523,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Doomstead")
       clearchatbox()
-      currentProfile = 'doomstead';
-      updateButtonVisibility();
+      currentProfile = 'doomstead'
+      updateButtonVisibility()
       updatestatus('Switched to Doomstead profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
     })
@@ -501,7 +532,7 @@
 
   function mainpagecode() {
     const content = { "filesetconfig": "mainpage" }
-    fetch('assets/php/save_config.php', {
+    fetch(`assets/php/save_config.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content)
@@ -510,8 +541,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Mainpage")
       clearchatbox()
-      currentProfile = 'mainpage';
-      updateButtonVisibility();
+      currentProfile = 'mainpage'
+      updateButtonVisibility()
       updatestatus('Switched to Mainpage profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
     })
@@ -519,7 +550,7 @@
 
   function ragdocs() {
     const content = { "filesetconfig": "ragdocs" }
-    fetch('assets/php/save_config.php', {
+    fetch(`assets/php/save_config.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content)
@@ -528,8 +559,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGdocs")
       clearchatbox()
-      currentProfile = 'ragdocs';
-      updateButtonVisibility();
+      currentProfile = 'ragdocs'
+      updateButtonVisibility()
       updatestatus('Switched to RAGdocs profile. Click Run button to load model.')
       updatetooltitle('Retrieval Argumentation Generation for Code')
     })
@@ -537,7 +568,7 @@
 
   function transcripts() {
     const content = { "filesetconfig": "transcript" }
-    fetch('assets/php/save_config.php', {
+    fetch(`assets/php/save_config.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content)
@@ -546,8 +577,8 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Transcripts")
       clearchatbox()
-      currentProfile = 'transcript';
-      updateButtonVisibility();
+      currentProfile = 'transcript'
+      updateButtonVisibility()
       updatestatus('Switched to Transcript profile. Click Run button to load model.')
       updatetooltitle('Transcript Processor')
     })
@@ -563,7 +594,7 @@
     const modal = new BuildModal()
     modal.startPolling()
 
-    fetch('assets/php/full_builder.php', {
+    fetch(`assets/php/full_builder.php`, {
       method: 'POST',
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
@@ -580,57 +611,30 @@
     alert('Use "Full Build" to rebuild the vector store completely.')
   }
 
-  async function loadmodel() {
-    const statusDiv = document.getElementById('status');
-    const promptInput = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendButton');
-    
-    if (statusDiv) statusDiv.textContent = "Loading model from config...";
-    
-    try {
-      const response = await fetch('assets/php/force_reload_model.php');
-      const data = await response.json();
-      
-      if (data.success) {
-        if (statusDiv) statusDiv.textContent = `Model ready: ${data.new_model}`;
-        if (promptInput) promptInput.disabled = false;
-        if (sendBtn) sendBtn.disabled = false;
-        console.log(`✓ Model loaded: ${data.new_model}`);
-      } else {
-        if (statusDiv) statusDiv.textContent = "Failed to load model";
-        alert("Failed to load model. Check Ollama service.");
-      }
-    } catch (error) {
-      console.error("Load model error:", error);
-      if (statusDiv) statusDiv.textContent = "Error loading model";
-      alert("Error: " + error.message);
-    }
-  }
-
   async function checkmodel() {
-    updatestatus('Checking Ollama models...')
+    updatestatus('Checking models...')
     
     try {
-      const response = await fetch('assets/php/ollama_api.php?action=list')
+      const response = await fetch(`assets/php/ollama_api.php?action=list`)
       const data = await response.json()
       
       if (data.success && data.models) {
         if (data.models.length === 0) {
-          alert('No models found in Ollama.\n\nPull a model first:\nollama pull deepseek-coder:6.7b')
+          alert('No models found.\n\nPull a model: ollama pull deepseek-coder:6.7b')
           updatestatus('No models available')
         } else {
-          const modelList = data.models.map(m => `${m.name} (${(m.size / 1024 / 1024 / 1024).toFixed(1)} GB)`).join('\n')
-          alert(`Available Ollama models:\n\n${modelList}\n\nTo load a model, click the Run button.`)
+          const modelList = data.models.map(m => `${m.name} (${(parseInt(m.size) / 1024 / 1024 / 1024).toFixed(1)} GB)`).join('\n')
+          alert(`Available models:\n\n${modelList}`)
           updatestatus(`${data.models.length} model(s) available`)
         }
       } else {
-        updatestatus('Could not fetch models')
-        alert('Error connecting to Ollama API')
+        updatestatus('Cannot connect to Ollama')
+        alert('Cannot connect to Ollama. Is the stack running?')
       }
     } catch (error) {
       console.error('Check model error:', error)
-      updatestatus('Ollama API error')
-      alert('Could not connect to Ollama. Is it running?')
+      updatestatus('Connection error')
+      alert('Could not connect to Ollama. Is the stack running?')
     }
   }
 
@@ -643,7 +647,7 @@
   }
 
   function book() {
-    updatestatus('Documentation feature coming soon')
+    updatestatus('Documentation coming soon')
     alert('Documentation viewer will be implemented in future version')
   }
 
@@ -654,18 +658,17 @@
   }
 
   function updatetooltitle(text) {
-    let banner = document.getElementById("tooltitle");
-    if (banner) banner.textContent = text;
+    let banner = document.getElementById("tooltitle")
+    if (banner) banner.textContent = text
   }
 
   window.addEventListener('beforeunload', function() {
-    stopOllamaChecker();
-  });
+    stopStackChecker()
+  })
 
   window.loadtoolbar = loadtoolbar
   window.updatestatus = updatestatus
   window.rebuild_vectorstore = rebuild_vectorstore
-  window.loadmodel = loadmodel
   window.checkmodel = checkmodel
 })()
 

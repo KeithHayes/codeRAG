@@ -92,11 +92,13 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
         os.path.join(base_path, 'assets', 'py', 'logger.py'),
         os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
+        os.path.join(base_path, 'assets', 'py', 'start_api_server.py'),
         os.path.join(base_path, 'assets', 'py', 'report.py'),
         os.path.join(base_path, 'assets', 'py', 'doomstead.yaml'),
         os.path.join(base_path, 'assets', 'py', 'mainpage.yaml'),
         os.path.join(base_path, 'assets', 'py', 'ragcode.yaml'),
         os.path.join(base_path, 'assets', 'py', 'ragdocs.yaml '),
+        os.path.join(base_path, 'assets', 'py', 'transcript.yaml '),
         os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
     ]
 
