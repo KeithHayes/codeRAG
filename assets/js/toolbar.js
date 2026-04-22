@@ -1,4 +1,4 @@
-// JS assets/js/toolbar.js
+// assets/js/toolbar.js
 // JS assets/js/toolbar.js - Fixed status preservation, no alerts for model loading
 (function () {
   const statusDiv = document.createElement('div')
@@ -28,6 +28,20 @@
     const pasteButton = document.getElementById('button_pastetranscript')
     if (pasteButton) {
       pasteButton.style.display = currentProfile === 'transcript' ? '' : 'none'
+    }
+    
+    const sailboatButton = document.getElementById('button_checkmodel')
+    if (sailboatButton) {
+      sailboatButton.style.display = currentProfile === 'transcript' ? '' : 'none'
+    }
+    
+    const dogrunButton = document.getElementById('button_loadmodel')
+    if (dogrunButton) {
+      if (currentProfile === 'transcript' && pasteButton && pasteButton.style.display !== 'none') {
+        dogrunButton.style.display = 'none'
+      } else {
+        dogrunButton.style.display = ''
+      }
     }
   }
   
@@ -222,133 +236,67 @@
   }
 
   function handlePasteTranscriptClick() {
-    // Create modal dialog
-    const modal = document.createElement('div')
-    modal.style.position = 'fixed'
-    modal.style.top = '0'
-    modal.style.left = '0'
-    modal.style.width = '100%'
-    modal.style.height = '100%'
-    modal.style.backgroundColor = 'rgba(0,0,0,0.5)'
-    modal.style.display = 'flex'
-    modal.style.justifyContent = 'center'
-    modal.style.alignItems = 'center'
-    modal.style.zIndex = '10000'
-    
-    const dialog = document.createElement('div')
-    dialog.style.backgroundColor = '#e6d5bf'
-    dialog.style.padding = '20px'
-    dialog.style.borderRadius = '8px'
-    dialog.style.width = '80%'
-    dialog.style.maxWidth = '600px'
-    dialog.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)'
-    
-    const title = document.createElement('h3')
-    title.textContent = 'Paste Transcript'
-    title.style.color = '#964B00'
-    title.style.marginTop = '0'
-    title.style.marginBottom = '15px'
-    title.style.textAlign = 'center'
-    
-    const textarea = document.createElement('textarea')
-    textarea.style.width = '100%'
-    textarea.style.height = '300px'
-    textarea.style.padding = '10px'
-    textarea.style.backgroundColor = '#ffedd4'
-    textarea.style.border = '2px solid #523A28'
-    textarea.style.borderRadius = '4px'
-    textarea.style.fontFamily = 'monospace'
-    textarea.style.fontSize = '14px'
-    textarea.style.resize = 'vertical'
-    textarea.placeholder = 'Press Ctrl+V to paste your transcript here...'
-    
-    const buttonContainer = document.createElement('div')
-    buttonContainer.style.display = 'flex'
-    buttonContainer.style.justifyContent = 'space-between'
-    buttonContainer.style.marginTop = '15px'
-    buttonContainer.style.gap = '10px'
-    
-    const saveBtn = document.createElement('button')
-    saveBtn.textContent = 'Save Transcript'
-    saveBtn.style.backgroundColor = '#523A28'
-    saveBtn.style.color = '#ffedd4'
-    saveBtn.style.border = 'none'
-    saveBtn.style.padding = '8px 16px'
-    saveBtn.style.borderRadius = '4px'
-    saveBtn.style.cursor = 'pointer'
-    saveBtn.style.flex = '1'
-    
-    const cancelBtn = document.createElement('button')
-    cancelBtn.textContent = 'Cancel'
-    cancelBtn.style.backgroundColor = '#964b00'
-    cancelBtn.style.color = '#ffedd4'
-    cancelBtn.style.border = 'none'
-    cancelBtn.style.padding = '8px 16px'
-    cancelBtn.style.borderRadius = '4px'
-    cancelBtn.style.cursor = 'pointer'
-    cancelBtn.style.flex = '1'
-    
-    buttonContainer.appendChild(saveBtn)
-    buttonContainer.appendChild(cancelBtn)
-    
-    dialog.appendChild(title)
-    dialog.appendChild(textarea)
-    dialog.appendChild(buttonContainer)
-    modal.appendChild(dialog)
-    document.body.appendChild(modal)
-    
-    // Focus the textarea
-    setTimeout(() => textarea.focus(), 100)
-    
-    // Save button handler
-    saveBtn.onclick = function() {
-      const transcript = textarea.value.trim()
-      
-      if (!transcript) {
-        alert('Please paste some text first')
-        return
-      }
-      
-      updatestatus('Sending transcript...')
-      
-      fetch(`assets/php/rag.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'save_transcript',
-          transcript: transcript 
+    const modal = new ClipboardModal(
+      function(transcript) {
+        updatestatus('Sending transcript...')
+        fetch(`assets/php/rag.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            action: 'save_transcript',
+            transcript: transcript 
+          })
         })
-      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            updatestatus('Transcript saved')
+          } else {
+            updatestatus('Failed to save transcript')
+            alert('Failed to save transcript: ' + (data.error || 'Unknown error'))
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error)
+          updatestatus('Error saving transcript')
+          alert('Error saving transcript: ' + error.message)
+        })
+      },
+      function() {
+        updatestatus('Paste cancelled')
+      }
+    )
+  }
+
+  function handleCheckModelsClick() {
+    updatestatus('Checking models...')
+    
+    fetch(`assets/php/ollama_api.php?action=list`)
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          updatestatus('Transcript saved')
-          modal.remove()
+        if (data.success && data.models) {
+          if (data.models.length === 0) {
+            alert('No models found.\n\nPull a model: ollama pull deepseek-coder:6.7b')
+            updatestatus('No models available')
+          } else {
+            const modelList = data.models.map(m => `${m.name} (${(parseInt(m.size) / 1024 / 1024 / 1024).toFixed(1)} GB)`).join('\n')
+            alert(`Available models:\n\n${modelList}`)
+            updatestatus(`${data.models.length} model(s) available`)
+          }
         } else {
-          updatestatus('Failed to save transcript')
-          alert('Failed to save transcript: ' + (data.error || 'Unknown error'))
+          updatestatus('Cannot connect to Ollama')
+          alert('Cannot connect to Ollama. Is the stack running?')
         }
       })
       .catch(error => {
-        console.error('Error:', error)
-        updatestatus('Error saving transcript')
-        alert('Error saving transcript: ' + error.message)
+        console.error('Check model error:', error)
+        updatestatus('Connection error')
+        alert('Could not connect to Ollama. Is the stack running?')
       })
-    }
-    
-    // Cancel button handler
-    cancelBtn.onclick = function() {
-      modal.remove()
-      updatestatus('Paste cancelled')
-    }
-    
-    // Close modal when clicking outside
-    modal.onclick = function(e) {
-      if (e.target === modal) {
-        modal.remove()
-        updatestatus('Paste cancelled')
-      }
-    }
+  }
+
+  function handleSailboatClick() {
+    updatestatus('Empty stub - called by event handler')
   }
 
   function loadtoolbar() {
@@ -437,12 +385,22 @@
       }
     }
 
-    const checkButton = document.querySelector('#button_checkmodel a')
-    if (checkButton) {
-      checkButton.onclick = function(e) {
+    const sailboatButton = document.querySelector('#button_checkmodel a')
+    if (sailboatButton) {
+      sailboatButton.onclick = function(e) {
         e.preventDefault()
         e.stopPropagation()
-        checkmodel()
+        handleSailboatClick()
+        return false
+      }
+    }
+
+    const horuseyeButton = document.querySelector('#button_fastapi a')
+    if (horuseyeButton) {
+      horuseyeButton.onclick = function(e) {
+        e.preventDefault()
+        e.stopPropagation()
+        handleCheckModelsClick()
         return false
       }
     }
@@ -593,7 +551,7 @@
       loadmodel: 'Load Model',
       checkmodel: 'Check Models',
       pastetranscript: 'Paste Transcript',
-      fastapi: 'Ollama API Docs',
+      fastapi: 'Check Models',
       homepage: 'Homepage',
       book: 'Documentation'
     }
@@ -750,37 +708,6 @@
     updatestatus('Refresh not implemented - use Full Build')
   }
 
-  async function checkmodel() {
-    updatestatus('Checking models...')
-    
-    try {
-      const response = await fetch(`assets/php/ollama_api.php?action=list`)
-      const data = await response.json()
-      
-      if (data.success && data.models) {
-        if (data.models.length === 0) {
-          alert('No models found.\n\nPull a model: ollama pull deepseek-coder:6.7b')
-          updatestatus('No models available')
-        } else {
-          const modelList = data.models.map(m => `${m.name} (${(parseInt(m.size) / 1024 / 1024 / 1024).toFixed(1)} GB)`).join('\n')
-          alert(`Available models:\n\n${modelList}`)
-          updatestatus(`${data.models.length} model(s) available`)
-        }
-      } else {
-        updatestatus('Cannot connect to Ollama')
-        alert('Cannot connect to Ollama. Is the stack running?')
-      }
-    } catch (error) {
-      console.error('Check model error:', error)
-      updatestatus('Connection error')
-      alert('Could not connect to Ollama. Is the stack running?')
-    }
-  }
-
-  function fastapi() {
-    window.open('https://github.com/ollama/ollama/blob/main/docs/api.md', '_blank', 'noopener,noreferrer')
-  }
-
   function homepage() {
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
   }
@@ -810,7 +737,6 @@
   window.loadtoolbar = loadtoolbar
   window.updatestatus = updatestatus
   window.rebuild_vectorstore = rebuild_vectorstore
-  window.checkmodel = checkmodel
 })()
 
 if (document.readyState === 'loading') {

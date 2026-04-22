@@ -1,4 +1,5 @@
 // assets/js/build_modal.js
+// assets/js/build_modal.js
 class BuildModal {
     constructor() {
         this.modal = null
