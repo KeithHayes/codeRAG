@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import List, Dict, Any
 import argparse
 
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import (
     TextLoader, PyPDFLoader, DirectoryLoader
@@ -423,7 +423,7 @@ class FAISSBuilder:
 def main():
     parser = argparse.ArgumentParser(description='FAISS Vector Store Builder')
     parser.add_argument('--profile', required=True, 
-                       choices=['ragcode', 'doomstead', 'mainpage', 'ragdocs'],
+                       choices=['ragcode', 'doomstead', 'mainpage', 'ragdocs', 'transcript'],
                        help='Configuration profile to build')
     
     args = parser.parse_args()

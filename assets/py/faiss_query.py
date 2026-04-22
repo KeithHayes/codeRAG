@@ -12,7 +12,7 @@ from typing import List, Dict, Any
 
 warnings.filterwarnings("ignore")
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")

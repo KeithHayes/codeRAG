@@ -1,20 +1,30 @@
 doomsteadRAG:
-  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  embedding_model: sentence-transformers/all-mpnet-base-v2
   chunk_size: 800
   chunk_overlap: 150
-  vector_db_type: "faiss"
-  
+  vector_db_type: faiss
+  text_parsing:
+    strategy: semantic
+    preserve_comments: true
+    detect_paragraphs: true
+    min_chunk_size: 200
+    separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - "! "
+    - "? "
+    - " "
   code_dirs:
-    py:
-      - "/var/www/html/doomsteadRAG/assets/py"
     php:
-      - "/var/www/html/doomsteadRAG/assets/php"
+    - /var/www/html/doomsteadRAG/assets/php
     js:
-      - "/var/www/html/doomsteadRAG/assets/js"
+    - /var/www/html/doomsteadRAG/assets/js
     css:
-      - "/var/www/html/doomsteadRAG/assets/css"
-
-  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragcode/faiss_index"
-  collection_name: "ragcode"
+    - /var/www/html/doomsteadRAG/assets/css
+    py:
+    - /var/www/html/doomsteadRAG/assets/py
+  vector_db_path: /var/www/html/doomsteadRAG/assets/data/ragcode/faiss_index
+  collection_name: ragcode
   min_score: "0.25"
-  ollama_model: "deepseek-coder:6.7b"
+  ollama_model: deepseek-coder:6.7b

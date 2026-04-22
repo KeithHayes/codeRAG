@@ -310,10 +310,10 @@
     buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
     buttonlist.appendChild(addbutton('pastetranscript', 'pasteBTN', 'left', false))
-    buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
     buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
     buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
     buttonlist.appendChild(addbutton('fastapi', 'horuseyeBTN', 'left', false))
+    buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
     buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
     buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true))
     buttonlist.appendChild(addbutton('book', 'bookBTN', 'right', false))
@@ -659,7 +659,7 @@
       clearchatbox()
       currentProfile = 'transcript'
       updateButtonVisibility()
-      updatestatus('Switched to Transcript profile. Click Run button to load model.')
+      updatestatus('Switched to Transcript profile. Clipboard loads Transcript.')
       updatetooltitle('Transcript Processor')
     })
   }

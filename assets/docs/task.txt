@@ -1,9 +1,0 @@
-changes to toolbar.js only :
-
-The horuseyeBTN will now implement what sailboatBTN is doing as they are repurposed.
-
-sailboatBTN becomes an empty stub called by an event handler for now.
-
-The visibility of sailboatBTN will have the same visibility as pasteBTN.
-
-The visibility of dogrunBTN will be hidden when pasteBTN is visible.

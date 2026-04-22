@@ -10,7 +10,7 @@ class RAGSystem {
     private $ollama_url = "http://localhost:11434";
     private $current_model = "deepseek-coder:6.7b";
     private $model_ready = true;
-    private $python_path = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
+    private $python_path = '/var/www/html/doomsteadRAG/venv_rag/bin/python3';
     private $current_profile = 'ragcode';
     
     public function __construct() {

@@ -18,8 +18,8 @@ if (file_exists($config_file)) {
     $profile = $config['filesetconfig'] ?? 'ragcode';
 }
 
-// Paths
-$pythonBinary = '/var/www/html/doomsteadRAG/assets/py/venv/bin/python3';
+// Paths - Updated to use clean venv
+$pythonBinary = '/var/www/html/doomsteadRAG/venv_rag/bin/python3';
 $pythonScript = '/var/www/html/doomsteadRAG/assets/py/faiss_builder.py';
 
 if (!file_exists($pythonScript)) {
