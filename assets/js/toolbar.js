@@ -1,5 +1,4 @@
 // assets/js/toolbar.js
-// JS assets/js/toolbar.js - Fixed status preservation, no alerts for model loading
 (function () {
   const statusDiv = document.createElement('div')
   
@@ -299,13 +298,54 @@
     updatestatus('Empty stub - called by event handler')
   }
 
+  function rebuild_vectorstore() {
+    updatestatus('Building FAISS vector store...')
+    
+    if (typeof BuildModal !== 'undefined') {
+      const modal = new BuildModal()
+      modal.startPolling()
+      
+      fetch('assets/php/full_builder.php', {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          updatestatus('Build failed: ' + (data.error || 'Unknown error'))
+        } else {
+          updatestatus('Build started...')
+        }
+      })
+      .catch((error) => {
+        console.error('Build error:', error)
+        updatestatus('Build failed - check logs')
+      })
+    } else {
+      console.error('BuildModal not loaded')
+      updatestatus('BuildModal not loaded - refresh page')
+    }
+  }
+
+  function refresh_vectorstore() {
+    updatestatus('Refresh not implemented - use Full Build')
+  }
+
   function loadtoolbar() {
     const bar = document.getElementById("coderagtoolbar")
+    if (!bar) {
+      console.error('coderagtoolbar element not found')
+      return
+    }
+    
     const buttonlist = document.createElement('ul')
     buttonlist.id = 'coderag_menu_buttons'
     buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode','Doomstead','Mainpage','RAGdocs','Transcripts','PlantDiseases']))
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode', 'Doomstead', 'Mainpage', 'RAGdocs', 'Transcripts', 'PlantDiseases']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
@@ -574,7 +614,21 @@
     }
   }
 
+  function cleanupProfile() {
+    const chatbox = document.getElementById("chatbox")
+    if (chatbox) chatbox.innerHTML = ""
+    
+    const promptInput = document.getElementById('userInput')
+    const sendBtn = document.getElementById('sendButton')
+    if (promptInput) {
+      promptInput.disabled = true
+      promptInput.value = ""
+    }
+    if (sendBtn) sendBtn.disabled = true
+  }
+
   function ragcode() {
+    cleanupProfile()
     const content = { "filesetconfig": "ragcode" }
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
@@ -584,7 +638,6 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGcode")
-      clearchatbox()
       currentProfile = 'ragcode'
       updateButtonVisibility()
       updatestatus('Switched to RAGcode profile. Click Run button to load model.')
@@ -593,6 +646,7 @@
   }
 
   function doomsteadcode() {
+    cleanupProfile()
     const content = { "filesetconfig": "doomstead" }
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
@@ -602,7 +656,6 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Doomstead")
-      clearchatbox()
       currentProfile = 'doomstead'
       updateButtonVisibility()
       updatestatus('Switched to Doomstead profile. Click Run button to load model.')
@@ -611,6 +664,7 @@
   }
 
   function mainpagecode() {
+    cleanupProfile()
     const content = { "filesetconfig": "mainpage" }
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
@@ -620,7 +674,6 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Mainpage")
-      clearchatbox()
       currentProfile = 'mainpage'
       updateButtonVisibility()
       updatestatus('Switched to Mainpage profile. Click Run button to load model.')
@@ -629,6 +682,7 @@
   }
 
   function ragdocs() {
+    cleanupProfile()
     const content = { "filesetconfig": "ragdocs" }
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
@@ -638,7 +692,6 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("RAGdocs")
-      clearchatbox()
       currentProfile = 'ragdocs'
       updateButtonVisibility()
       updatestatus('Switched to RAGdocs profile. Click Run button to load model.')
@@ -647,6 +700,7 @@
   }
 
   function transcripts() {
+    cleanupProfile()
     const content = { "filesetconfig": "transcript" }
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
@@ -656,7 +710,6 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("Transcripts")
-      clearchatbox()
       currentProfile = 'transcript'
       updateButtonVisibility()
       updatestatus('Switched to Transcript profile. Clipboard loads Transcript.')
@@ -665,6 +718,7 @@
   }
 
   function plantdiseases() {
+    cleanupProfile()
     const content = { "filesetconfig": "plantdiseases" }
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
@@ -674,38 +728,11 @@
       const dropdown = document.getElementById('dropdown_fileload')
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext("PlantDiseases")
-      clearchatbox()
       currentProfile = 'plantdiseases'
       updateButtonVisibility()
       updatestatus('Switched to PlantDiseases profile. Click Run button to load model.')
       updatetooltitle('Plant Diseases RAG - Based on 11pests1disease.pdf')
     })
-  }
-
-  function clearchatbox() {
-    const chatbox = document.getElementById("chatbox")
-    if (chatbox) chatbox.innerHTML = ""
-  }
-
-  function rebuild_vectorstore() {
-    updatestatus('Building FAISS vector store...')
-    const modal = new BuildModal()
-    modal.startPolling()
-
-    fetch(`assets/php/full_builder.php`, {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json'
-      }
-    }).catch((error) => {
-      console.error('Build error:', error)
-      updatestatus('Build failed - check logs')
-    })
-  }
-
-  function refresh_vectorstore() {
-    updatestatus('Refresh not implemented - use Full Build')
   }
 
   function homepage() {
@@ -737,16 +764,17 @@
   window.loadtoolbar = loadtoolbar
   window.updatestatus = updatestatus
   window.rebuild_vectorstore = rebuild_vectorstore
-})()
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+  
+  // Auto-initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.loadtoolbar === 'function') {
+        window.loadtoolbar()
+      }
+    })
+  } else {
     if (typeof window.loadtoolbar === 'function') {
       window.loadtoolbar()
     }
-  })
-} else {
-  if (typeof window.loadtoolbar === 'function') {
-    window.loadtoolbar()
   }
-}
+})()

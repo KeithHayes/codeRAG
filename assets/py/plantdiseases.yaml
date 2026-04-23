@@ -1,33 +1,13 @@
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
-  chunk_size: 1000
-  chunk_overlap: 200
+  chunk_size: 800
+  chunk_overlap: 150
   vector_db_type: "faiss"
-  
-  text_parsing:
-    strategy: "document"
-    preserve_comments: false
-    detect_headers: true
-    preserve_formatting: true
-    respect_page_breaks: true
-    separators:
-      - "\n\n## "
-      - "\n## "
-      - "\n\n### "
-      - "\n### "
-      - "\n\n"
-      - "\n"
-      - ". "
-      - " "
-  
   pdf:
-    - "/var/www/html/doomsteadRAG/assets/data/pdf"
-  
-  code_dirs: {}
-  
-  text_dirs: {}
-  
+    - "/var/www/html/doomsteadRAG/assets/data/plantdiseases/documents"
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/plantdiseases/faiss_index"
   collection_name: "plantdiseases"
   min_score: "0.25"
   ollama_model: "mistral:7b-instruct-v0.3-q4_0"
+  system_prompt: "You are a plant disease diagnostic assistant. Answer based on the provided context from plant disease documentation. Focus on disease identification, symptoms, causes, and treatments. Be specific and reference the source document."
+  user_prompt_template: "Context from plant disease document:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant disease context above. Focus on disease identification, symptoms, causes, and treatments. Be specific and reference the source document."

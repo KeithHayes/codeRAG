@@ -1,16 +1,26 @@
+=== PY assets/py/ragdocs.yaml ===
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   chunk_size: 800
   chunk_overlap: 150
   vector_db_type: "faiss"
-  
+  text_parsing:
+    strategy: "semantic"
+    preserve_comments: true
+    detect_paragraphs: true
+    min_chunk_size: 200
+    separators:
+      - "\n\n"
+      - "\n"
+      - ". "
+      - "! "
+      - "? "
+      - " "
   text_dirs:
-    - "/var/www/html/doomsteadRAG/assets/ragdocs/txt"
-  
-  pdf:
-    - "/var/www/html/doomsteadRAG/assets/ragdocs/pdf"
-
+    - "assets/docs"
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs/faiss_index"
   collection_name: "ragdocs"
-  min_score: "0.1"
-  ollama_model: "mistral:7b"
+  min_score: "0.25"
+  ollama_model: "mistral:7b-instruct-v0.3-q4_0"
+  system_prompt: "You are a helpful documentation assistant. Answer based on the provided context from documentation files. Be specific and reference the source documents."
+  user_prompt_template: "Context from documentation:\n{context}\n\nQuestion: {question}\n\nAnswer based on the documentation context above. Be specific and reference the source documents."

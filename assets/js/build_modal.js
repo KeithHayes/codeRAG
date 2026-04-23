@@ -1,5 +1,4 @@
 // assets/js/build_modal.js
-// assets/js/build_modal.js
 class BuildModal {
     constructor() {
         this.modal = null
@@ -54,15 +53,19 @@ class BuildModal {
         this.progressContainer.style.backgroundColor = '#e4d2ba'
         this.progressContainer.style.border = '1px solid #964B00'
         this.progressContainer.style.borderRadius = '4px'
-        this.progressContainer.style.padding = '8px'
+        this.progressContainer.style.padding = '2px'
         this.progressContainer.style.marginBottom = '18px'
 
         this.progressBar = document.createElement('div')
-        this.progressBar.style.height = '20px'
+        this.progressBar.style.height = '24px'
         this.progressBar.style.backgroundColor = '#523A28'
         this.progressBar.style.width = '0%'
         this.progressBar.style.transition = 'width 0.3s ease'
         this.progressBar.style.borderRadius = '4px'
+        this.progressBar.style.textAlign = 'center'
+        this.progressBar.style.lineHeight = '24px'
+        this.progressBar.style.color = 'white'
+        this.progressBar.style.fontSize = '12px'
 
         this.progressText = document.createElement('div')
         this.progressText.textContent = ''
@@ -96,6 +99,9 @@ class BuildModal {
                     if (data.line && data.line !== this.lastProcessedLine) {
                         this.lastProcessedLine = data.line
                         this.processLogLine(data.line)
+                    }
+                    if (data.progress !== undefined) {
+                        this.updateProgress(data.progress, data.line)
                     }
                 })
                 .catch(() => {})
@@ -169,9 +175,13 @@ class BuildModal {
     }
 
     updateProgress(percent, status) {
-        this.progressBar.style.width = percent + '%'
-        this.progressText.textContent = percent + '%'
-        this.statusText.textContent = status
+        let displayPercent = Math.min(Math.max(percent, 0), 100)
+        this.progressBar.style.width = displayPercent + '%'
+        this.progressBar.textContent = displayPercent + '%'
+        this.progressText.textContent = displayPercent + '%'
+        if (status) {
+            this.statusText.textContent = status
+        }
     }
 
     close() {
