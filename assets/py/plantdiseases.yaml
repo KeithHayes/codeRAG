@@ -4,10 +4,18 @@ doomsteadRAG:
   chunk_overlap: 150
   vector_db_type: "faiss"
   pdf:
-    - "/var/www/html/doomsteadRAG/assets/data/plantdiseases/documents"
+    - "/var/www/html/doomsteadRAG/assets/docs/plantdiseases"
   vector_db_path: "/var/www/html/doomsteadRAG/assets/data/plantdiseases/faiss_index"
   collection_name: "plantdiseases"
   min_score: "0.25"
-  ollama_model: "mistral:7b-instruct-v0.3-q4_0"
-  system_prompt: "You are a plant disease diagnostic assistant. Answer based on the provided context from plant disease documentation. Focus on disease identification, symptoms, causes, and treatments. Be specific and reference the source document."
-  user_prompt_template: "Context from plant disease document:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant disease context above. Focus on disease identification, symptoms, causes, and treatments. Be specific and reference the source document."
+  ollama_model: "deepseek-coder:6.7b"
+  system_prompt: "You are a plant diseases expert. Answer based on the provided plant diseases documentation. Focus on identification, symptoms, and treatment of plant diseases and pests."
+  user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant diseases documentation above."
+  toolbar:
+    - "fileloadBTN"
+    - "homeserver"
+    - "full_build"
+    - "loadmodel"
+    - "fastapi"
+    - "book"
+    - "target"

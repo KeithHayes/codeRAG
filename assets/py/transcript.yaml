@@ -1,2 +1,9 @@
 doomsteadRAG:
-  ollama_model: "qwen2.5:7b-instruct"
+    toolbar:
+    - "fileloadBTN"
+    - "homeserver"
+    - "pastetranscript"
+    - "checkmodel"
+    - "fastapi"
+    - "book"
+    - "target"
