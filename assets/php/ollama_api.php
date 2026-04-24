@@ -1,126 +1,135 @@
 <?php
-// assets/php/ollama_api.php - Optimized fast responses with running_model action
+// assets/php/ollama_api.php - Ollama REST API handler
 header('Content-Type: application/json');
-header('Cache-Control: no-cache, must-revalidate');
 
-$action = $_GET['action'] ?? '';
-
-$START_SCRIPT = '/home/kdog/openwebui/start.sh';
-$STOP_SCRIPT = '/home/kdog/openwebui/stop.sh';
-
-function is_stack_running() {
-    static $cache = null;
-    static $cache_time = 0;
+function ollama_api_request($endpoint, $method = 'GET', $data = null) {
+    $url = "http://localhost:11434/api/" . $endpoint;
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
     
-    $now = time();
-    if ($cache !== null && ($now - $cache_time) < 2) {
-        return $cache;
+    if ($data !== null) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     }
     
-    $output = shell_exec('docker ps --filter "name=open-webui" --format "{{.Status}}" 2>&1');
-    $result = ($output && strpos($output, 'Up') !== false);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
     
-    $cache = $result;
-    $cache_time = $now;
-    return $result;
+    if ($http_code !== 200) {
+        error_log("Ollama API error: HTTP $http_code - $error");
+        return null;
+    }
+    
+    return json_decode($response, true);
 }
 
 function is_ollama_running() {
-    $output = shell_exec('docker ps --filter "name=ollama" --format "{{.Status}}" 2>&1');
-    return ($output && strpos($output, 'Up') !== false);
+    $ch = curl_init('http://localhost:11434/api/tags');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+    curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return ($http_code === 200);
 }
 
-function get_available_models() {
-    $output = shell_exec('docker exec ollama ollama list 2>&1');
-    $models = [];
-    if ($output) {
-        $lines = explode("\n", trim($output));
-        foreach ($lines as $line) {
-            if (strpos($line, 'NAME') === false && !empty(trim($line))) {
-                $parts = preg_split('/\s+/', $line);
-                $models[] = ['name' => $parts[0], 'size' => isset($parts[1]) ? $parts[1] : 'unknown'];
-            }
+function pull_model($model) {
+    error_log("Pulling model: $model");
+    $ch = curl_init('http://localhost:11434/api/pull');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['model' => $model]));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 600);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    error_log("Pull model response: HTTP $http_code");
+    return ($http_code === 200);
+}
+
+function load_model($model) {
+    error_log("Loading model: $model");
+    $ch = curl_init('http://localhost:11434/api/generate');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'model' => $model,
+        'prompt' => 'Hello',
+        'stream' => false,
+        'keep_alive' => 3600
+    ]));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($http_code === 200) {
+        error_log("Model loaded successfully: $model");
+        return true;
+    }
+    error_log("Failed to load model: $model, HTTP $http_code");
+    return false;
+}
+
+$action = $_GET['action'] ?? '';
+
+if ($action === 'status') {
+    $running = is_ollama_running();
+    echo json_encode(['success' => true, 'running' => $running, 'timestamp' => time()]);
+    exit;
+}
+
+if ($action === 'start') {
+    exec('/home/kdog/openwebui/start.sh > /dev/null 2>&1 &');
+    echo json_encode(['success' => true, 'message' => 'Stack start initiated']);
+    exit;
+}
+
+if ($action === 'stop') {
+    exec('/home/kdog/openwebui/stop.sh > /dev/null 2>&1 &');
+    echo json_encode(['success' => true, 'message' => 'Stack stop initiated']);
+    exit;
+}
+
+if ($action === 'list') {
+    if (!is_ollama_running()) {
+        echo json_encode(['success' => false, 'error' => 'Ollama service not running']);
+        exit;
+    }
+    
+    $data = ollama_api_request('tags');
+    if ($data && isset($data['models'])) {
+        $models = [];
+        foreach ($data['models'] as $m) {
+            $models[] = ['name' => $m['name'], 'size' => $m['size']];
         }
+        echo json_encode(['success' => true, 'models' => $models]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Failed to fetch models']);
     }
-    return $models;
+    exit;
 }
 
-function get_running_model() {
-    $output = shell_exec('docker exec ollama ollama ps 2>&1');
-    if ($output && trim($output) !== '' && trim($output) !== 'NAME') {
-        $lines = explode("\n", trim($output));
-        foreach ($lines as $line) {
-            if (strpos($line, 'NAME') === false && !empty(trim($line))) {
-                $parts = preg_split('/\s+/', $line);
-                return $parts[0];
-            }
-        }
+if ($action === 'running_model') {
+    if (!is_ollama_running()) {
+        echo json_encode(['success' => false, 'running' => false]);
+        exit;
     }
-    return null;
+    
+    $ps_data = ollama_api_request('ps');
+    if ($ps_data && isset($ps_data['models']) && !empty($ps_data['models'])) {
+        echo json_encode(['success' => true, 'model' => $ps_data['models'][0]['name']]);
+    } else {
+        echo json_encode(['success' => true, 'model' => null]);
+    }
+    exit;
 }
 
-try {
-    switch ($action) {
-        case 'status':
-            echo json_encode([
-                'success' => true,
-                'running' => is_stack_running(),
-                'timestamp' => time()
-            ]);
-            break;
-            
-        case 'running_model':
-            if (!is_ollama_running()) {
-                echo json_encode(['success' => false, 'model' => null]);
-                break;
-            }
-            $model = get_running_model();
-            echo json_encode(['success' => true, 'model' => $model]);
-            break;
-            
-        case 'start':
-            if (!file_exists($START_SCRIPT)) {
-                echo json_encode(['success' => false, 'error' => 'start.sh not found']);
-                break;
-            }
-            chmod($START_SCRIPT, 0755);
-            exec($START_SCRIPT . ' > /dev/null 2>&1 &');
-            
-            echo json_encode([
-                'success' => true,
-                'running' => false,
-                'message' => 'Starting stack...'
-            ]);
-            break;
-            
-        case 'stop':
-            if (!file_exists($STOP_SCRIPT)) {
-                echo json_encode(['success' => false, 'error' => 'stop.sh not found']);
-                break;
-            }
-            chmod($STOP_SCRIPT, 0755);
-            exec($STOP_SCRIPT . ' > /dev/null 2>&1 &');
-            
-            echo json_encode([
-                'success' => true,
-                'running' => false,
-                'message' => 'Stopping stack...'
-            ]);
-            break;
-            
-        case 'list':
-            if (!is_ollama_running()) {
-                echo json_encode(['success' => false, 'error' => 'Ollama not running', 'models' => []]);
-                break;
-            }
-            $models = get_available_models();
-            echo json_encode(['success' => true, 'models' => $models]);
-            break;
-            
-        default:
-            echo json_encode(['success' => false, 'error' => 'Invalid action']);
-    }
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-}
+echo json_encode(['success' => false, 'error' => 'Invalid action: ' . $action]);
 ?>

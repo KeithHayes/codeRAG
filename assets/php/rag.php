@@ -1,6 +1,5 @@
 <?php
 // assets/php/rag.php — Doomstead RAG Backend with FAISS + Ollama
-
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -72,6 +71,17 @@ class RAGSystem {
         } else {
             throw new Exception("user_prompt_template not found in {$yaml_file}");
         }
+    }
+    
+    private function is_ollama_running() {
+        $ch = curl_init($this->ollama_url . '/api/tags');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return ($http_code === 200);
     }
     
     public function search_vector_store($query, $k = 15) {
@@ -227,6 +237,10 @@ class RAGSystem {
     }
     
     public function query_ollama($prompt) {
+        if (!$this->is_ollama_running()) {
+            throw new Exception("Ollama service is not running");
+        }
+        
         $data = [
             'model' => $this->current_model,
             'messages' => [
@@ -246,6 +260,7 @@ class RAGSystem {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         
         $response = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -253,24 +268,29 @@ class RAGSystem {
         curl_close($ch);
         
         if ($curl_error) {
+            error_log("Curl error in query_ollama: " . $curl_error);
             throw new Exception("Curl error: " . $curl_error);
         }
         
         if ($http_code !== 200) {
+            error_log("Ollama API returned HTTP code: $http_code, response: " . substr($response, 0, 500));
             throw new Exception("Ollama API returned HTTP code: $http_code");
         }
         
         if (empty($response)) {
+            error_log("Empty response from Ollama API");
             throw new Exception("Empty response from Ollama API");
         }
         
         $result = json_decode($response, true);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON decode error: " . json_last_error_msg() . ", response: " . substr($response, 0, 500));
             throw new Exception("JSON decode error: " . json_last_error_msg());
         }
         
         if (!isset($result['message']['content'])) {
+            error_log("Missing message.content in Ollama response: " . json_encode($result));
             throw new Exception("Missing message.content in Ollama response");
         }
         

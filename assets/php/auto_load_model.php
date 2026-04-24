@@ -1,6 +1,36 @@
 <?php
-// auto_load_model.php - Load model from config on page refresh
+// auto_load_model.php - Load model from config on page refresh using Ollama REST API
 header('Content-Type: application/json');
+
+function is_ollama_running() {
+    $ch = curl_init('http://localhost:11434/api/tags');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+    curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return ($http_code === 200);
+}
+
+function get_running_model() {
+    $ch = curl_init('http://localhost:11434/api/ps');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($http_code !== 200 || !$response) {
+        return null;
+    }
+    
+    $data = json_decode($response, true);
+    if (isset($data['models']) && !empty($data['models'])) {
+        return $data['models'][0]['name'];
+    }
+    return null;
+}
 
 // Get current profile
 $config_file = __DIR__ . '/../data/config.json';
@@ -13,7 +43,7 @@ if (file_exists($config_file)) {
 
 // Read model from YAML config
 $yaml_file = __DIR__ . "/../py/{$profile}.yaml";
-$model = 'deepseek-coder:6.7b'; // default
+$model = 'deepseek-coder:6.7b';
 
 if (file_exists($yaml_file)) {
     $content = file_get_contents($yaml_file);
@@ -22,35 +52,41 @@ if (file_exists($yaml_file)) {
     }
 }
 
-// Check if model is actually running (not stopping)
-$ps_output = shell_exec("ollama ps 2>/dev/null");
-$is_running = false;
-
-if (!empty($ps_output)) {
-    $lines = explode("\n", $ps_output);
-    foreach ($lines as $line) {
-        // Look for model name and ensure it's not "Stopping..."
-        if (strpos($line, $model) !== false && strpos($line, 'Stopping') === false) {
-            $is_running = true;
-            break;
-        }
-    }
+if (!is_ollama_running()) {
+    echo json_encode([
+        'success' => false,
+        'model' => $model,
+        'status' => 'ollama_not_running',
+        'profile' => $profile
+    ]);
+    exit;
 }
 
+// Check if model is actually running
+$running_model = get_running_model();
+$is_running = ($running_model === $model);
+
 if (!$is_running) {
-    // Force stop any existing instance
-    shell_exec("ollama stop {$model} 2>/dev/null");
-    sleep(1);
-    
     // Load the model
-    shell_exec("ollama run {$model} > /dev/null 2>&1 &");
+    $ch = curl_init('http://localhost:11434/api/generate');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'model' => $model,
+        'prompt' => 'Hello',
+        'stream' => false,
+        'keep_alive' => 3600
+    ]));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_exec($ch);
+    curl_close($ch);
     
     // Wait for model to actually start running
     $loaded = false;
     for ($i = 0; $i < 30; $i++) {
-        sleep(2);
-        $ps_output = shell_exec("ollama ps 2>/dev/null");
-        if (!empty($ps_output) && strpos($ps_output, $model) !== false && strpos($ps_output, 'Stopping') === false) {
+        sleep(1);
+        $current = get_running_model();
+        if ($current === $model) {
             $loaded = true;
             break;
         }
@@ -73,3 +109,4 @@ echo json_encode([
     'status' => 'loaded',
     'profile' => $profile
 ]);
+?>

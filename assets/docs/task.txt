@@ -1,17 +1,90 @@
-Plant Diseases RAG - Based on 11pests1disease.pdf
+I have a PHP/JavaScript RAG application that previously used Ollama inside a Docker container. Ollama has been reinstalled directly on the host system (not in Docker), and now the model loading and API calls are failing.
 
-    fileloadBTN
-    dividerBTN
-    homeserverBTN
-    dbuploadBTN
-    dogrunBTN
-    horuseyeBTN
-    targetBTN
-    dividerBTN
-    bookBTN
-    Model ready: mistral:7b-instruct-v0.3-q4_0
+The current code uses docker exec ollama ollama [command] which no longer works. It needs to be changed to call the Ollama REST API directly at http://localhost:11434/api/.
+Issues observed:
 
-You: Are fungal diseases common in Kentucky
-Assistant:
+    Models are not loading when clicking the "Load Model" button
 
-Request failed: JSON.parse: unexpected end of data at line 1 column 1 of the JSON data
+    Status shows "Waiting for service..." even when Ollama is running
+
+    The ollama_api.php and force_reload_model.php files still have Docker-specific code
+
+Required fixes:
+
+File: assets/php/ollama_api.php
+
+    Remove all docker exec calls
+
+    Replace is_ollama_running() to check http://localhost:11434/api/tags endpoint via curl
+
+    Replace get_available_models() to use http://localhost:11434/api/tags and parse JSON response
+
+    Replace get_running_model() to use http://localhost:11434/api/ps
+
+    Status check should verify Ollama API responds with HTTP 200
+
+File: assets/php/force_reload_model.php
+
+    Remove all docker exec and shell_exec('ollama ...') commands
+
+    Use curl to call Ollama REST API endpoints:
+
+        GET http://localhost:11434/api/tags - list available models
+
+        GET http://localhost:11434/api/ps - get running model
+
+        POST http://localhost:11434/api/generate - load/keep model alive (send {"model":"name","keep_alive":3600})
+
+        POST http://localhost:11434/api/pull - download model if missing
+
+        POST http://localhost:11434/api/generate with {"model":"name","keep_alive":0} to stop a model
+
+    Add proper error handling and timeout values (connect timeout 2-3 seconds, request timeout 5-30 seconds)
+
+File: assets/php/auto_load_model.php
+
+    Same fixes as above - remove Docker commands, use REST API
+
+    Check running model via /api/ps endpoint
+
+    Load model via /api/generate with keep_alive
+
+File: assets/php/rag.php
+
+    The query_ollama() method currently uses http://localhost:11434/api/chat - this endpoint is correct for direct Ollama installation
+
+    Ensure curl timeouts are appropriate (120 seconds for chat)
+
+    Add better error logging for API failures
+
+File: assets/js/toolbar.js
+
+    The polling logic for model loading should check the running_model endpoint more frequently
+
+    Consider reducing polling interval from 1000ms to 500ms for faster response
+
+    Add retry logic if model load times out
+
+Testing checklist after fixes:
+
+    Run curl http://localhost:11434/api/tags from command line - should return JSON with available models
+
+    Run curl http://localhost:11434/api/ps - should show running model or empty list
+
+    Load Model button should successfully load the model specified in the YAML config
+
+    Status should show "Ollama ready" when service is running
+
+    Chat functionality should work with RAG context
+
+Additional debug information:
+
+    Ollama is installed on host, listening on port 11434
+
+    No Docker container for Ollama exists anymore
+
+    The start.sh and stop.sh scripts still manage the Open WebUI stack but Ollama is now separate
+
+    Python FAISS vector store is working correctly - only Ollama integration is broken
+
+Please provide the corrected complete code for each file listed above.

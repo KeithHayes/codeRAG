@@ -138,7 +138,7 @@
     }
     
     let attempts = 0
-    const maxAttempts = 30
+    const maxAttempts = 60
     
     modelPollingInterval = setInterval(async () => {
       attempts++
@@ -152,7 +152,7 @@
           modelPollingInterval = null
           modelLoadStatus = null
           updatestatus(`Model ready: ${expectedModel}`)
-          lockStatus(5000)
+          lockStatus(10000)
           
           const promptInput = document.getElementById('userInput')
           const sendBtn = document.getElementById('sendButton')
@@ -162,14 +162,14 @@
           clearInterval(modelPollingInterval)
           modelPollingInterval = null
           modelLoadStatus = null
-          updatestatus('Model load timeout')
+          updatestatus('Model load timeout - click Load Model again')
         } else {
-          updatestatus(`Loading model: ${expectedModel}...`)
+          updatestatus(`Loading model: ${expectedModel}... (${Math.round(attempts / maxAttempts * 100)}%)`)
         }
       } catch (error) {
         updatestatus(`Loading model: ${expectedModel}...`)
       }
-    }, 1000)
+    }, 500)
   }
   
   function handleStackButtonClick() {
@@ -295,7 +295,8 @@
   }
 
   function handleSailboatClick() {
-    updatestatus('Empty stub - called by event handler')
+    updatestatus('Checking models...')
+    handleCheckModelsClick()
   }
 
   function rebuild_vectorstore() {
@@ -332,6 +333,53 @@
 
   function refresh_vectorstore() {
     updatestatus('Refresh not implemented - use Full Build')
+  }
+
+  function loadModel() {
+    const statusDivElem = document.getElementById('status')
+    const promptInput = document.getElementById('userInput')
+    const sendBtn = document.getElementById('sendButton')
+    
+    if (modelPollingInterval) {
+      clearInterval(modelPollingInterval)
+      modelPollingInterval = null
+    }
+    
+    modelLoadStatus = null
+    
+    if (statusDivElem) statusDivElem.textContent = "Loading model..."
+    
+    fetch(`assets/php/force_reload_model.php`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const successMsg = `Model ready: ${data.new_model}`
+          modelLoadStatus = successMsg
+          if (statusDivElem) statusDivElem.textContent = successMsg
+          if (promptInput) promptInput.disabled = false
+          if (sendBtn) sendBtn.disabled = false
+          lockStatus(10000)
+        } else if (data.status === 'loading') {
+          if (statusDivElem) statusDivElem.textContent = `Loading model: ${data.new_model}...`
+          pollModelStatus(data.new_model, data.profile)
+        } else {
+          modelLoadStatus = null
+          if (statusDivElem) statusDivElem.textContent = data.message || "Failed to load"
+          if (data.message && data.message.includes('not running')) {
+            alert('Stack not running. Click homeserver button to start.')
+          }
+          if (promptInput) promptInput.disabled = true
+          if (sendBtn) sendBtn.disabled = true
+        }
+      })
+      .catch(error => {
+        console.error("Load model error:", error)
+        modelLoadStatus = null
+        if (statusDivElem) statusDivElem.textContent = "Error loading"
+        alert("Error: " + error.message)
+        if (promptInput) promptInput.disabled = true
+        if (sendBtn) sendBtn.disabled = true
+      })
   }
 
   function loadtoolbar() {
@@ -381,46 +429,10 @@
 
     const runButton = document.querySelector('#button_loadmodel a')
     if (runButton) {
-      runButton.onclick = async function(e) {
+      runButton.onclick = function(e) {
         e.preventDefault()
         e.stopPropagation()
-        
-        const statusDivElem = document.getElementById('status')
-        const promptInput = document.getElementById('userInput')
-        const sendBtn = document.getElementById('sendButton')
-        
-        modelLoadStatus = null
-        
-        if (statusDivElem) statusDivElem.textContent = "Loading model..."
-        
-        try {
-          const response = await fetch(`assets/php/force_reload_model.php`)
-          const data = await response.json()
-          
-          if (data.success) {
-            const successMsg = `Model ready: ${data.new_model}`
-            modelLoadStatus = successMsg
-            if (statusDivElem) statusDivElem.textContent = successMsg
-            if (promptInput) promptInput.disabled = false
-            if (sendBtn) sendBtn.disabled = false
-            lockStatus(10000)
-          } else if (data.status === 'loading') {
-            if (statusDivElem) statusDivElem.textContent = `Loading model: ${data.new_model}...`
-            pollModelStatus(data.new_model, data.profile)
-          } else {
-            modelLoadStatus = null
-            if (statusDivElem) statusDivElem.textContent = data.message || "Failed to load"
-            if (data.message && data.message.includes('not running')) {
-              alert('Stack not running. Click homeserver button to start.')
-            }
-          }
-        } catch (error) {
-          console.error("Load model error:", error)
-          modelLoadStatus = null
-          if (statusDivElem) statusDivElem.textContent = "Error loading"
-          alert("Error: " + error.message)
-        }
-        
+        loadModel()
         return false
       }
     }
@@ -591,7 +603,7 @@
       loadmodel: 'Load Model',
       checkmodel: 'Check Models',
       pastetranscript: 'Paste Transcript',
-      fastapi: 'Check Models',
+      fastapi: 'Ollama API Docs',
       homepage: 'Homepage',
       book: 'Documentation'
     }
@@ -625,114 +637,54 @@
       promptInput.value = ""
     }
     if (sendBtn) sendBtn.disabled = true
+    
+    if (modelPollingInterval) {
+      clearInterval(modelPollingInterval)
+      modelPollingInterval = null
+    }
+    modelLoadStatus = null
+  }
+
+  function switchProfile(profileName, configValue, toolTitle, statusMessage) {
+    cleanupProfile()
+    const content = { "filesetconfig": configValue }
+    fetch(`assets/php/save_config.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(content)
+    }).finally(() => {
+      const dropdown = document.getElementById('dropdown_fileload')
+      if (dropdown) dropdown.style.display = 'none'
+      colordropdowntext(profileName)
+      currentProfile = configValue
+      updateButtonVisibility()
+      updatestatus(statusMessage)
+      updatetooltitle(toolTitle)
+    })
   }
 
   function ragcode() {
-    cleanupProfile()
-    const content = { "filesetconfig": "ragcode" }
-    fetch(`assets/php/save_config.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(content)
-    }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload')
-      if (dropdown) dropdown.style.display = 'none'
-      colordropdowntext("RAGcode")
-      currentProfile = 'ragcode'
-      updateButtonVisibility()
-      updatestatus('Switched to RAGcode profile. Click Run button to load model.')
-      updatetooltitle('Retrieval Argumentation Generation for Code')
-    })
+    switchProfile('RAGcode', 'ragcode', 'Retrieval Argumentation Generation for Code', 'Switched to RAGcode profile. Click Load Model button to load model.')
   }
 
   function doomsteadcode() {
-    cleanupProfile()
-    const content = { "filesetconfig": "doomstead" }
-    fetch(`assets/php/save_config.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(content)
-    }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload')
-      if (dropdown) dropdown.style.display = 'none'
-      colordropdowntext("Doomstead")
-      currentProfile = 'doomstead'
-      updateButtonVisibility()
-      updatestatus('Switched to Doomstead profile. Click Run button to load model.')
-      updatetooltitle('Retrieval Argumentation Generation for Code')
-    })
+    switchProfile('Doomstead', 'doomstead', 'Retrieval Argumentation Generation for Code', 'Switched to Doomstead profile. Click Load Model button to load model.')
   }
 
   function mainpagecode() {
-    cleanupProfile()
-    const content = { "filesetconfig": "mainpage" }
-    fetch(`assets/php/save_config.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(content)
-    }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload')
-      if (dropdown) dropdown.style.display = 'none'
-      colordropdowntext("Mainpage")
-      currentProfile = 'mainpage'
-      updateButtonVisibility()
-      updatestatus('Switched to Mainpage profile. Click Run button to load model.')
-      updatetooltitle('Retrieval Argumentation Generation for Code')
-    })
+    switchProfile('Mainpage', 'mainpage', 'Retrieval Argumentation Generation for Code', 'Switched to Mainpage profile. Click Load Model button to load model.')
   }
 
   function ragdocs() {
-    cleanupProfile()
-    const content = { "filesetconfig": "ragdocs" }
-    fetch(`assets/php/save_config.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(content)
-    }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload')
-      if (dropdown) dropdown.style.display = 'none'
-      colordropdowntext("RAGdocs")
-      currentProfile = 'ragdocs'
-      updateButtonVisibility()
-      updatestatus('Switched to RAGdocs profile. Click Run button to load model.')
-      updatetooltitle('Retrieval Argumentation Generation for Code')
-    })
+    switchProfile('RAGdocs', 'ragdocs', 'Retrieval Argumentation Generation for Code', 'Switched to RAGdocs profile. Click Load Model button to load model.')
   }
 
   function transcripts() {
-    cleanupProfile()
-    const content = { "filesetconfig": "transcript" }
-    fetch(`assets/php/save_config.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(content)
-    }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload')
-      if (dropdown) dropdown.style.display = 'none'
-      colordropdowntext("Transcripts")
-      currentProfile = 'transcript'
-      updateButtonVisibility()
-      updatestatus('Switched to Transcript profile. Clipboard loads Transcript.')
-      updatetooltitle('Transcript Processor')
-    })
+    switchProfile('Transcripts', 'transcript', 'Transcript Processor', 'Switched to Transcript profile. Click Load Model button to load model.')
   }
 
   function plantdiseases() {
-    cleanupProfile()
-    const content = { "filesetconfig": "plantdiseases" }
-    fetch(`assets/php/save_config.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(content)
-    }).finally(() => {
-      const dropdown = document.getElementById('dropdown_fileload')
-      if (dropdown) dropdown.style.display = 'none'
-      colordropdowntext("PlantDiseases")
-      currentProfile = 'plantdiseases'
-      updateButtonVisibility()
-      updatestatus('Switched to PlantDiseases profile. Click Run button to load model.')
-      updatetooltitle('Plant Diseases RAG - Based on 11pests1disease.pdf')
-    })
+    switchProfile('PlantDiseases', 'plantdiseases', 'Plant Diseases RAG - Based on 11pests1disease.pdf', 'Switched to PlantDiseases profile. Click Load Model button to load model.')
   }
 
   function homepage() {
@@ -764,8 +716,8 @@
   window.loadtoolbar = loadtoolbar
   window.updatestatus = updatestatus
   window.rebuild_vectorstore = rebuild_vectorstore
+  window.loadModel = loadModel
   
-  // Auto-initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       if (typeof window.loadtoolbar === 'function') {
