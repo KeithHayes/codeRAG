@@ -1,13 +1,1 @@
-Logic to hide and show tools in toolbar.js will be eliminated and button visibility will be read from the yaml files.
-
-A new data string will be added to each yaml file that specifies which buttons are visible as follows.
-
-RAGcode tools        : fileloadBTN, homeserver, full_build, loadmodel, fastapi, book, target
-Doomstead tools      : fileloadBTN, homeserver, full_build, loadmodel, fastapi, book, target
-Mainpage tools       : fileloadBTN, homeserver, full_build, loadmodel, fastapi, book, target
-RAGdocs tools        : fileloadBTN, homeserver, full_build, loadmodel, fastapi, book, target
-Transcripts tools    : fileloadBTN, homeserver, pastetranscript, checkmoded, fastapi, book, target
-PlantDiseases tools  : fileloadBTN, homeserver, full_build, loadmodel, fastapi, book, target
-
-the property can be named 'toolbar' inside the yaml files and toolbar.js will read and hide the approriate property string when the config is changed.
-
+the .yaml files have been moved from assets/py to assets/yaml this is a simple directory change.  Adjust all references to the .yaml files to point to this new location.

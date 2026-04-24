@@ -10,7 +10,7 @@ if (empty($model)) {
     exit;
 }
 
-$yaml_file = __DIR__ . "/../py/{$profile}.yaml";
+$yaml_file = __DIR__ . "/../yaml/{$profile}.yaml";
 
 if (!file_exists($yaml_file)) {
     echo json_encode(['success' => false, 'error' => "Config file not found: {$yaml_file}"]);

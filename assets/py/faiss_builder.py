@@ -67,7 +67,7 @@ class FAISSBuilder:
         self.logger.info(f"=== FAISS Builder for profile: {profile} ===")
     
     def _load_config(self) -> Dict:
-        config_path = PROJECT_ROOT / "assets" / "py" / f"{self.profile}.yaml"
+        config_path = PROJECT_ROOT / "assets" / "yaml" / f"{self.profile}.yaml"
         if not config_path.exists():
             raise FileNotFoundError(f"Config not found: {config_path}")
         with open(config_path, 'r') as f:

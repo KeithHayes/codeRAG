@@ -16,7 +16,7 @@ class FAISSearcher:
         self.faiss_dir = DATA_DIR / profile / "faiss_index"
         
         # Load config to get the embedding model that was used
-        config_path = PROJECT_ROOT / "assets" / "py" / f"{self.profile}.yaml"
+        config_path = PROJECT_ROOT / "assets" / "yaml" / f"{self.profile}.yaml"
         model_name = "sentence-transformers/all-mpnet-base-v2"  # default
         if config_path.exists():
             with open(config_path, 'r') as f:

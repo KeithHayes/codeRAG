@@ -1,9 +1,0 @@
-doomsteadRAG:
-    toolbar:
-    - "fileloadBTN"
-    - "homeserver"
-    - "pastetranscript"
-    - "checkmodel"
-    - "fastapi"
-    - "book"
-    - "target"

@@ -42,7 +42,7 @@ if (file_exists($config_file)) {
 }
 
 // Read model from YAML config
-$yaml_file = __DIR__ . "/../py/{$profile}.yaml";
+$yaml_file = __DIR__ . "/../yaml/{$profile}.yaml";
 $model = 'deepseek-coder:6.7b';
 
 if (file_exists($yaml_file)) {

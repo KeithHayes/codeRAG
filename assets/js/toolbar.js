@@ -324,7 +324,7 @@
         const profile = config.filesetconfig || 'ragcode'
         currentProfile = profile
         
-        const yamlFile = `assets/py/${profile}.yaml`
+        const yamlFile = `assets/yaml/${profile}.yaml`
         
         return fetch(yamlFile + '?_=' + Date.now())
           .then(res => res.text())

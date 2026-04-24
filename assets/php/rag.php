@@ -39,7 +39,7 @@ class RAGSystem {
     }
     
     private function load_model_from_profile() {
-        $yaml_file = __DIR__ . "/../py/{$this->current_profile}.yaml";
+        $yaml_file = __DIR__ . "/../yaml/{$this->current_profile}.yaml";
         if (!file_exists($yaml_file)) {
             throw new Exception("YAML config file not found: {$yaml_file}");
         }
@@ -53,7 +53,7 @@ class RAGSystem {
     }
     
     private function load_prompts_from_profile() {
-        $yaml_file = __DIR__ . "/../py/{$this->current_profile}.yaml";
+        $yaml_file = __DIR__ . "/../yaml/{$this->current_profile}.yaml";
         if (!file_exists($yaml_file)) {
             throw new Exception("YAML config file not found: {$yaml_file}");
         }
