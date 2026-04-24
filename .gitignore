@@ -8,3 +8,9 @@ assets/ragdocs/archive/*.pdf
 .gitignore
 .project
 .pydevproject
+venv_rag/
+assets/data/
+assets/logs/
+*.db
+*.faiss
+*.pkl
