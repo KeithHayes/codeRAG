@@ -1,0 +1,41 @@
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 900
+  chunk_overlap: 175
+  vector_db_type: "faiss"
+  text_parsing:
+    strategy: "hybrid"
+    preserve_comments: true
+    detect_code_blocks: true
+    detect_paragraphs: true
+    preserve_markdown: true
+    separators:
+      - "\n\n```"
+      - "\n```"
+      - "\n\n#"
+      - "\n#"
+      - "\n\n"
+      - "\n"
+      - " "
+  code_dirs:
+    php:
+      - "/var/www/html/homedog/assets/php"
+      - "/var/www/html/homedog/index.php"
+    js:
+      - "/var/www/html/homedog/assets/js"
+    css:
+      - "/var/www/html/homedog/assets/css"
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/mainpage/faiss_index"
+  collection_name: "mainpage"
+  min_score: "0.25"
+  ollama_model: "llama3.2:1b"
+  system_prompt: "You are a helpful assistant for the main website. Answer based on the provided context. Focus on frontend and backend functionality, user interface behavior, and API interactions. Be specific and reference the actual code."
+  user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the code context above. Focus on frontend and backend functionality."
+  toolbar:
+    - "fileload"
+    - "homeserver"
+    - "fullbuild"
+    - "loadmodel"
+    - "choosemodel"
+    - "book"
+    - "target"

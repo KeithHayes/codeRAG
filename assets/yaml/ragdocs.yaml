@@ -1,0 +1,28 @@
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  vector_db_type: "faiss"
+  code_dirs:
+    php:
+      - "/var/www/html/doomsteadRAG/assets/php"
+    js:
+      - "/var/www/html/doomsteadRAG/assets/js"
+    css:
+      - "/var/www/html/doomsteadRAG/assets/css"
+    py:
+      - "/var/www/html/doomsteadRAG/assets/py"
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragdocs/faiss_index"
+  collection_name: "ragdocs"
+  min_score: "0.25"
+  ollama_model: "nomic-embed-text:latest"
+  system_prompt: "You are a documentation assistant. Answer based on the provided documentation context. Be accurate and reference specific documentation sections."
+  user_prompt_template: "Documentation context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the documentation above."
+  toolbar:
+    - "fileload"
+    - "homeserver"
+    - "fullbuild"
+    - "loadmodel"
+    - "choosemodel"
+    - "book"
+    - "target"

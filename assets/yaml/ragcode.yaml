@@ -1,0 +1,29 @@
+doomsteadRAG:
+  embedding_model: "sentence-transformers/multi-qa-mpnet-base-dot-v1"
+  chunk_size: 800
+  chunk_overlap: 150
+  vector_db_type: "faiss"
+  code_dirs:
+    php:
+      - "/var/www/html/doomsteadRAG/assets/php"
+      - "/var/www/html/doomsteadRAG/index.php"
+    js:
+      - "/var/www/html/doomsteadRAG/assets/js"
+    css:
+      - "/var/www/html/doomsteadRAG/assets/css"
+    py:
+      - "/var/www/html/doomsteadRAG/assets/py"
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragcode/faiss_index"
+  collection_name: "ragcode"
+  min_score: "0.25"
+  ollama_model: "deepseek-coder:6.7b"
+  system_prompt: "You are a helpful coding assistant. When asked about a button, class, or element, ALWAYS look for JavaScript files first. CSS files only contain styling information. Prioritize event handlers, onclick functions, and API calls from JavaScript code. If you find JavaScript code that defines what a button does, describe that functionality. Only use CSS context if no JavaScript context is available. Be specific and reference the actual code."
+  user_prompt_template: "Code context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the code above. If JavaScript code is available, describe what the button actually does when clicked. If only CSS is available, explain that you found only styling information."
+  toolbar:
+    - "fileload"
+    - "homeserver"
+    - "fullbuild"
+    - "loadmodel"
+    - "choosemodel"
+    - "book"
+    - "target"

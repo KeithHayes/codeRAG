@@ -1,0 +1,9 @@
+doomsteadRAG:
+    toolbar:
+    - "fileload"
+    - "homeserver"
+    - "pastetranscript"
+    - "runtask"
+    - "choosemodel"
+    - "book"
+    - "target"

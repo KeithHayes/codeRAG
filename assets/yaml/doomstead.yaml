@@ -1,0 +1,40 @@
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  chunk_size: 1000
+  chunk_overlap: 200
+  vector_db_type: "faiss"
+  text_parsing:
+    strategy: "semantic"
+    preserve_comments: true
+    detect_paragraphs: true
+    min_chunk_size: 200
+    separators:
+      - "\n\n"
+      - "\n"
+      - ". "
+      - "! "
+      - "? "
+      - " "
+  code_dirs:
+    php:
+      - "/var/www/html/homedog/doomstead/index.php"
+      - "/var/www/html/homedog/doomstead/Sources"
+      - "/var/www/html/homedog/doomstead/Themes/doomstead"
+    js:
+      - "/var/www/html/homedog/doomstead/Themes/doomstead/scripts"
+    css:
+      - "/var/www/html/homedog/doomstead/Themes/doomstead/css"
+  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/doomstead/faiss_index"
+  collection_name: "doomstead"
+  min_score: "0.25"
+  ollama_model: "codellama:7b"
+  system_prompt: "You are a helpful assistant for the Doomstead project. Answer based on the provided context. Focus on the functional behavior of the doomstead system - how the forum works, user interactions, theme functionality, and backend processes. Be specific and reference the actual code when possible."
+  user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the code context above. Focus on the functional behavior of the doomstead system."
+  toolbar:
+    - "fileload"
+    - "homeserver"
+    - "fullbuild"
+    - "loadmodel"
+    - "choosemodel"
+    - "book"
+    - "target"
