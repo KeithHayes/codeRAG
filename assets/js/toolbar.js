@@ -1,5 +1,4 @@
 // assets/js/toolbar.js
-// assets/js/toolbar.js
 (function () {
   const statusDiv = document.createElement('div')
   
@@ -10,8 +9,6 @@
   let lastStatusCheck = 0
   let cachedStatus = false
   let modelLoadStatus = null
-  let statusLock = false
-  let modelPollingInterval = null
   let statusTimeout = null
   
   // ========== STATUS MANAGEMENT ==========
@@ -23,33 +20,28 @@
     }
   }
   
-  function setStatusMessage(text, isTemporary = false, duration = 5000) {
+  function clearStatus(delay) {
+    clearStatusTimeout()
+    statusTimeout = setTimeout(() => {
+      if (statusDiv) {
+        if (stackRunning) {
+          statusDiv.textContent = ''
+        } else {
+          statusDiv.textContent = 'Waiting for service...'
+        }
+      }
+      statusTimeout = null
+    }, delay)
+  }
+  
+  function setStatusMessage(text, isTemporary = true, duration = 500) {
     if (statusDiv) {
       statusDiv.textContent = text
-      
       if (isTemporary) {
         clearStatusTimeout()
         statusTimeout = setTimeout(() => {
-          if (statusDiv && !statusLock && !modelLoadStatus) {
-            if (stackRunning) {
-              statusDiv.textContent = 'Ollama ready'
-            } else {
-              statusDiv.textContent = 'Waiting for service...'
-            }
-          }
-          statusTimeout = null
+          clearStatus(duration)
         }, duration)
-      }
-    }
-  }
-  
-  function clearStatusToDefault() {
-    clearStatusTimeout()
-    if (statusDiv && !statusLock && !modelLoadStatus) {
-      if (stackRunning) {
-        statusDiv.textContent = 'Ollama ready'
-      } else {
-        statusDiv.textContent = 'Waiting for service...'
       }
     }
   }
@@ -108,7 +100,7 @@
           checkStackStatus()
           isUpdatingStack = false
           if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
-          clearStatusToDefault()
+          clearStatus(500)
         }, 3000)
       })
       .catch(error => {
@@ -116,7 +108,7 @@
         setStatusMessage('Error starting stack', true, 5000)
         isUpdatingStack = false
         if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
-        setTimeout(() => clearStatusToDefault(), 5000)
+        setTimeout(() => clearStatus(500), 5000)
       })
     } else {
       isUpdatingStack = true
@@ -135,7 +127,7 @@
           checkStackStatus()
           isUpdatingStack = false
           if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
-          clearStatusToDefault()
+          clearStatus(500)
         }, 2000)
       })
       .catch(error => {
@@ -143,7 +135,7 @@
         setStatusMessage('Error stopping stack', true, 5000)
         isUpdatingStack = false
         if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
-        setTimeout(() => clearStatusToDefault(), 5000)
+        setTimeout(() => clearStatus(500), 5000)
       })
     }
   }
@@ -170,17 +162,17 @@
         } else {
           setStatusMessage('Build started...', true, 5000)
         }
-        setTimeout(() => clearStatusToDefault(), 8000)
+        setTimeout(() => clearStatus(500), 8000)
       })
       .catch((error) => {
         console.error('Build error:', error)
         setStatusMessage('Build failed - check logs', true, 8000)
-        setTimeout(() => clearStatusToDefault(), 8000)
+        setTimeout(() => clearStatus(500), 8000)
       })
     } else {
       console.error('BuildModal not loaded')
       setStatusMessage('BuildModal not loaded - refresh page', true, 8000)
-      setTimeout(() => clearStatusToDefault(), 8000)
+      setTimeout(() => clearStatus(500), 8000)
     }
   }
   
@@ -189,7 +181,7 @@
     if (typeof ClipboardModal === 'undefined') {
       console.error('ClipboardModal not loaded')
       setStatusMessage('ClipboardModal not loaded - refresh page', true, 8000)
-      setTimeout(() => clearStatusToDefault(), 8000)
+      setTimeout(() => clearStatus(500), 8000)
       return
     }
     
@@ -212,25 +204,24 @@
             setStatusMessage('Failed to save transcript', true, 5000)
             alert('Failed to save transcript: ' + (data.error || 'Unknown error'))
           }
-          setTimeout(() => clearStatusToDefault(), 5000)
+          setTimeout(() => clearStatus(500), 5000)
         })
         .catch(error => {
           console.error('Error:', error)
           setStatusMessage('Error saving transcript', true, 5000)
           alert('Error saving transcript: ' + error.message)
-          setTimeout(() => clearStatusToDefault(), 5000)
+          setTimeout(() => clearStatus(500), 5000)
         })
       },
       function() {
         setStatusMessage('Paste cancelled', true, 3000)
-        setTimeout(() => clearStatusToDefault(), 3000)
+        setTimeout(() => clearStatus(500), 3000)
       }
     )
   }
   
   // Load Model Button Handler
   function loadModel() {
-    const statusDivElem = document.getElementById('status')
     const promptInput = document.getElementById('userInput')
     const sendBtn = document.getElementById('sendButton')
     
@@ -252,10 +243,9 @@
           setStatusMessage(successMsg, true, 10000)
           if (promptInput) promptInput.disabled = false
           if (sendBtn) sendBtn.disabled = false
-          lockStatus(10000)
           setTimeout(() => {
             modelLoadStatus = null
-            clearStatusToDefault()
+            clearStatus(500)
           }, 10000)
         } else if (data.status === 'loading') {
           setStatusMessage(`Loading model: ${data.new_model}...`, false)
@@ -268,7 +258,7 @@
           }
           if (promptInput) promptInput.disabled = true
           if (sendBtn) sendBtn.disabled = true
-          setTimeout(() => clearStatusToDefault(), 8000)
+          setTimeout(() => clearStatus(500), 8000)
         }
       })
       .catch(error => {
@@ -278,7 +268,7 @@
         alert('Error: ' + error.message)
         if (promptInput) promptInput.disabled = true
         if (sendBtn) sendBtn.disabled = true
-        setTimeout(() => clearStatusToDefault(), 8000)
+        setTimeout(() => clearStatus(500), 8000)
       })
   }
   
@@ -302,39 +292,39 @@
           setStatusMessage('Cannot connect to Ollama', true, 5000)
           alert('Cannot connect to Ollama. Is the stack running?')
         }
-        setTimeout(() => clearStatusToDefault(), 5000)
+        setTimeout(() => clearStatus(500), 5000)
       })
       .catch(error => {
         console.error('Check model error:', error)
         setStatusMessage('Connection error', true, 5000)
         alert('Could not connect to Ollama. Is the stack running?')
-        setTimeout(() => clearStatusToDefault(), 5000)
+        setTimeout(() => clearStatus(500), 5000)
       })
   }
   
   // Choose Model Click Handler
   function handlechoosemodelClick() {
     setStatusMessage('Model selection clicked', true, 3000)
-    setTimeout(() => clearStatusToDefault(), 3000)
+    setTimeout(() => clearStatus(500), 3000)
   }
   
   // Function Stub Button Handler
   function function_stub() {
     setStatusMessage('Refresh not implemented - use Full Build', true, 5000)
-    setTimeout(() => clearStatusToDefault(), 5000)
+    setTimeout(() => clearStatus(500), 5000)
   }
   
   // Homepage Button Handler
   function handleHomepageClick() {
     setStatusMessage('Opening homepage...', true, 3000)
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
-    setTimeout(() => clearStatusToDefault(), 3000)
+    setTimeout(() => clearStatus(500), 3000)
   }
   
   // Documentation Button Handler
   function handleBookClick() {
     setStatusMessage('Documentation coming soon', true, 3000)
-    setTimeout(() => clearStatusToDefault(), 3000)
+    setTimeout(() => clearStatus(500), 3000)
   }
   
   // ========== PROFILE MANAGEMENT ==========
@@ -370,11 +360,11 @@
       
       const chatbox = document.getElementById('chatbox')
       if (chatbox) chatbox.innerHTML = ''
-      setTimeout(() => clearStatusToDefault(), 8000)
+      setTimeout(() => clearStatus(500), 8000)
     }).catch(error => {
       console.error('Profile switch error:', error)
       setStatusMessage('Error switching profile', true, 5000)
-      setTimeout(() => clearStatusToDefault(), 5000)
+      setTimeout(() => clearStatus(500), 5000)
     })
   }
   
@@ -495,8 +485,8 @@
       }
       stackRunning = true
       cachedStatus = true
-      if (!modelLoadStatus && !statusLock) {
-        setStatusMessage('Ollama ready', false)
+      if (!modelLoadStatus) {
+        clearStatus(0)
       }
     } else {
       if (!homeserverBtn.classList.contains('homeservershift')) {
@@ -504,7 +494,7 @@
       }
       stackRunning = false
       cachedStatus = false
-      if (!modelLoadStatus && !statusLock) {
+      if (!modelLoadStatus) {
         setStatusMessage('Waiting for service...', false)
       }
     }
@@ -512,7 +502,6 @@
   
   function checkStackStatus() {
     if (isUpdatingStack) return
-    if (statusLock) return
     
     const now = Date.now()
     if (now - lastStatusCheck < 2000) {
@@ -559,20 +548,6 @@
     }
   }
   
-  function lockStatus(ms) {
-    statusLock = true
-    setTimeout(() => {
-      statusLock = false
-      if (!modelLoadStatus) {
-        if (stackRunning) {
-          setStatusMessage('Ollama ready', false)
-        } else {
-          setStatusMessage('Waiting for service...', false)
-        }
-      }
-    }, ms)
-  }
-  
   function pollModelStatus(expectedModel, profile) {
     if (modelPollingInterval) {
       clearInterval(modelPollingInterval)
@@ -588,7 +563,6 @@
           modelPollingInterval = null
           modelLoadStatus = null
           setStatusMessage(`Model ready: ${expectedModel}`, true, 10000)
-          lockStatus(10000)
           
           const promptInput = document.getElementById('userInput')
           const sendBtn = document.getElementById('sendButton')
@@ -597,7 +571,7 @@
           
           setTimeout(() => {
             modelLoadStatus = null
-            clearStatusToDefault()
+            clearStatus(500)
           }, 10000)
         } else {
           setStatusMessage(`Loading model: ${expectedModel}...`, false)
@@ -923,6 +897,7 @@
   window.updatestatus = updatestatus
   window.rebuild_vectorstore = rebuild_vectorstore
   window.loadModel = loadModel
+  window.clearStatus = clearStatus
   
   // ========== AUTO-INITIALIZE ==========
   

@@ -1,6 +1,6 @@
-The messages in the toolbar 'status' text display are not managed well.
+There is a task that resets the status display in the toolbar on a periodic basis.  We will eliminate this and keep only the optional task that clears the status display after a delay which can be sent to the task.  function clearstatus(delay)
 
-clicking on a toolbar button should display a message that only should be changed within the click handler and it should be cleared to the default message after a timeout when the tool button tasks complete.  obviously a routine that sets the default message after a short delay that is only called when the sequence of all tasks generated in the interrupt handler of a button complete
+The status reflects the active button state if a button is processing data the status says what is happening but if a button is inactive the status should be blank.
 
-as things are now the information is erratic.
+Properly a status message is displayed at the start of processing a button task and cleared when the task completes.  But this is invisible if the task is short so to start with we will set a timer that clears the task after a 500ms delay.  clearstatus(500).  All tasks will then appear to last half a second at least even if they are less in duration.
 

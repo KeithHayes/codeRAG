@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    action: "chat",
+                    action: "sendtask",
                     message: prompt 
                 }),
                 signal: AbortSignal.timeout(120000)

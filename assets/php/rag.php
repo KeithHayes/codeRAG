@@ -304,6 +304,76 @@ class RAGSystem {
     public function get_current_profile() {
         return $this->current_profile;
     }
+
+    public function ragcodetask($message) {
+        // Independent code path for RAGcode configuration
+        $searchResults = $this->search_vector_store($message, 15);
+        $context = $this->build_rag_context($searchResults, $message);
+        $prompt = $this->build_prompt($message, $context);
+        $response_text = $this->query_ollama($prompt);
+        $response = [
+            'response' => $response_text,
+            'model' => $this->get_current_model(),
+            'profile' => $this->get_current_profile(),
+            'timestamp' => time()
+        ];
+        return $response;
+    }
+    
+    public function doomsteadtask($message) {
+        // Independent code path for Doomstead configuration (placeholder)
+        return [
+            'response' => "Doomstead task not yet implemented",
+            'model' => $this->get_current_model(),
+            'profile' => $this->get_current_profile(),
+            'timestamp' => time()
+        ];
+    }
+    
+    public function mainpagetask($message) {
+        // Independent code path for Mainpage configuration (placeholder)
+        return [
+            'response' => "Mainpage task not yet implemented",
+            'model' => $this->get_current_model(),
+            'profile' => $this->get_current_profile(),
+            'timestamp' => time()
+        ];
+    }
+    
+    public function ragdocstask($message) {
+        // Independent code path for RAGdocs configuration (placeholder)
+        return [
+            'response' => "RAGdocs task not yet implemented",
+            'model' => $this->get_current_model(),
+            'profile' => $this->get_current_profile(),
+            'timestamp' => time()
+        ];
+    }
+    
+    public function transcripttask($message) {
+        // Independent code path for Transcript configuration (placeholder)
+        return [
+            'response' => "Transcript task not yet implemented",
+            'model' => $this->get_current_model(),
+            'profile' => $this->get_current_profile(),
+            'timestamp' => time()
+        ];
+    }
+    
+    public function plantdiseasestask($message) {
+        // Independent code path for PlantDiseases configuration
+        $searchResults = $this->search_vector_store($message, 15);
+        $context = $this->build_rag_context($searchResults, $message);
+        $prompt = $this->build_prompt($message, $context);
+        $response_text = $this->query_ollama($prompt);
+        $response = [
+            'response' => $response_text,
+            'model' => $this->get_current_model(),
+            'profile' => $this->get_current_profile(),
+            'timestamp' => time()
+        ];
+        return $response;
+    }
 }
 
 while (ob_get_level()) {
@@ -356,23 +426,38 @@ try {
             $response = ['success' => true, 'path' => $file_path, 'size' => $result];
             break;
             
-        case 'chat':
+        case 'sendtask':
             $message = $input['message'] ?? '';
             if (empty($message)) {
                 throw new Exception('No message provided');
             }
+            $configFile = __DIR__ . '/../data/config.json';
+            $json = @file_get_contents($configFile);
+            $data = json_decode($json, true);
+            $profile = $data['filesetconfig'] ?? '';
             
-            $searchResults = $rag->search_vector_store($message, 15);
-            $context = $rag->build_rag_context($searchResults, $message);
-            $prompt = $rag->build_prompt($message, $context);
-            $response_text = $rag->query_ollama($prompt);
-            
-            $response = [
-                'response' => $response_text,
-                'model' => $rag->get_current_model(),
-                'profile' => $rag->get_current_profile(),
-                'timestamp' => time()
-            ];
+            switch ($profile) {
+                case 'ragcode':
+                    $response = $rag->ragcodetask($message);
+                    break;
+                case 'doomstead':
+                    $response = $rag->doomsteadtask($message);
+                    break;
+                case 'mainpage':
+                    $response = $rag->mainpagetask($message);
+                    break;
+                case 'ragdocs':
+                    $response = $rag->ragdocstask($message);
+                    break;
+                case 'transcript':
+                    $response = $rag->transcripttask($message);
+                    break;
+                case 'plantdiseases':
+                    $response = $rag->plantdiseasestask($message);
+                    break;
+                default:
+                    throw new Exception('Unknown profile: ' . $profile);
+            }
             break;
             
         default:
