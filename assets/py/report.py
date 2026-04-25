@@ -72,7 +72,7 @@ def create_report():
         os.path.join(base_path, 'index.php'),
         os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
         os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
-        os.path.join(base_path, 'assets', 'php', 'full_builder.php'),
+        os.path.join(base_path, 'assets', 'php', 'fullbuilder.php'),
         os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
         os.path.join(base_path, 'assets', 'php', 'process_transcript.php'),
         os.path.join(base_path, 'assets', 'php', 'rag.php'),

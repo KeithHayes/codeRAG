@@ -20,5 +20,7 @@
 <script src="assets/js/rag.js"></script>
 <script src="assets/js/build_modal.js"></script>
 <script src="assets/js/clipboard_modal.js"></script>
-<script src="assets/js/toolbar.js"></script></body>
+<script src="assets/js/model_modal.js"></script>
+<script src="assets/js/toolbar.js"></script>
+</body>
 </html>

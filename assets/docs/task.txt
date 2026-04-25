@@ -1,1 +1,6 @@
-the .yaml files have been moved from assets/py to assets/yaml this is a simple directory change.  Adjust all references to the .yaml files to point to this new location.
+The messages in the toolbar 'status' text display are not managed well.
+
+clicking on a toolbar button should display a message that only should be changed within the click handler and it should be cleared to the default message after a timeout when the tool button tasks complete.  obviously a routine that sets the default message after a short delay that is only called when the sequence of all tasks generated in the interrupt handler of a button complete
+
+as things are now the information is erratic.
+

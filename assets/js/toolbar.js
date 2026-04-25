@@ -1,4 +1,5 @@
 // assets/js/toolbar.js
+// assets/js/toolbar.js
 (function () {
   const statusDiv = document.createElement('div')
   
@@ -11,32 +12,73 @@
   let modelLoadStatus = null
   let statusLock = false
   let modelPollingInterval = null
+  let statusTimeout = null
+  
+  // ========== STATUS MANAGEMENT ==========
+  
+  function clearStatusTimeout() {
+    if (statusTimeout) {
+      clearTimeout(statusTimeout)
+      statusTimeout = null
+    }
+  }
+  
+  function setStatusMessage(text, isTemporary = false, duration = 5000) {
+    if (statusDiv) {
+      statusDiv.textContent = text
+      
+      if (isTemporary) {
+        clearStatusTimeout()
+        statusTimeout = setTimeout(() => {
+          if (statusDiv && !statusLock && !modelLoadStatus) {
+            if (stackRunning) {
+              statusDiv.textContent = 'Ollama ready'
+            } else {
+              statusDiv.textContent = 'Waiting for service...'
+            }
+          }
+          statusTimeout = null
+        }, duration)
+      }
+    }
+  }
+  
+  function clearStatusToDefault() {
+    clearStatusTimeout()
+    if (statusDiv && !statusLock && !modelLoadStatus) {
+      if (stackRunning) {
+        statusDiv.textContent = 'Ollama ready'
+      } else {
+        statusDiv.textContent = 'Waiting for service...'
+      }
+    }
+  }
   
   // ========== TOOLBAR BUTTON HANDLERS ==========
   
   // File Set Dropdown Handlers
   function ragcode() {
-    switchProfile('RAGcode', 'ragcode', 'Retrieval Argumentation Generation for Code', 'Switched to RAGcode profile. Click Load Model button to load model.')
+    switchProfile('RAGcode', 'ragcode', 'Retrieval Argumentation Generation for Code', 'Switched to RAGcode profile. Click Run button to load model.')
   }
 
   function doomsteadcode() {
-    switchProfile('Doomstead', 'doomstead', 'Retrieval Argumentation Generation for Code', 'Switched to Doomstead profile. Click Load Model button to load model.')
+    switchProfile('Doomstead', 'doomstead', 'Retrieval Argumentation Generation for Code', 'Switched to Doomstead profile. Click Run button to load model.')
   }
 
   function mainpagecode() {
-    switchProfile('Mainpage', 'mainpage', 'Retrieval Argumentation Generation for Code', 'Switched to Mainpage profile. Click Load Model button to load model.')
+    switchProfile('Mainpage', 'mainpage', 'Retrieval Argumentation Generation for Code', 'Switched to Mainpage profile. Click Run button to load model.')
   }
 
   function ragdocs() {
-    switchProfile('RAGdocs', 'ragdocs', 'Retrieval Argumentation Generation for Code', 'Switched to RAGdocs profile. Click Load Model button to load model.')
+    switchProfile('RAGdocs', 'ragdocs', 'Retrieval Argumentation Generation for Code', 'Switched to RAGdocs profile. Click Run button to load model.')
   }
 
   function transcripts() {
-    switchProfile('Transcripts', 'transcript', 'Transcript Processor', 'Switched to Transcript profile. Click Load Model button to load model.')
+    switchProfile('Transcripts', 'transcript', 'Transcript Processor', 'Switched to Transcript profile. Click Run button to load model.')
   }
 
   function plantdiseases() {
-    switchProfile('PlantDiseases', 'plantdiseases', 'Plant Diseases RAG - Based on 11pests1disease.pdf', 'Switched to PlantDiseases profile. Click Load Model button to load model.')
+    switchProfile('PlantDiseases', 'plantdiseases', 'Plant Diseases RAG - Based on 11pests1disease.pdf', 'Switched to PlantDiseases profile. Click Run button to load model.')
   }
   
   // Homeserver Button Handler
@@ -45,14 +87,14 @@
     const isShifted = homeserverBtn && homeserverBtn.classList.contains('homeservershift')
     
     if (isUpdatingStack) {
-      updatestatus('Operation already in progress...')
+      setStatusMessage('Operation already in progress...', true, 3000)
       return
     }
     
     if (isShifted) {
       isUpdatingStack = true
       modelLoadStatus = null
-      updatestatus('Starting stack...')
+      setStatusMessage('Starting stack...', true, 8000)
       if (homeserverBtn) homeserverBtn.style.pointerEvents = 'none'
       
       fetch(`assets/php/ollama_api.php?action=start`, {
@@ -61,23 +103,25 @@
       })
       .then(response => response.json())
       .then(data => {
-        updatestatus(data.message || (data.success ? 'Stack started' : 'Start initiated'))
+        setStatusMessage(data.message || (data.success ? 'Stack started' : 'Start initiated'), true, 5000)
         setTimeout(() => {
           checkStackStatus()
           isUpdatingStack = false
           if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+          clearStatusToDefault()
         }, 3000)
       })
       .catch(error => {
         console.error('Start error:', error)
-        updatestatus('Error starting stack')
+        setStatusMessage('Error starting stack', true, 5000)
         isUpdatingStack = false
         if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+        setTimeout(() => clearStatusToDefault(), 5000)
       })
     } else {
       isUpdatingStack = true
       modelLoadStatus = null
-      updatestatus('Stopping stack...')
+      setStatusMessage('Stopping stack...', true, 8000)
       if (homeserverBtn) homeserverBtn.style.pointerEvents = 'none'
       
       fetch(`assets/php/ollama_api.php?action=stop`, {
@@ -86,31 +130,33 @@
       })
       .then(response => response.json())
       .then(data => {
-        updatestatus('Stack stopped')
+        setStatusMessage('Stack stopped', true, 5000)
         setTimeout(() => {
           checkStackStatus()
           isUpdatingStack = false
           if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+          clearStatusToDefault()
         }, 2000)
       })
       .catch(error => {
         console.error('Stop error:', error)
-        updatestatus('Error stopping stack')
+        setStatusMessage('Error stopping stack', true, 5000)
         isUpdatingStack = false
         if (homeserverBtn) homeserverBtn.style.pointerEvents = ''
+        setTimeout(() => clearStatusToDefault(), 5000)
       })
     }
   }
   
   // Full Build Button Handler
   function rebuild_vectorstore() {
-    updatestatus('Building FAISS vector store...')
+    setStatusMessage('Building FAISS vector store...', true, 30000)
     
     if (typeof BuildModal !== 'undefined') {
       const modal = new BuildModal()
       modal.startPolling()
       
-      fetch('assets/php/full_builder.php', {
+      fetch('assets/php/fullbuilder.php', {
         method: 'POST',
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
@@ -120,18 +166,21 @@
       .then(response => response.json())
       .then(data => {
         if (!data.success) {
-          updatestatus('Build failed: ' + (data.error || 'Unknown error'))
+          setStatusMessage('Build failed - check logs', true, 8000)
         } else {
-          updatestatus('Build started...')
+          setStatusMessage('Build started...', true, 5000)
         }
+        setTimeout(() => clearStatusToDefault(), 8000)
       })
       .catch((error) => {
         console.error('Build error:', error)
-        updatestatus('Build failed - check logs')
+        setStatusMessage('Build failed - check logs', true, 8000)
+        setTimeout(() => clearStatusToDefault(), 8000)
       })
     } else {
       console.error('BuildModal not loaded')
-      updatestatus('BuildModal not loaded - refresh page')
+      setStatusMessage('BuildModal not loaded - refresh page', true, 8000)
+      setTimeout(() => clearStatusToDefault(), 8000)
     }
   }
   
@@ -139,13 +188,14 @@
   function handlePasteTranscriptClick() {
     if (typeof ClipboardModal === 'undefined') {
       console.error('ClipboardModal not loaded')
-      updatestatus('ClipboardModal not loaded - refresh page')
+      setStatusMessage('ClipboardModal not loaded - refresh page', true, 8000)
+      setTimeout(() => clearStatusToDefault(), 8000)
       return
     }
     
     const modal = new ClipboardModal(
       function(transcript) {
-        updatestatus('Sending transcript...')
+        setStatusMessage('Sending transcript...', true, 10000)
         fetch(`assets/php/rag.php`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -157,20 +207,23 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            updatestatus('Transcript saved')
+            setStatusMessage('Transcript saved', true, 5000)
           } else {
-            updatestatus('Failed to save transcript')
+            setStatusMessage('Failed to save transcript', true, 5000)
             alert('Failed to save transcript: ' + (data.error || 'Unknown error'))
           }
+          setTimeout(() => clearStatusToDefault(), 5000)
         })
         .catch(error => {
           console.error('Error:', error)
-          updatestatus('Error saving transcript')
+          setStatusMessage('Error saving transcript', true, 5000)
           alert('Error saving transcript: ' + error.message)
+          setTimeout(() => clearStatusToDefault(), 5000)
         })
       },
       function() {
-        updatestatus('Paste cancelled')
+        setStatusMessage('Paste cancelled', true, 3000)
+        setTimeout(() => clearStatusToDefault(), 3000)
       }
     )
   }
@@ -188,7 +241,7 @@
     
     modelLoadStatus = null
     
-    if (statusDivElem) statusDivElem.textContent = "Loading model..."
+    setStatusMessage('Loading model...', true, 60000)
     
     fetch(`assets/php/force_reload_model.php?_=${Date.now()}`)
       .then(response => response.json())
@@ -196,36 +249,42 @@
         if (data.success) {
           const successMsg = `Model ready: ${data.new_model}`
           modelLoadStatus = successMsg
-          if (statusDivElem) statusDivElem.textContent = successMsg
+          setStatusMessage(successMsg, true, 10000)
           if (promptInput) promptInput.disabled = false
           if (sendBtn) sendBtn.disabled = false
           lockStatus(10000)
+          setTimeout(() => {
+            modelLoadStatus = null
+            clearStatusToDefault()
+          }, 10000)
         } else if (data.status === 'loading') {
-          if (statusDivElem) statusDivElem.textContent = `Loading model: ${data.new_model}...`
+          setStatusMessage(`Loading model: ${data.new_model}...`, false)
           pollModelStatus(data.new_model, data.profile)
         } else {
           modelLoadStatus = null
-          if (statusDivElem) statusDivElem.textContent = data.message || "Failed to load"
+          setStatusMessage(data.message || 'Failed to load', true, 8000)
           if (data.message && data.message.includes('not running')) {
             alert('Stack not running. Click homeserver button to start.')
           }
           if (promptInput) promptInput.disabled = true
           if (sendBtn) sendBtn.disabled = true
+          setTimeout(() => clearStatusToDefault(), 8000)
         }
       })
       .catch(error => {
-        console.error("Load model error:", error)
+        console.error('Load model error:', error)
         modelLoadStatus = null
-        if (statusDivElem) statusDivElem.textContent = "Error loading"
-        alert("Error: " + error.message)
+        setStatusMessage('Error loading', true, 8000)
+        alert('Error: ' + error.message)
         if (promptInput) promptInput.disabled = true
         if (sendBtn) sendBtn.disabled = true
+        setTimeout(() => clearStatusToDefault(), 8000)
       })
   }
   
   // Check Models Button Handler
-  function handleCheckModelsClick() {
-    updatestatus('Checking models...')
+  function handleruntasksClick() {
+    setStatusMessage('Checking models...', true, 10000)
     
     fetch(`assets/php/ollama_api.php?action=list`)
       .then(response => response.json())
@@ -233,49 +292,58 @@
         if (data.success && data.models) {
           if (data.models.length === 0) {
             alert('No models found.\n\nPull a model: ollama pull deepseek-coder:6.7b')
-            updatestatus('No models available')
+            setStatusMessage('No models available', true, 5000)
           } else {
             const modelList = data.models.map(m => `${m.name} (${(parseInt(m.size) / 1024 / 1024 / 1024).toFixed(1)} GB)`).join('\n')
             alert(`Available models:\n\n${modelList}`)
-            updatestatus(`${data.models.length} model(s) available`)
+            setStatusMessage(`${data.models.length} model(s) available`, true, 5000)
           }
         } else {
-          updatestatus('Cannot connect to Ollama')
+          setStatusMessage('Cannot connect to Ollama', true, 5000)
           alert('Cannot connect to Ollama. Is the stack running?')
         }
+        setTimeout(() => clearStatusToDefault(), 5000)
       })
       .catch(error => {
         console.error('Check model error:', error)
-        updatestatus('Connection error')
+        setStatusMessage('Connection error', true, 5000)
         alert('Could not connect to Ollama. Is the stack running?')
+        setTimeout(() => clearStatusToDefault(), 5000)
       })
   }
   
-  // Ollama API Docs Button Handler
-  function handleFastapiClick() {
-    window.open('https://github.com/ollama/ollama/blob/main/docs/api.md', '_blank', 'noopener,noreferrer')
+  // Choose Model Click Handler
+  function handlechoosemodelClick() {
+    setStatusMessage('Model selection clicked', true, 3000)
+    setTimeout(() => clearStatusToDefault(), 3000)
   }
   
-  // Refresh Vector Store Button Handler
-  function refresh_vectorstore() {
-    updatestatus('Refresh not implemented - use Full Build')
+  // Function Stub Button Handler
+  function function_stub() {
+    setStatusMessage('Refresh not implemented - use Full Build', true, 5000)
+    setTimeout(() => clearStatusToDefault(), 5000)
   }
   
   // Homepage Button Handler
   function handleHomepageClick() {
+    setStatusMessage('Opening homepage...', true, 3000)
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
+    setTimeout(() => clearStatusToDefault(), 3000)
   }
   
   // Documentation Button Handler
   function handleBookClick() {
-    updatestatus('Documentation coming soon')
+    setStatusMessage('Documentation coming soon', true, 3000)
+    setTimeout(() => clearStatusToDefault(), 3000)
   }
   
   // ========== PROFILE MANAGEMENT ==========
   
   function switchProfile(profileName, configValue, toolTitle, statusMessage) {
     cleanupProfile()
-    const content = { "filesetconfig": configValue }
+    const content = { 'filesetconfig': configValue }
+    setStatusMessage(statusMessage, true, 8000)
+    
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -285,24 +353,40 @@
       if (dropdown) dropdown.style.display = 'none'
       colordropdowntext(profileName)
       currentProfile = configValue
+      
+      const fullBuildBtn = document.getElementById('button_fullbuild')
+      const pasteBtn = document.getElementById('button_pastetranscript')
+      
+      if (configValue === 'transcript') {
+        if (fullBuildBtn) fullBuildBtn.style.display = 'none'
+        if (pasteBtn) pasteBtn.style.display = ''
+      } else {
+        if (fullBuildBtn) fullBuildBtn.style.display = ''
+        if (pasteBtn) pasteBtn.style.display = 'none'
+      }
+      
       updateButtonVisibilityFromYaml()
-      updatestatus(statusMessage)
       updatetooltitle(toolTitle)
+      
+      const chatbox = document.getElementById('chatbox')
+      if (chatbox) chatbox.innerHTML = ''
+      setTimeout(() => clearStatusToDefault(), 8000)
     }).catch(error => {
       console.error('Profile switch error:', error)
-      updatestatus('Error switching profile')
+      setStatusMessage('Error switching profile', true, 5000)
+      setTimeout(() => clearStatusToDefault(), 5000)
     })
   }
   
   function cleanupProfile() {
-    const chatbox = document.getElementById("chatbox")
-    if (chatbox) chatbox.innerHTML = ""
+    const chatbox = document.getElementById('chatbox')
+    if (chatbox) chatbox.innerHTML = ''
     
     const promptInput = document.getElementById('userInput')
     const sendBtn = document.getElementById('sendButton')
     if (promptInput) {
       promptInput.disabled = true
-      promptInput.value = ""
+      promptInput.value = ''
     }
     if (sendBtn) sendBtn.disabled = true
     
@@ -335,7 +419,7 @@
       })
       .catch(error => {
         console.error('Failed to load toolbar config:', error)
-        const defaultItems = ['fileloadBTN', 'homeserver', 'full_build', 'loadmodel', 'fastapi', 'book', 'target']
+        const defaultItems = ['fileload', 'homeserver', 'fullbuild', 'loadmodel', 'choosemodel', 'book', 'target']
         applyToolbarVisibility(defaultItems)
       })
   }
@@ -355,7 +439,7 @@
       
       if (inToolbar) {
         if (line.match(/^\s*-\s+/)) {
-          const match = line.match(/^\s*-\s+["']?([^"'\n]+)["']?/)
+          const match = line.match(/^\s*-\s+['"]?([^"'\n]+)['"]?/)
           if (match) {
             items.push(match[1].trim())
           }
@@ -370,14 +454,14 @@
   
   function applyToolbarVisibility(visibleButtons) {
     const buttonMappings = {
-      'fileloadBTN': 'button_fileload',
+      'fileload': 'button_fileload',
       'homeserver': 'button_homeserver',
-      'full_build': 'button_full_build',
+      'fullbuild': 'button_fullbuild',
       'pastetranscript': 'button_pastetranscript',
       'loadmodel': 'button_loadmodel',
-      'checkmodel': 'button_checkmodel',
-      'fastapi': 'button_fastapi',
-      'vectordb': 'button_vectordb',
+      'runtask': 'button_runtask',
+      'choosemodel': 'button_choosemodel',
+      'stub': 'button_stub',
       'homepage': 'button_homepage',
       'target': 'button_homepage',
       'book': 'button_book'
@@ -412,7 +496,7 @@
       stackRunning = true
       cachedStatus = true
       if (!modelLoadStatus && !statusLock) {
-        updatestatus('Ollama ready')
+        setStatusMessage('Ollama ready', false)
       }
     } else {
       if (!homeserverBtn.classList.contains('homeservershift')) {
@@ -421,7 +505,7 @@
       stackRunning = false
       cachedStatus = false
       if (!modelLoadStatus && !statusLock) {
-        updatestatus('Waiting for service...')
+        setStatusMessage('Waiting for service...', false)
       }
     }
   }
@@ -460,7 +544,7 @@
       clearInterval(stackCheckInterval)
     }
     
-    updatestatus('Checking Ollama...')
+    setStatusMessage('Checking Ollama...', false)
     checkStackStatus()
     
     stackCheckInterval = setInterval(() => {
@@ -481,9 +565,9 @@
       statusLock = false
       if (!modelLoadStatus) {
         if (stackRunning) {
-          updatestatus('Ollama ready')
+          setStatusMessage('Ollama ready', false)
         } else {
-          updatestatus('Waiting for service...')
+          setStatusMessage('Waiting for service...', false)
         }
       }
     }, ms)
@@ -494,12 +578,7 @@
       clearInterval(modelPollingInterval)
     }
     
-    let attempts = 0
-    const maxAttempts = 60
-    
     modelPollingInterval = setInterval(async () => {
-      attempts++
-      
       try {
         const response = await fetch(`assets/php/ollama_api.php?action=running_model`)
         const data = await response.json()
@@ -508,37 +587,35 @@
           clearInterval(modelPollingInterval)
           modelPollingInterval = null
           modelLoadStatus = null
-          updatestatus(`Model ready: ${expectedModel}`)
+          setStatusMessage(`Model ready: ${expectedModel}`, true, 10000)
           lockStatus(10000)
           
           const promptInput = document.getElementById('userInput')
           const sendBtn = document.getElementById('sendButton')
           if (promptInput) promptInput.disabled = false
           if (sendBtn) sendBtn.disabled = false
-        } else if (attempts >= maxAttempts) {
-          clearInterval(modelPollingInterval)
-          modelPollingInterval = null
-          modelLoadStatus = null
-          updatestatus('Model load timeout - click Load Model again')
+          
+          setTimeout(() => {
+            modelLoadStatus = null
+            clearStatusToDefault()
+          }, 10000)
         } else {
-          updatestatus(`Loading model: ${expectedModel}... (${Math.round(attempts / maxAttempts * 100)}%)`)
+          setStatusMessage(`Loading model: ${expectedModel}...`, false)
         }
       } catch (error) {
-        updatestatus(`Loading model: ${expectedModel}...`)
+        setStatusMessage(`Loading model: ${expectedModel}...`, false)
       }
-    }, 500)
+    }, 1000)
   }
   
   // ========== UI HELPER FUNCTIONS ==========
   
   function updatestatus(text) {
-    if (statusDiv) {
-      statusDiv.textContent = text
-    }
+    setStatusMessage(text, false)
   }
   
   function updatetooltitle(text) {
-    let banner = document.getElementById("tooltitle")
+    let banner = document.getElementById('tooltitle')
     if (banner) banner.textContent = text
   }
   
@@ -558,13 +635,13 @@
   function loadtooltips() {
     const tooltips = {
       fileload: 'File Set',
-      full_build: 'Rebuild Vector Store',
-      vectordb: 'Refresh Vector Store',
+      fullbuild: 'Build Vector Store',
+      stub: 'Refresh Vector Store',
       homeserver: 'Start/Stop Stack',
       loadmodel: 'Load Model',
-      checkmodel: 'Check Models',
+      runtask: 'Check Models',
       pastetranscript: 'Paste Transcript',
-      fastapi: 'Ollama API Docs',
+      choosemodel: 'Models',
       homepage: 'Homepage',
       book: 'Documentation'
     }
@@ -673,7 +750,7 @@
   // ========== MAIN TOOLBAR BUILD FUNCTION ==========
   
   function loadtoolbar() {
-    const bar = document.getElementById("coderagtoolbar")
+    const bar = document.getElementById('coderagtoolbar')
     if (!bar) {
       console.error('coderagtoolbar element not found')
       return
@@ -686,12 +763,12 @@
     buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode', 'Doomstead', 'Mainpage', 'RAGdocs', 'Transcripts', 'PlantDiseases']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
-    buttonlist.appendChild(addbutton('full_build', 'dbuploadBTN', 'left', false))
+    buttonlist.appendChild(addbutton('fullbuild', 'dbuploadBTN', 'left', false))
     buttonlist.appendChild(addbutton('pastetranscript', 'pasteBTN', 'left', false))
     buttonlist.appendChild(addbutton('loadmodel', 'dogrunBTN', 'left', false))
-    buttonlist.appendChild(addbutton('checkmodel', 'sailboatBTN', 'left', false))
-    buttonlist.appendChild(addbutton('fastapi', 'horuseyeBTN', 'left', false))
-    buttonlist.appendChild(addbutton('vectordb', 'dbrefreshBTN', 'left', false))
+    buttonlist.appendChild(addbutton('runtask', 'sailboatBTN', 'left', false))
+    buttonlist.appendChild(addbutton('choosemodel', 'horuseyeBTN', 'left', false))
+    buttonlist.appendChild(addbutton('stub', 'dbrefreshBTN', 'left', false))
     buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
     buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true))
     buttonlist.appendChild(addbutton('book', 'bookBTN', 'right', false))
@@ -721,7 +798,12 @@
       updateButtonVisibilityFromYaml()
     }, 100)
 
-    // Attach button event handlers
+    const pasteBtn = document.getElementById('button_pastetranscript')
+    if (pasteBtn) pasteBtn.style.display = 'none'
+    
+    const fullBuildBtn = document.getElementById('button_fullbuild')
+    if (fullBuildBtn) fullBuildBtn.style.display = ''
+
     const dropdownButton = document.querySelector('#button_fileload a')
     if (dropdownButton) {
       dropdownButton.onclick = function(e) {
@@ -740,7 +822,7 @@
       }
     }
     
-    const fullBuildButton = document.querySelector('#button_full_build a')
+    const fullBuildButton = document.querySelector('#button_fullbuild a')
     if (fullBuildButton) {
       fullBuildButton.onclick = function(e) {
         e.preventDefault()
@@ -770,32 +852,32 @@
       }
     }
     
-    const sailboatButton = document.querySelector('#button_checkmodel a')
+    const sailboatButton = document.querySelector('#button_runtask a')
     if (sailboatButton) {
       sailboatButton.onclick = function(e) {
         e.preventDefault()
         e.stopPropagation()
-        handleCheckModelsClick()
+        handleruntasksClick()
         return false
       }
     }
     
-    const horuseyeButton = document.querySelector('#button_fastapi a')
+    const horuseyeButton = document.querySelector('#button_choosemodel a')
     if (horuseyeButton) {
       horuseyeButton.onclick = function(e) {
         e.preventDefault()
         e.stopPropagation()
-        handleFastapiClick()
+        handlechoosemodelClick()
         return false
       }
     }
     
-    const refreshButton = document.querySelector('#button_vectordb a')
+    const refreshButton = document.querySelector('#button_stub a')
     if (refreshButton) {
       refreshButton.onclick = function(e) {
         e.preventDefault()
         e.stopPropagation()
-        refresh_vectorstore()
+        function_stub()
         return false
       }
     }
@@ -819,6 +901,10 @@
         return false
       }
     }
+    
+    if (typeof ModelModal !== 'undefined') {
+      new ModelModal()
+    }
   }
   
   // ========== CLEANUP ON PAGE UNLOAD ==========
@@ -828,6 +914,7 @@
     if (modelPollingInterval) {
       clearInterval(modelPollingInterval)
     }
+    clearStatusTimeout()
   })
   
   // ========== EXPOSE PUBLIC API ==========

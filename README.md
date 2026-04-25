@@ -32,7 +32,7 @@ Web Interface Controls:
 | Load Model    | Leaping dog       | Load the model specified in current profile   |
 | Check Model   | Sailboat          | List available Ollama models                  |
 | Home Server   | House             | Check Ollama service status                   |
-| FastAPI       | Eye               | Open Ollama API documentation                 |
+| choosemodel       | Eye               | Open Ollama API documentation                 |
 
 Workflow:
 
@@ -82,7 +82,7 @@ doomsteadRAG/
 │   │   ├── rag.php          # Main RAG handler
 │   │   ├── force_reload_model.php  # Model loader
 │   │   ├── ollama_api.php   # Ollama management
-│   │   └── full_builder.php # FAISS builder trigger
+│   │   └── fullbuilder.php # FAISS builder trigger
 │   ├── py/
 │   │   ├── faiss_builder.py # FAISS index builder
 │   │   ├── faiss_query.py   # FAISS search

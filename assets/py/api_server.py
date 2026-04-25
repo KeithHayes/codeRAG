@@ -259,8 +259,8 @@ def rag_query():
     
     return jsonify({'error': 'Invalid action'})
 
-@app.route('/assets/php/full_builder.php', methods=['POST', 'OPTIONS'])
-def full_builder():
+@app.route('/assets/php/fullbuilder.php', methods=['POST', 'OPTIONS'])
+def fullbuilder():
     if request.method == 'OPTIONS':
         return '', 200
     
