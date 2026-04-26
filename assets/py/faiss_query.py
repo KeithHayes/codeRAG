@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import sys
 import json
 import yaml
@@ -15,19 +14,34 @@ class FAISSearcher:
         self.profile = profile
         self.faiss_dir = DATA_DIR / profile / "faiss_index"
         
-        # Load config to get the embedding model that was used
+        # Load config to get the embedding models that were used
         config_path = PROJECT_ROOT / "assets" / "yaml" / f"{self.profile}.yaml"
-        model_name = "sentence-transformers/all-mpnet-base-v2"  # default
+        code_model_name = "sentence-transformers/all-mpnet-base-v2"
+        text_model_name = "sentence-transformers/all-MiniLM-L6-v2"
+        
         if config_path.exists():
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
-                model_name = config.get('doomsteadRAG', {}).get('embedding_model', model_name)
+                doomstead_rag = config.get('doomsteadRAG', {})
+                code_model_name = doomstead_rag.get('embedding_model', code_model_name)
+                text_model_name = doomstead_rag.get('text_embedding_model', text_model_name)
         
+        # Try to load build info to get exact models used
+        build_info_path = self.faiss_dir / 'build_info.json'
+        if build_info_path.exists():
+            with open(build_info_path, 'r') as f:
+                build_info = json.load(f)
+                code_model_name = build_info.get('code_embedding_model', code_model_name)
+                text_model_name = build_info.get('text_embedding_model', text_model_name)
+        
+        # We need to use the code embedding model for the main similarity search
+        # since FAISS indexes are compatible within the same embedding space
         self.embeddings = HuggingFaceEmbeddings(
-            model_name=model_name,
+            model_name=code_model_name,
             model_kwargs={'device': 'cpu'},
             encode_kwargs={'normalize_embeddings': True}
         )
+        
         self.vectorstore = FAISS.load_local(str(self.faiss_dir), self.embeddings, allow_dangerous_deserialization=True)
     
     def search(self, query: str, k: int = 5):

@@ -1,5 +1,5 @@
 doomsteadRAG:
-  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   chunk_size: 800
   chunk_overlap: 150
   vector_db_type: "faiss"

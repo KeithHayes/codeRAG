@@ -47,15 +47,16 @@ def create_report():
     # Paths to include in the report
     boilerplate_files = [
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
+        #os.path.join(base_path, 'assets', 'docs', 'backannotate.txt'),
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'specification.txt'),
+        os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
     ]
 
     css_files = [
         os.path.join(base_path, 'assets', 'css', 'rag.css'),
         os.path.join(base_path, 'assets', 'css', 'toolbar.css'),
         os.path.join(base_path, 'assets', 'css', 'toolbarbuttons.css'),
-        os.path.join(base_path, 'assets', 'css', 'w3.css'),
+        #os.path.join(base_path, 'assets', 'css', 'w3.css'),
     ]
 
     log_files = [
@@ -64,6 +65,8 @@ def create_report():
 
     js_files = [
         os.path.join(base_path, 'assets', 'js', 'build_modal.js'),
+        os.path.join(base_path, 'assets', 'js', 'clipboard_modal.js'),
+        os.path.join(base_path, 'assets', 'js', 'model_modal.js'),
         os.path.join(base_path, 'assets', 'js', 'rag.js'),
         os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
     ]
@@ -86,12 +89,16 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'chunker.py'),
         os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'faiss_builder.py'),
+        os.path.join(base_path, 'assets', 'py', 'faiss_query_wrapper.py'),
         os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
         os.path.join(base_path, 'assets', 'py', 'logger.py'),
         os.path.join(base_path, 'assets', 'py', 'report.py'),
         os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'start_api_server.py'),
         os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
+    ]
+
+    yaml_files = [
         os.path.join(base_path, 'assets', 'py', 'doomstead.yaml'),
         os.path.join(base_path, 'assets', 'py', 'mainpage.yaml'),
         os.path.join(base_path, 'assets', 'py', 'ragcode.yaml'),
@@ -155,6 +162,14 @@ def create_report():
                 if os.path.exists(py_file):
                     with open(py_file, 'r', encoding='utf-8') as f:
                         report.write(f"=== PY assets/py/{os.path.basename(py_file)} ===\n")
+                        report.write(f.read())
+                        report.write("\n\n")
+
+            # Yaml section
+            for yaml_file in yaml_files:
+                if os.path.exists(yaml_file):
+                    with open(yaml_file, 'r', encoding='utf-8') as f:
+                        report.write(f"=== PY assets/files/{os.path.basename(yaml_file)} ===\n")
                         report.write(f.read())
                         report.write("\n\n")
 

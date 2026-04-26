@@ -1,6 +1,1 @@
-There is a task that resets the status display in the toolbar on a periodic basis.  We will eliminate this and keep only the optional task that clears the status display after a delay which can be sent to the task.  function clearstatus(delay)
-
-The status reflects the active button state if a button is processing data the status says what is happening but if a button is inactive the status should be blank.
-
-Properly a status message is displayed at the start of processing a button task and cleared when the task completes.  But this is invisible if the task is short so to start with we will set a timer that clears the task after a 500ms delay.  clearstatus(500).  All tasks will then appear to last half a second at least even if they are less in duration.
-
+I want the book button to display this text so I can copy it "What are different kinds of plant diseases", "What is Stewart’s wilt disease"

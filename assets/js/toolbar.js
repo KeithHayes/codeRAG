@@ -9,9 +9,14 @@
   let lastStatusCheck = 0
   let cachedStatus = false
   let modelLoadStatus = null
-  let statusTimeout = null
   
-  // ========== STATUS MANAGEMENT ==========
+  // ========== STATUS MANAGEMENT WITH QUEUE AND TIMEOUT LOCK ==========
+  
+  let statusTimeout = null
+  let statusQueue = []
+  let statusLockExpiry = 0
+  let currentStatusMessage = ''
+  let pendingStatusMessage = null
   
   function clearStatusTimeout() {
     if (statusTimeout) {
@@ -20,56 +25,121 @@
     }
   }
   
-  function clearStatus(delay) {
-    clearStatusTimeout()
-    statusTimeout = setTimeout(() => {
-      if (statusDiv) {
-        if (stackRunning) {
-          statusDiv.textContent = ''
-        } else {
-          statusDiv.textContent = 'Waiting for service...'
+  function processStatusQueue() {
+    if (statusQueue.length === 0) {
+      // No queued messages, clear the status bar if no lock active
+      if (Date.now() >= statusLockExpiry) {
+        if (statusDiv) {
+          if (stackRunning) {
+            statusDiv.textContent = ''
+          } else {
+            statusDiv.textContent = 'Waiting for service...'
+          }
+          currentStatusMessage = statusDiv.textContent
         }
+        statusLockExpiry = 0
       }
-      statusTimeout = null
-    }, delay)
+      return
+    }
+    
+    // Check if lock has expired
+    if (Date.now() >= statusLockExpiry) {
+      const nextMessage = statusQueue.shift()
+      if (statusDiv) {
+        statusDiv.textContent = nextMessage.text
+        currentStatusMessage = nextMessage.text
+      }
+      // Set lock for this message
+      statusLockExpiry = Date.now() + 300
+      // Clear any existing timeout
+      clearStatusTimeout()
+      // Set timeout to process queue after lock expires
+      statusTimeout = setTimeout(() => {
+        processStatusQueue()
+      }, 300)
+    }
   }
   
   function setStatusMessage(text, isTemporary = true, duration = 500) {
-    if (statusDiv) {
-      statusDiv.textContent = text
-      if (isTemporary) {
-        clearStatusTimeout()
-        statusTimeout = setTimeout(() => {
-          clearStatus(duration)
-        }, duration)
-      }
+    // Add message to queue
+    statusQueue.push({
+      text: text,
+      isTemporary: isTemporary,
+      duration: duration,
+      timestamp: Date.now()
+    })
+    
+    // Try to process queue immediately
+    processStatusQueue()
+    
+    // For temporary messages, schedule removal from queue after duration
+    if (isTemporary) {
+      setTimeout(() => {
+        // Remove this specific message from queue if it's still there
+        const index = statusQueue.findIndex(msg => msg.text === text && msg.timestamp === timestamp)
+        if (index !== -1) {
+          statusQueue.splice(index, 1)
+        }
+        // If this message is currently displayed, mark it for clearing
+        if (currentStatusMessage === text) {
+          // Queue a clear operation
+          statusQueue.push({
+            text: null,
+            isTemporary: false,
+            duration: 0,
+            timestamp: Date.now(),
+            isClear: true
+          })
+          processStatusQueue()
+        }
+      }, duration)
     }
+  }
+  
+  function clearStatus(delay) {
+    // Queue a clear operation after delay
+    setTimeout(() => {
+      statusQueue.push({
+        text: null,
+        isTemporary: false,
+        duration: 0,
+        timestamp: Date.now(),
+        isClear: true
+      })
+      processStatusQueue()
+    }, delay)
   }
   
   // ========== TOOLBAR BUTTON HANDLERS ==========
   
   // File Set Dropdown Handlers
   function ragcode() {
+    setStatusMessage('Switched to RAGcode profile. Click Run button to load model.', true, 8000)
     switchProfile('RAGcode', 'ragcode', 'Retrieval Argumentation Generation for Code', 'Switched to RAGcode profile. Click Run button to load model.')
   }
 
   function doomsteadcode() {
+    setStatusMessage('Switched to Doomstead profile. Click Run button to load model.', true, 8000)
     switchProfile('Doomstead', 'doomstead', 'Retrieval Argumentation Generation for Code', 'Switched to Doomstead profile. Click Run button to load model.')
   }
 
   function mainpagecode() {
+    setStatusMessage('Switched to Mainpage profile. Click Run button to load model.', true, 8000)
     switchProfile('Mainpage', 'mainpage', 'Retrieval Argumentation Generation for Code', 'Switched to Mainpage profile. Click Run button to load model.')
   }
 
   function ragdocs() {
+    setStatusMessage('Switched to RAGdocs profile. Click Run button to load model.', true, 8000)
     switchProfile('RAGdocs', 'ragdocs', 'Retrieval Argumentation Generation for Code', 'Switched to RAGdocs profile. Click Run button to load model.')
   }
 
   function transcripts() {
+    setStatusMessage('Switched to Transcript profile. Click Run button to load model.', true, 8000)
     switchProfile('Transcripts', 'transcript', 'Transcript Processor', 'Switched to Transcript profile. Click Run button to load model.')
   }
 
   function plantdiseases() {
+    setStatusMessage('Switched to PlantDiseases profile. Click Run button to load model.', true, 8000)
     switchProfile('PlantDiseases', 'plantdiseases', 'Plant Diseases RAG - Based on 11pests1disease.pdf', 'Switched to PlantDiseases profile. Click Run button to load model.')
   }
   
@@ -178,6 +248,8 @@
   
   // Paste Transcript Button Handler
   function handlePasteTranscriptClick() {
+    setStatusMessage('Opening paste dialog...', true, 3000)
+    
     if (typeof ClipboardModal === 'undefined') {
       console.error('ClipboardModal not loaded')
       setStatusMessage('ClipboardModal not loaded - refresh page', true, 8000)
@@ -187,7 +259,7 @@
     
     const modal = new ClipboardModal(
       function(transcript) {
-        setStatusMessage('Sending transcript...', true, 10000)
+        setStatusMessage('Saving transcript...', true, 10000)
         fetch(`assets/php/rag.php`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -225,14 +297,14 @@
     const promptInput = document.getElementById('userInput')
     const sendBtn = document.getElementById('sendButton')
     
+    setStatusMessage('Loading model...', true, 60000)
+    
     if (modelPollingInterval) {
       clearInterval(modelPollingInterval)
       modelPollingInterval = null
     }
     
     modelLoadStatus = null
-    
-    setStatusMessage('Loading model...', true, 60000)
     
     fetch(`assets/php/force_reload_model.php?_=${Date.now()}`)
       .then(response => response.json())
@@ -274,7 +346,7 @@
   
   // Check Models Button Handler
   function handleruntasksClick() {
-    setStatusMessage('Checking models...', true, 10000)
+    setStatusMessage('Checking available models...', true, 10000)
     
     fetch(`assets/php/ollama_api.php?action=list`)
       .then(response => response.json())
@@ -304,7 +376,7 @@
   
   // Choose Model Click Handler
   function handlechoosemodelClick() {
-    setStatusMessage('Model selection clicked', true, 3000)
+    setStatusMessage('Model selection ready - hover over Models button', true, 3000)
     setTimeout(() => clearStatus(500), 3000)
   }
   
@@ -316,15 +388,17 @@
   
   // Homepage Button Handler
   function handleHomepageClick() {
-    setStatusMessage('Opening homepage...', true, 3000)
+    setStatusMessage('Opening homepage in new tab...', true, 3000)
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
     setTimeout(() => clearStatus(500), 3000)
   }
   
   // Documentation Button Handler
   function handleBookClick() {
-    setStatusMessage('Documentation coming soon', true, 3000)
-    setTimeout(() => clearStatus(500), 3000)
+    const message = 'Example queries:\n\n"What are different kinds of plant diseases"\n\n"What is Stewart\'s wilt disease"'
+    alert(message)
+    setStatusMessage('Example queries displayed - copy them to the chat', true, 5000)
+    setTimeout(() => clearStatus(500), 5000)
   }
   
   // ========== PROFILE MANAGEMENT ==========
@@ -332,7 +406,6 @@
   function switchProfile(profileName, configValue, toolTitle, statusMessage) {
     cleanupProfile()
     const content = { 'filesetconfig': configValue }
-    setStatusMessage(statusMessage, true, 8000)
     
     fetch(`assets/php/save_config.php`, {
       method: 'POST',
@@ -548,6 +621,8 @@
     }
   }
   
+  let modelPollingInterval = null
+  
   function pollModelStatus(expectedModel, profile) {
     if (modelPollingInterval) {
       clearInterval(modelPollingInterval)
@@ -617,7 +692,7 @@
       pastetranscript: 'Paste Transcript',
       choosemodel: 'Models',
       homepage: 'Homepage',
-      book: 'Documentation'
+      book: 'Example Queries'
     }
     for (const id in tooltips) {
       const el = document.getElementById(id)
@@ -753,6 +828,7 @@
     statusDiv.id = 'status'
     statusDiv.className = 'status'
     statusDiv.textContent = 'Checking Ollama...'
+    currentStatusMessage = 'Checking Ollama...'
 
     statusLi.appendChild(statusDiv)
 
@@ -888,7 +964,9 @@
     if (modelPollingInterval) {
       clearInterval(modelPollingInterval)
     }
-    clearStatusTimeout()
+    if (statusTimeout) {
+      clearTimeout(statusTimeout)
+    }
   })
   
   // ========== EXPOSE PUBLIC API ==========
@@ -898,6 +976,7 @@
   window.rebuild_vectorstore = rebuild_vectorstore
   window.loadModel = loadModel
   window.clearStatus = clearStatus
+  window.setStatusMessage = setStatusMessage
   
   // ========== AUTO-INITIALIZE ==========
   

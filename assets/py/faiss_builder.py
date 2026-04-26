@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import json
@@ -40,12 +39,22 @@ class FAISSBuilder:
         self.profile_dir = DATA_DIR / profile
         self.faiss_dir = self.profile_dir / "faiss_index"
         
-        # Get embedding model from config (default to all-mpnet-base-v2 for backwards compatibility)
-        model_name = self.config.get('embedding_model', 'sentence-transformers/all-mpnet-base-v2')
-        self.logger.info(f"Using embedding model: {model_name}")
+        # Get embedding models from config
+        self.code_model_name = self.config.get('embedding_model', 'sentence-transformers/all-mpnet-base-v2')
+        self.text_model_name = self.config.get('text_embedding_model', 'sentence-transformers/all-MiniLM-L6-v2')
         
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=model_name,
+        self.logger.info(f"Using code embedding model: {self.code_model_name}")
+        self.logger.info(f"Using text embedding model: {self.text_model_name}")
+        
+        # Initialize both embedding models
+        self.code_embeddings = HuggingFaceEmbeddings(
+            model_name=self.code_model_name,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+        
+        self.text_embeddings = HuggingFaceEmbeddings(
+            model_name=self.text_model_name,
             model_kwargs={'device': 'cpu'},
             encode_kwargs={'normalize_embeddings': True}
         )
@@ -90,6 +99,12 @@ class FAISSBuilder:
         skip_patterns = ['venv', '__pycache__', '.venv', 'minified_']
         return any(pattern in str(file_path) for pattern in skip_patterns)
     
+    def _is_text_document(self, file_path: str) -> bool:
+        """Determine if a document is text-based (not code)"""
+        text_indicators = ['specification', 'README', 'readme', 'documentation', 'docs', '.txt']
+        path_str = str(file_path).lower()
+        return any(indicator in path_str for indicator in text_indicators)
+    
     def _load_code_documents(self) -> List[Document]:
         documents = []
         code_dirs = self.config.get('code_dirs', {})
@@ -119,15 +134,20 @@ class FAISSBuilder:
                             with open(file_path, 'r', encoding='utf-8') as f:
                                 content = f.read()
                             
+                            # Determine if this is text or code
+                            is_text = self._is_text_document(str(file_path))
+                            
                             doc = Document(
                                 page_content=content,
                                 metadata={
                                     'source': str(file_path),
-                                    'file_type': file_type
+                                    'file_type': file_type,
+                                    'document_type': 'text' if is_text else 'code',
+                                    'embedding_model': self.text_model_name if is_text else self.code_model_name
                                 }
                             )
                             documents.append(doc)
-                            self.logger.debug(f"  Loaded: {file_path.name}")
+                            self.logger.debug(f"  Loaded: {file_path.name} (type: {'text' if is_text else 'code'})")
                             
                         except Exception as e:
                             self.logger.error(f"Error reading {file_path}: {e}")
@@ -157,6 +177,10 @@ class FAISSBuilder:
                     show_progress=True
                 )
                 pdf_docs = loader.load()
+                # Mark PDFs as text documents
+                for doc in pdf_docs:
+                    doc.metadata['document_type'] = 'text'
+                    doc.metadata['embedding_model'] = self.text_model_name
                 documents.extend(pdf_docs)
                 self.logger.info(f"Loaded {len(pdf_docs)} PDF documents")
                 
@@ -165,53 +189,137 @@ class FAISSBuilder:
         
         return documents
     
+    def _load_specification_documents(self) -> List[Document]:
+        """Load as-built-specification.txt if it exists"""
+        documents = []
+        spec_path = PROJECT_ROOT / "assets" / "docs" / "as-built-specification.txt"
+        
+        if spec_path.exists():
+            self.logger.info(f"Loading specification document: {spec_path}")
+            try:
+                with open(spec_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                doc = Document(
+                    page_content=content,
+                    metadata={
+                        'source': str(spec_path),
+                        'file_type': 'specification',
+                        'document_type': 'text',
+                        'is_specification': True,
+                        'embedding_model': self.text_model_name
+                    }
+                )
+                documents.append(doc)
+                self.logger.info(f"Loaded specification document")
+            except Exception as e:
+                self.logger.error(f"Error loading specification: {e}")
+        else:
+            self.logger.warning(f"Specification document not found: {spec_path}")
+        
+        return documents
+    
     def build_index(self):
         try:
-            documents = []
+            code_documents = []
+            text_documents = []
+            
+            # Load specification document first (always text)
+            spec_docs = self._load_specification_documents()
+            text_documents.extend(spec_docs)
             
             # Load code documents if code_dirs is configured
             if self.config.get('code_dirs'):
-                code_docs = self._load_code_documents()
-                documents.extend(code_docs)
-                self.logger.info(f"Loaded {len(code_docs)} code documents")
+                all_docs = self._load_code_documents()
+                # Separate code from text documents
+                for doc in all_docs:
+                    if doc.metadata.get('document_type') == 'text':
+                        text_documents.append(doc)
+                    else:
+                        code_documents.append(doc)
+                self.logger.info(f"Loaded {len(code_documents)} code documents and {len(text_documents)} text documents from code_dirs")
             
-            # Load PDF documents if pdf is configured
+            # Load PDF documents if pdf is configured (always text)
             if self.config.get('pdf'):
                 pdf_docs = self._load_pdf_documents()
-                documents.extend(pdf_docs)
+                text_documents.extend(pdf_docs)
                 self.logger.info(f"Loaded {len(pdf_docs)} PDF documents")
             
-            if not documents:
+            total_docs = len(code_documents) + len(text_documents)
+            if total_docs == 0:
                 self.logger.warning("No documents found to process")
                 return False
             
-            self.logger.info(f"Total documents loaded: {len(documents)}")
+            self.logger.info(f"Total documents: {total_docs} (Code: {len(code_documents)}, Text: {len(text_documents)})")
             
-            # Split into chunks
+            # Split documents into chunks
             self.logger.info("Splitting documents into chunks...")
-            chunks = self.splitter.split_documents(documents)
-            self.logger.info(f"Created {len(chunks)} chunks")
+            all_chunks = []
             
-            if not chunks:
+            # Process code documents with code splitter
+            if code_documents:
+                code_chunks = self.splitter.split_documents(code_documents)
+                for chunk in code_chunks:
+                    chunk.metadata['embedding_type'] = 'code'
+                all_chunks.extend(code_chunks)
+                self.logger.info(f"Created {len(code_chunks)} chunks from code documents")
+            
+            # Process text documents with text splitter (might use different parameters in future)
+            if text_documents:
+                text_chunks = self.splitter.split_documents(text_documents)
+                for chunk in text_chunks:
+                    chunk.metadata['embedding_type'] = 'text'
+                all_chunks.extend(text_chunks)
+                self.logger.info(f"Created {len(text_chunks)} chunks from text documents")
+            
+            if not all_chunks:
                 self.logger.warning("No chunks created")
                 return False
             
-            # Build FAISS index
-            self.logger.info("Building FAISS index...")
-            vectorstore = FAISS.from_documents(chunks, self.embeddings)
+            self.logger.info(f"Total chunks created: {len(all_chunks)}")
             
-            # Save index
+            # Build separate FAISS indices for code and text
+            code_chunks_for_index = [chunk for chunk in all_chunks if chunk.metadata.get('embedding_type') == 'code']
+            text_chunks_for_index = [chunk for chunk in all_chunks if chunk.metadata.get('embedding_type') == 'text']
+            
+            # Create combined vectorstore by merging indices
+            self.logger.info("Building FAISS index for code documents...")
+            if code_chunks_for_index:
+                code_vectorstore = FAISS.from_documents(code_chunks_for_index, self.code_embeddings)
+                final_vectorstore = code_vectorstore
+            else:
+                final_vectorstore = None
+            
+            if text_chunks_for_index:
+                self.logger.info("Building FAISS index for text documents...")
+                text_vectorstore = FAISS.from_documents(text_chunks_for_index, self.text_embeddings)
+                if final_vectorstore:
+                    final_vectorstore.merge_from(text_vectorstore)
+                else:
+                    final_vectorstore = text_vectorstore
+            
+            if not final_vectorstore:
+                self.logger.error("No vectorstore created")
+                return False
+            
+            # Save combined index
             self.logger.info(f"Saving FAISS index to {self.faiss_dir}")
-            vectorstore.save_local(str(self.faiss_dir))
+            final_vectorstore.save_local(str(self.faiss_dir))
             
             # Save metadata
             metadata = {
                 'profile': self.profile,
-                'embedding_model': self.config.get('embedding_model', 'sentence-transformers/all-mpnet-base-v2'),
-                'total_chunks': len(chunks),
-                'total_documents': len(documents),
+                'code_embedding_model': self.code_model_name,
+                'text_embedding_model': self.text_model_name,
+                'total_chunks': len(all_chunks),
+                'code_chunks': len(code_chunks_for_index),
+                'text_chunks': len(text_chunks_for_index),
+                'total_documents': total_docs,
+                'code_documents': len(code_documents),
+                'text_documents': len(text_documents),
                 'chunk_size': self.config.get('chunk_size', 800),
                 'chunk_overlap': self.config.get('chunk_overlap', 150),
+                'has_specification': len(spec_docs) > 0
             }
             
             with open(self.faiss_dir / 'build_info.json', 'w') as f:
