@@ -1,21 +1,34 @@
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'fullbuild'
+  - 'loadmodel'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
+
+ollama_model: "qwen2.5:7b-instruct"
+
+system_prompt: "You are a plant diseases expert. Answer based on the provided plant diseases documentation. Focus on identification, symptoms, and treatment of plant diseases and pests."
+
+user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant diseases documentation above."
+
 doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
   text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   chunk_size: 800
   chunk_overlap: 150
-  vector_db_type: "faiss"
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - "! "
+    - "? "
+    - " "
+  code_dirs: {}
   pdf:
     - "/var/www/html/doomsteadRAG/assets/docs/plantdiseases"
-  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/plantdiseases/faiss_index"
-  collection_name: "plantdiseases"
-  min_score: "0.25"
-  ollama_model: "qwen2.5:7b-instruct"
-  system_prompt: "You are a plant diseases expert. Answer based on the provided plant diseases documentation. Focus on identification, symptoms, and treatment of plant diseases and pests."
-  user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant diseases documentation above."
-  toolbar:
-    - "fileload"
-    - "homeserver"
-    - "fullbuild"
-    - "loadmodel"
-    - "choosemodel"
-    - "book"
-    - "target"
+  specification_files:
+    - "assets/docs/as-built-specification.txt"
+    - "assets/docs/backannotate.txt"
+    - "assets/docs/boilerplate.txt"

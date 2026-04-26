@@ -190,11 +190,20 @@ class FAISSBuilder:
         return documents
     
     def _load_specification_documents(self) -> List[Document]:
-        """Load as-built-specification.txt if it exists"""
+        """Load specification documents from YAML-configured paths"""
         documents = []
-        spec_path = PROJECT_ROOT / "assets" / "docs" / "as-built-specification.txt"
+        spec_files = self.config.get('specification_files', [])
         
-        if spec_path.exists():
+        if not spec_files:
+            self.logger.debug("No specification_files configured in YAML")
+            return documents
+        
+        for spec_path_str in spec_files:
+            spec_path = Path(spec_path_str) if Path(spec_path_str).is_absolute() else PROJECT_ROOT / spec_path_str
+            if not spec_path.exists():
+                self.logger.warning(f"Specification file not found: {spec_path}")
+                continue
+            
             self.logger.info(f"Loading specification document: {spec_path}")
             try:
                 with open(spec_path, 'r', encoding='utf-8') as f:
@@ -211,11 +220,9 @@ class FAISSBuilder:
                     }
                 )
                 documents.append(doc)
-                self.logger.info(f"Loaded specification document")
+                self.logger.info(f"Loaded specification document from {spec_path}")
             except Exception as e:
-                self.logger.error(f"Error loading specification: {e}")
-        else:
-            self.logger.warning(f"Specification document not found: {spec_path}")
+                self.logger.error(f"Error loading specification {spec_path}: {e}")
         
         return documents
     
@@ -224,7 +231,7 @@ class FAISSBuilder:
             code_documents = []
             text_documents = []
             
-            # Load specification document first (always text)
+            # Load specification documents from YAML config
             spec_docs = self._load_specification_documents()
             text_documents.extend(spec_docs)
             
@@ -319,7 +326,7 @@ class FAISSBuilder:
                 'text_documents': len(text_documents),
                 'chunk_size': self.config.get('chunk_size', 800),
                 'chunk_overlap': self.config.get('chunk_overlap', 150),
-                'has_specification': len(spec_docs) > 0
+                'specification_files': self.config.get('specification_files', [])
             }
             
             with open(self.faiss_dir / 'build_info.json', 'w') as f:

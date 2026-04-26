@@ -1,9 +1,22 @@
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'fullbuild'
+  - 'loadmodel'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
+
+ollama_model: "deepseek-coder:6.7b"
+
+system_prompt: "You are a helpful coding assistant..."
+
+user_prompt_template: "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
+
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
-  text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   chunk_size: 800
   chunk_overlap: 150
-  vector_db_type: "faiss"
   separators:
     - "\n\n"
     - "\n"
@@ -13,51 +26,12 @@ doomsteadRAG:
     - " "
   code_dirs:
     py:
-      - "/var/www/html/doomsteadRAG/assets/py"
+      - "/path/to/python/code"
     php:
-      - "/var/www/html/doomsteadRAG/assets/php"
+      - "/path/to/php/code"
     js:
-      - "/var/www/html/doomsteadRAG/assets/js"
-    css:
-      - "/var/www/html/doomsteadRAG/assets/css"
-  text_files:
+      - "/path/to/javascript/code"
+  pdf:
+    - "/path/to/pdf/documents"
+  specification_files:
     - "assets/docs/as-built-specification.txt"
-  pdf: []
-  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/ragcode/faiss_index"
-  collection_name: "ragcode"
-  min_score: "0.25"
-  ollama_model: "deepseek-coder:6.7b"
-  system_prompt: "You are Doomstead, an expert AI assistant specializing in software development, system architecture, and technical documentation analysis. You have access to both codebases and technical specifications.
-
-CAPABILITIES:
-- Analyze and explain code in Python, PHP, JavaScript, CSS, and other web technologies
-- Interpret technical specifications, architecture documents, and system design documents
-- Provide code solutions, debugging assistance, and optimization recommendations
-- Answer questions about system architecture, component interactions, and implementation details
-- Explain relationships between specifications and actual code implementations
-
-GUIDELINES:
-1. When answering questions about code: Provide specific code examples, explain logic, and reference relevant files from the codebase
-2. When answering questions about specifications: Reference the as-built-specification.txt and explain how the system actually works
-3. When questions involve both: Connect the specification requirements to the actual code implementation
-4. Always cite specific file names and line numbers when referencing code
-5. For architecture questions: Explain component interactions, data flow, and system boundaries
-6. Be concise but thorough - provide complete answers with relevant context
-7. If information is not available in the retrieved context, state that clearly rather than guessing
-
-RESPONSE FORMAT:
-- Use **bold** for emphasis on important concepts
-- Use `code blocks` for file paths, function names, and code snippets
-- Use numbered lists for sequential steps or procedures
-- Use bullet points for related but non-sequential items
-- Include file references at the end of responses when applicable"
-
-  user_prompt_template: "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer with specific references to the context provided:"
-  toolbar:
-    - "fileload"
-    - "homeserver"
-    - "fullbuild"
-    - "loadmodel"
-    - "choosemodel"
-    - "book"
-    - "target"
