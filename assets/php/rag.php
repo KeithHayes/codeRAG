@@ -459,7 +459,34 @@ try {
                     throw new Exception('Unknown profile: ' . $profile);
             }
             break;
+        case 'get_model_name':
+            // Read current profile from config.json fresh
+            $config_file = __DIR__ . '/../data/config.json';
+            $profile = 'ragcode';
             
+            if (file_exists($config_file)) {
+                $config_content = file_get_contents($config_file);
+                $config_data = json_decode($config_content, true);
+                $profile = $config_data['filesetconfig'] ?? 'ragcode';
+            }
+            
+            // Read model name from YAML file fresh
+            $yaml_file = __DIR__ . "/../yaml/{$profile}.yaml";
+            $model_name = 'unknown';
+            
+            if (file_exists($yaml_file)) {
+                $yaml_content = file_get_contents($yaml_file);
+                if (preg_match('/ollama_model:\s*["\']?([^"\'\n]+)["\']?/', $yaml_content, $matches)) {
+                    $model_name = trim($matches[1]);
+                }
+            }
+            
+            $response = [
+                'success' => true, 
+                'model_name' => $model_name, 
+                'profile' => $profile
+            ];
+            break;
         default:
             throw new Exception('Invalid action: ' . $action);
     }

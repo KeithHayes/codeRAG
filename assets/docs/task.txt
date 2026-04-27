@@ -1,1 +1,159 @@
-I want the book button to display this text so I can copy it "What are different kinds of plant diseases", "What is Stewart’s wilt disease"
+
+Task
+
+Implement a centralized state machine that manages ALL status messages displayed on the toolbar status bar. Replace all existing setStatusMessage() and updatestatus() calls with state transitions. Remove all polling-based status updates except for the existing stack service polling (which remains unchanged). Each state has a specific message string displayed to the user.
+Files to modify
+
+    assets/js/toolbar.js - Complete rewrite of status management using state machine
+
+    assets/js/rag.js - Update loadModelFromConfig() to use state transitions instead of updatestatus()
+
+State Machine Design
+javascript
+
+const StatusState = {
+  // Stack states (from existing polling, these are automatic)
+  STACK_UNKNOWN: 'stack_unknown',
+  STACK_CHECKING: 'stack_checking', 
+  STACK_RUNNING: 'stack_running',
+  STACK_NOT_RUNNING: 'stack_not_running',
+  STACK_STARTING: 'stack_starting',
+  STACK_STOPPING: 'stack_stopping',
+  
+  // Model states
+  MODEL_LOADING: 'model_loading',
+  MODEL_READY: 'model_ready',
+  MODEL_FAILED: 'model_failed',
+  MODEL_AUTO_LOADING: 'model_auto_loading',
+  
+  // Vector store states  
+  VECTORDB_BUILDING: 'vectordb_building',
+  VECTORDB_BUILT: 'vectordb_built',
+  VECTORDB_FAILED: 'vectordb_failed',
+  
+  // Transcript states
+  TRANSCRIPT_SAVING: 'transcript_saving',
+  TRANSCRIPT_SAVED: 'transcript_saved',
+  TRANSCRIPT_FAILED: 'transcript_failed',
+  
+  // Profile states
+  PROFILE_SWITCHING: 'profile_switching',
+  
+  // Model list states
+  MODELS_CHECKING: 'models_checking',
+  
+  // Generic states
+  IDLE: 'idle',
+  ERROR: 'error'
+}
+
+State Messages (exact strings to display)
+State	Message
+STACK_CHECKING	"Checking Ollama service..."
+STACK_STARTING	"Starting Ollama service..."
+STACK_STOPPING	"Stopping Ollama service..."
+STACK_RUNNING	"" (empty - clear status)
+STACK_NOT_RUNNING	"Waiting for service..."
+MODEL_LOADING	"Loading model: {modelName}..."
+MODEL_READY	"Model ready: {modelName}"
+MODEL_FAILED	"Model load failed: {modelName} - {error}"
+MODEL_AUTO_LOADING	"Loading model from config..."
+VECTORDB_BUILDING	"Building FAISS vector store: {progress}%"
+VECTORDB_BUILT	"Vector store build completed"
+VECTORDB_FAILED	"Vector store build failed - check logs"
+TRANSCRIPT_SAVING	"Saving transcript..."
+TRANSCRIPT_SAVED	"Transcript saved successfully"
+TRANSCRIPT_FAILED	"Transcript save failed"
+PROFILE_SWITCHING	"Switching to {profileName} profile..."
+MODELS_CHECKING	"Checking available models..."
+ERROR	"Error: {errorMsg}"
+IDLE	"" (clear status, but show stack state if not running)
+Rules
+
+    One source of truth - Only the state machine sets statusDiv.textContent
+
+    No direct status updates - Replace all setStatusMessage() and updatestatus() calls with transitionTo(state, data)
+
+    State-specific timeouts - Each state can have an auto-transition back to IDLE after a delay
+
+    Stack state persistence - When IDLE, show STACK_RUNNING (empty) or STACK_NOT_RUNNING ("Waiting for service...")
+
+    Preserve stack polling - Keep checkStackStatus() function, but have it transition to STACK_RUNNING or STACK_NOT_RUNNING states
+
+    No new polling - Remove any polling from loadModel (rely on existing PHP response) and rebuild_vectorstore (use BuildModal callbacks)
+
+Specific function changes
+
+loadModel() in toolbar.js:
+
+    Transition to MODEL_LOADING with modelName from YAML
+
+    Make existing fetch to force_reload_model.php
+
+    On success: transition to MODEL_READY with modelName
+
+    On failure: transition to MODEL_FAILED with modelName and error
+
+    After 3 seconds in MODEL_READY or MODEL_FAILED, transition back to IDLE
+
+rebuild_vectorstore() in toolbar.js:
+
+    Transition to VECTORDB_BUILDING
+
+    Use BuildModal callbacks to update progress percentage
+
+    On success: transition to VECTORDB_BUILT, then auto-transition to IDLE after 3 seconds
+
+    On failure: transition to VECTORDB_FAILED, then auto-transition to IDLE after 5 seconds
+
+handleruntasksClick() in toolbar.js:
+
+    Transition to MODELS_CHECKING
+
+    After API call, transition back to IDLE
+
+switchProfile() in toolbar.js:
+
+    Transition to PROFILE_SWITCHING with profileName
+
+    After save completes, transition back to IDLE
+
+handlePasteTranscriptClick() in toolbar.js:
+
+    On save: transition to TRANSCRIPT_SAVING, then TRANSCRIPT_SAVED or TRANSCRIPT_FAILED
+
+    Auto-transition to IDLE after 2 seconds for SAVED, 5 seconds for FAILED
+
+loadModelFromConfig() in rag.js:
+
+    Replace window.updatestatus() calls with window.transitionTo(MODEL_AUTO_LOADING) etc.
+
+    Expose transitionTo globally from toolbar.js
+
+Do NOT modify
+
+    Stack polling interval (keep at 3 seconds)
+
+    The existing API calls (their logic remains the same)
+
+    Model modal hover dropdown
+
+    BuildModal class
+
+    ClipboardModal class
+
+    Any PHP files
+
+    Any CSS
+
+    The force_reload_model.php endpoint (keep as is)
+
+Output
+
+Provide complete replacement files for:
+
+    assets/js/toolbar.js
+
+    assets/js/rag.js
+
+Both files must be complete, with all existing functionality preserved, only the status management replaced with the state machine.

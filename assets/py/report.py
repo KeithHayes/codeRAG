@@ -46,8 +46,8 @@ def create_report():
 
     # Paths to include in the report
     boilerplate_files = [
-        #os.path.join(base_path, 'assets', 'docs', 'task.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'backannotate.txt'),
+        os.path.join(base_path, 'assets', 'docs', 'task.txt'),
+        #os.path.join(base_path, 'assets', 'docs', 'backannotate.txt'),
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
         os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
     ]

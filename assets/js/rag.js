@@ -69,8 +69,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function loadModelFromConfig() {
-        if (window.updatestatus) {
-            window.updatestatus("Loading model from config...")
+        if (window.transitionTo) {
+            window.transitionTo('model_auto_loading')
         }
         
         try {
@@ -78,23 +78,24 @@ document.addEventListener("DOMContentLoaded", function () {
             const data = await res.json()
             
             if (data.success && data.status === "loaded") {
-                if (window.updatestatus) {
-                    window.updatestatus(`Model ready: ${data.model}`)
+                if (window.transitionTo) {
+                    window.transitionTo('model_ready', { modelName: data.model })
                 }
                 promptInput.disabled = false
                 sendBtn.disabled = false
                 promptInput.focus()
                 return true
             } else {
-                if (window.updatestatus) {
-                    window.updatestatus(`Failed to load model. Check Ollama.`)
+                if (window.transitionTo) {
+                    const errorMsg = data.message || 'Failed to load model'
+                    window.transitionTo('model_failed', { modelName: data.model || 'unknown', error: errorMsg })
                 }
                 return false
             }
         } catch (err) {
             console.error("Auto-load failed:", err)
-            if (window.updatestatus) {
-                window.updatestatus("Click 'Load Model' button")
+            if (window.transitionTo) {
+                window.transitionTo('error', { errorMsg: 'Click Load Model button' })
             }
             return false
         }
