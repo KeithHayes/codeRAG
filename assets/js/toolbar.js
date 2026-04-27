@@ -542,7 +542,7 @@
   }
   
   function handleBookClick() {
-    const message = 'Example queries:\n\n"What are different kinds of plant diseases"\n\n"What is Stewart\'s wilt disease"'
+    const message = 'Example queries:\n\nWhat is the current implementation of the FAISS vector store builder, and how does the specification document describe the expected behavior of the state machine for model loading states?\n\nWhat are different kinds of plant diseases\n\nWhat is Stewart\'s wilt disease'
     alert(message)
     if (stackRunning) {
       transitionTo(StatusState.STACK_RUNNING)

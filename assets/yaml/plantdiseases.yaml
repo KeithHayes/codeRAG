@@ -1,34 +1,39 @@
-toolbar:
-  - 'fileload'
-  - 'homeserver'
-  - 'fullbuild'
-  - 'loadmodel'
-  - 'choosemodel'
-  - 'book'
-  - 'target'
-
-ollama_model: "qwen2.5:7b-instruct"
-
-system_prompt: "You are a plant diseases expert. Answer based on the provided plant diseases documentation. Focus on identification, symptoms, and treatment of plant diseases and pests."
-
-user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant diseases documentation above."
-
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   chunk_size: 800
   chunk_overlap: 150
-  separators:
-    - "\n\n"
-    - "\n"
-    - ". "
-    - "! "
-    - "? "
-    - " "
-  code_dirs: {}
+  vector_db_type: "faiss"
+  text_parsing:
+    strategy: "semantic"
+    preserve_comments: true
+    detect_paragraphs: true
+    min_chunk_size: 200
+    separators:
+      - "\n\n"
+      - "\n"
+      - ". "
+      - "! "
+      - "? "
+      - " "
+  code_dirs:
+    txt:
+      - "assets/data/plant_diseases"
   pdf:
-    - "/var/www/html/doomsteadRAG/assets/docs/plantdiseases"
+    - "assets/data/plant_diseases"
   specification_files:
-    - "assets/docs/as-built-specification.txt"
-    - "assets/docs/backannotate.txt"
-    - "assets/docs/boilerplate.txt"
+    - "assets/docs/plant_diseases_spec.txt"
+  vector_db_path: "assets/data/plantdiseases/faiss_index"
+  collection_name: "plantdiseases"
+  min_score: "0.25"
+  ollama_model: "deepseek-coder:6.7b"
+  system_prompt: "You are a helpful assistant for plant diseases. Answer based on the provided context. Focus on plant disease identification, symptoms, treatments, and prevention."
+  user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant disease context above. Be specific about symptoms, causes, and treatments."
+  toolbar:
+    - "fileload"
+    - "homeserver"
+    - "fullbuild"
+    - "loadmodel"
+    - "choosemodel"
+    - "book"
+    - "target"

@@ -99,12 +99,12 @@ def create_report():
     ]
 
     yaml_files = [
-        os.path.join(base_path, 'assets', 'py', 'doomstead.yaml'),
-        os.path.join(base_path, 'assets', 'py', 'mainpage.yaml'),
-        os.path.join(base_path, 'assets', 'py', 'ragcode.yaml'),
-        os.path.join(base_path, 'assets', 'py', 'ragdocs.yaml '),
-        os.path.join(base_path, 'assets', 'py', 'transcript.yaml '),
-        os.path.join(base_path, 'assets', 'py', 'plantdiseases.yaml '),
+        os.path.join(base_path, 'assets', 'yaml', 'doomstead.yaml'),
+        os.path.join(base_path, 'assets', 'yaml', 'mainpage.yaml'),
+        os.path.join(base_path, 'assets', 'yaml', 'ragcode.yaml'),
+        os.path.join(base_path, 'assets', 'yaml', 'ragdocs.yaml '),
+        os.path.join(base_path, 'assets', 'yaml', 'transcript.yaml '),
+        os.path.join(base_path, 'assets', 'yaml', 'plantdiseases.yaml '),
     ]
 
     file_files = [
@@ -169,7 +169,7 @@ def create_report():
             for yaml_file in yaml_files:
                 if os.path.exists(yaml_file):
                     with open(yaml_file, 'r', encoding='utf-8') as f:
-                        report.write(f"=== PY assets/files/{os.path.basename(yaml_file)} ===\n")
+                        report.write(f"=== YAML assets/yaml/{os.path.basename(yaml_file)} ===\n")
                         report.write(f.read())
                         report.write("\n\n")
 

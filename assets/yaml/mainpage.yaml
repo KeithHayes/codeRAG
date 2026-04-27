@@ -1,5 +1,6 @@
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   chunk_size: 900
   chunk_overlap: 175
   vector_db_type: "faiss"
@@ -19,13 +20,14 @@ doomsteadRAG:
       - " "
   code_dirs:
     php:
-      - "/var/www/html/homedog/assets/php"
-      - "/var/www/html/homedog/index.php"
+      - "assets/php"
+      - "index.php"
     js:
-      - "/var/www/html/homedog/assets/js"
+      - "assets/js"
     css:
-      - "/var/www/html/homedog/assets/css"
-  vector_db_path: "/var/www/html/doomsteadRAG/assets/data/mainpage/faiss_index"
+      - "assets/css"
+  pdf: []
+  vector_db_path: "assets/data/mainpage/faiss_index"
   collection_name: "mainpage"
   min_score: "0.25"
   ollama_model: "llama3.2:1b"

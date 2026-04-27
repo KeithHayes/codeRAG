@@ -9,12 +9,13 @@ toolbar:
 
 ollama_model: "deepseek-coder:6.7b"
 
-system_prompt: "You are a helpful coding assistant..."
+system_prompt: "You are a helpful coding assistant. Answer based on the provided code context. Be specific and reference the actual code when possible."
 
 user_prompt_template: "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
 
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   chunk_size: 800
   chunk_overlap: 150
   separators:
@@ -25,13 +26,12 @@ doomsteadRAG:
     - "? "
     - " "
   code_dirs:
-    py:
-      - "/path/to/python/code"
     php:
-      - "/path/to/php/code"
+      - "assets/php"
     js:
-      - "/path/to/javascript/code"
-  pdf:
-    - "/path/to/pdf/documents"
+      - "assets/js"
+    py:
+      - "assets/py"
+  pdf: []
   specification_files:
     - "assets/docs/as-built-specification.txt"
