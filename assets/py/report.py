@@ -69,6 +69,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'js', 'model_modal.js'),
         os.path.join(base_path, 'assets', 'js', 'rag.js'),
         os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
+        os.path.join(base_path, 'assets', 'js', 'processtranscript.js'),
     ]
 
     php_files = [
@@ -105,6 +106,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'yaml', 'ragdocs.yaml '),
         os.path.join(base_path, 'assets', 'yaml', 'transcript.yaml '),
         os.path.join(base_path, 'assets', 'yaml', 'plantdiseases.yaml '),
+        os.path.join(base_path, 'assets', 'yaml', 'socialism.yaml '),
     ]
 
     file_files = [

@@ -1,0 +1,31 @@
+doomsteadRAG:
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  chunk_size: 800
+  chunk_overlap: 150
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - "! "
+    - "? "
+    - " "
+  code_dirs: {}
+  pdf: []
+  specification_files:
+    - "assets/data/socialism/socialism_01.txt"
+
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'fullbuild'
+  - 'loadmodel'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
+
+ollama_model: "deepseek-r1:8b"
+
+system_prompt: "You are a helpful assistant for Socialism content. Answer based on the provided context. Be specific and reference the actual source material when possible."
+
+user_prompt_template: "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"

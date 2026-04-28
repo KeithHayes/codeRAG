@@ -57,6 +57,12 @@
     PLANTDISEASES_VECTORDB_BUILDING: 'plantdiseases_vectordb_building',
     PLANTDISEASES_VECTORDB_BUILT: 'plantdiseases_vectordb_built',
     PLANTDISEASES_VECTORDB_FAILED: 'plantdiseases_vectordb_failed',
+    SOCIALISM_MODEL_LOADING: 'socialism_model_loading',
+    SOCIALISM_MODEL_READY: 'socialism_model_ready',
+    SOCIALISM_MODEL_FAILED: 'socialism_model_failed',
+    SOCIALISM_VECTORDB_BUILDING: 'socialism_vectordb_building',
+    SOCIALISM_VECTORDB_BUILT: 'socialism_vectordb_built',
+    SOCIALISM_VECTORDB_FAILED: 'socialism_vectordb_failed',
     PROFILE_SWITCHING: 'profile_switching',
     MODELS_CHECKING: 'models_checking',
     IDLE: 'idle',
@@ -106,6 +112,12 @@
     [StatusState.PLANTDISEASES_VECTORDB_BUILDING]: 'Building Plant Diseases vector store...',
     [StatusState.PLANTDISEASES_VECTORDB_BUILT]: 'Plant Diseases vector store build completed',
     [StatusState.PLANTDISEASES_VECTORDB_FAILED]: 'Plant Diseases vector store build failed',
+    [StatusState.SOCIALISM_MODEL_LOADING]: 'Loading model: {modelName}...',
+    [StatusState.SOCIALISM_MODEL_READY]: 'Model ready: {modelName}',
+    [StatusState.SOCIALISM_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
+    [StatusState.SOCIALISM_VECTORDB_BUILDING]: 'Building Socialism vector store...',
+    [StatusState.SOCIALISM_VECTORDB_BUILT]: 'Socialism vector store build completed',
+    [StatusState.SOCIALISM_VECTORDB_FAILED]: 'Socialism vector store build failed',
     [StatusState.PROFILE_SWITCHING]: 'Switching to {profileName} profile...',
     [StatusState.MODELS_CHECKING]: 'Checking available models...',
     [StatusState.IDLE]: '',
@@ -169,6 +181,7 @@
       case StatusState.RAGDOCS_MODEL_READY:
       case StatusState.TRANSCRIPT_MODEL_READY:
       case StatusState.PLANTDISEASES_MODEL_READY:
+      case StatusState.SOCIALISM_MODEL_READY:
         autoTransitionTimeout = setTimeout(() => {
           transitionTo(StatusState.IDLE)
         }, 4000)
@@ -181,6 +194,7 @@
       case StatusState.RAGDOCS_MODEL_FAILED:
       case StatusState.TRANSCRIPT_MODEL_FAILED:
       case StatusState.PLANTDISEASES_MODEL_FAILED:
+      case StatusState.SOCIALISM_MODEL_FAILED:
         autoTransitionTimeout = setTimeout(() => {
           transitionTo(StatusState.IDLE)
         }, 5000)
@@ -191,6 +205,7 @@
       case StatusState.MAINPAGE_VECTORDB_BUILT:
       case StatusState.RAGDOCS_VECTORDB_BUILT:
       case StatusState.PLANTDISEASES_VECTORDB_BUILT:
+      case StatusState.SOCIALISM_VECTORDB_BUILT:
         autoTransitionTimeout = setTimeout(() => {
           transitionTo(StatusState.IDLE)
         }, 3000)
@@ -201,6 +216,7 @@
       case StatusState.MAINPAGE_VECTORDB_FAILED:
       case StatusState.RAGDOCS_VECTORDB_FAILED:
       case StatusState.PLANTDISEASES_VECTORDB_FAILED:
+      case StatusState.SOCIALISM_VECTORDB_FAILED:
         autoTransitionTimeout = setTimeout(() => {
           transitionTo(StatusState.IDLE)
         }, 5000)
@@ -273,6 +289,10 @@
   function plantdiseases() {
     switchProfile('PlantDiseases', 'plantdiseases', 'Plant Diseases RAG')
   }
+
+  function socialism() {
+    switchProfile('Socialism', 'socialism', 'Socialism RAG')
+  }
   
   // ========== START/STOP REMOVED ==========
   // handleStackButtonClick function has been removed
@@ -308,6 +328,11 @@
         buildingState = StatusState.PLANTDISEASES_VECTORDB_BUILDING
         builtState = StatusState.PLANTDISEASES_VECTORDB_BUILT
         failedState = StatusState.PLANTDISEASES_VECTORDB_FAILED
+        break
+      case 'socialism':
+        buildingState = StatusState.SOCIALISM_VECTORDB_BUILDING
+        builtState = StatusState.SOCIALISM_VECTORDB_BUILT
+        failedState = StatusState.SOCIALISM_VECTORDB_FAILED
         break
       default:
         buildingState = StatusState.RAGCODE_VECTORDB_BUILDING
@@ -431,6 +456,11 @@
         readyState = StatusState.PLANTDISEASES_MODEL_READY
         failedState = StatusState.PLANTDISEASES_MODEL_FAILED
         break
+      case 'socialism':
+        loadingState = StatusState.SOCIALISM_MODEL_LOADING
+        readyState = StatusState.SOCIALISM_MODEL_READY
+        failedState = StatusState.SOCIALISM_MODEL_FAILED
+        break
       default:
         loadingState = StatusState.RAGCODE_MODEL_LOADING
         readyState = StatusState.RAGCODE_MODEL_READY
@@ -491,29 +521,88 @@
       })
   }
   
-  function handleruntasksClick() {
+  async function getCurrentProfile() {
+    try {
+      const response = await fetch('assets/data/config.json?_=' + Date.now())
+      const config = await response.json()
+      return config.filesetconfig || 'ragcode'
+    } catch (error) {
+      console.error('Failed to get current profile:', error)
+      return 'ragcode'
+    }
+  }
+  
+  async function handleruntasksClick() {
     transitionTo(StatusState.MODELS_CHECKING)
     
-    fetch(`assets/php/ollama_api.php?action=list&_=${Date.now()}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success && data.models) {
-          if (data.models.length === 0) {
-            alert('No models found.\n\nPull a model: ollama pull deepseek-coder:6.7b')
-          } else {
-            const modelList = data.models.map(m => `${m.name} (${(parseInt(m.size) / 1024 / 1024 / 1024).toFixed(1)} GB)`).join('\n')
-            alert(`Available models:\n\n${modelList}`)
-          }
-          transitionTo(StatusState.IDLE)
+    try {
+      const currentProfileName = await getCurrentProfile()
+      
+      if (currentProfileName !== 'transcript') {
+        const response = await fetch('assets/php/ollama_api.php?action=list&_=' + Date.now())
+        const data = await response.json()
+        
+        if (data.success && data.models && data.models.length > 0) {
+          let modelList = 'Available models:\n\n'
+          data.models.forEach(model => {
+            const sizeGB = (parseInt(model.size) / 1024 / 1024 / 1024).toFixed(1)
+            modelList += `${model.name} (${sizeGB} GB)\n`
+          })
+          alert(modelList)
+        } else if (data.success && (!data.models || data.models.length === 0)) {
+          alert('No models found.\n\nPull a model: ollama pull deepseek-coder:6.7b')
         } else {
-          transitionTo(StatusState.ERROR, { errorMsg: 'Cannot connect to Ollama' })
-          alert('Cannot connect to Ollama. Is the stack running?')
+          throw new Error('Failed to fetch models')
         }
-      })
-      .catch(() => {
-        transitionTo(StatusState.ERROR, { errorMsg: 'Connection error' })
-        alert('Could not connect to Ollama. Is the stack running?')
-      })
+        transitionTo(StatusState.IDLE)
+        return
+      }
+      
+      const transcriptPath = 'assets/data/transcripts/rawtranscript.txt'
+      const transcriptResponse = await fetch(transcriptPath + '?_=' + Date.now())
+      
+      if (!transcriptResponse.ok) {
+        throw new Error('Transcript file not found. Please paste a transcript first using the Paste Transcript button.')
+      }
+      
+      const transcript = await transcriptResponse.text()
+      
+      if (!transcript || transcript.trim().length === 0) {
+        throw new Error('Transcript file is empty')
+      }
+      
+      transitionTo(StatusState.PROFILE_SWITCHING, { profileName: 'Processing transcript...' })
+      
+      const result = await transcriptmodule.processtranscript(transcript)
+      
+      const chatbox = document.getElementById('chatbox')
+      if (chatbox) {
+        chatbox.innerHTML = ''
+        const messageDiv = document.createElement('div')
+        messageDiv.className = 'message bot'
+        messageDiv.innerHTML = '<strong>Assistant:</strong> <p>' + result.replace(/\n/g, '<br>') + '</p>'
+        chatbox.appendChild(messageDiv)
+      }
+      
+      transitionTo(StatusState.IDLE)
+      
+    } catch (error) {
+      console.error('handleruntasksClick error:', error)
+      
+      let errorMessage = error.message
+      if (error.name === 'StageError') {
+        errorMessage = `Pipeline failed at stage ${error.stage}: ${error.reason}`
+      } else if (error.message.includes('Transcript file not found')) {
+        errorMessage = error.message
+      } else if (error.message.includes('Empty transcript')) {
+        errorMessage = 'Transcript file is empty. Please paste a valid transcript.'
+      } else {
+        errorMessage = 'Failed to process transcript: ' + error.message
+      }
+      
+      transitionTo(StatusState.ERROR, { errorMsg: errorMessage })
+      alert(errorMessage)
+    }
   }
   
   function handlechoosemodelClick() {
@@ -824,7 +913,8 @@
       Mainpage: mainpagecode,
       RAGdocs: ragdocs,
       Transcripts: transcripts,
-      PlantDiseases: plantdiseases
+      PlantDiseases: plantdiseases,
+      Socialism: socialism
     }
     const li = document.createElement('li')
     li.style.float = side
@@ -906,7 +996,7 @@
     buttonlist.id = 'coderag_menu_buttons'
     buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode', 'Doomstead', 'Mainpage', 'RAGdocs', 'Transcripts', 'PlantDiseases']))
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode', 'Doomstead', 'Mainpage', 'RAGdocs', 'Transcripts', 'PlantDiseases', 'Socialism']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('fullbuild', 'dbuploadBTN', 'left', false))

@@ -1,9 +1,42 @@
-doomsteadRAG:
-    toolbar:
-    - "fileload"
-    - "homeserver"
-    - "pastetranscript"
-    - "runtask"
-    - "choosemodel"
-    - "book"
-    - "target"
+# assets/yaml/transcript.yaml
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'pastetranscript'
+  - 'runtask'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
+
+ollama_model: "qwen2.5:7b"
+
+system_prompt: "You are a transcript processing assistant. Process the transcript accurately and follow instructions precisely."
+
+user_prompt_template: "{question}\n\nTranscript:\n{context}"
+
+pipeline:
+  stages:
+    clean:
+      model: "qwen2.5:7b"
+      system_prompt: "You are a transcript cleaner. Remove irrelevant metadata, timestamps, and formatting artifacts. Keep the substantive content intact."
+      user_prompt_template: "Clean this transcript by removing timestamps, speaker labels, and formatting artifacts. Return only the cleaned text:\n\n{input}"
+      enabled: true
+    extract:
+      model: "qwen2.5:7b"
+      system_prompt: "You are an information extractor. Extract key information from transcripts including main topics, decisions, action items, and important details."
+      user_prompt_template: "Extract key information from this transcript. Include: main topics discussed, decisions made, action items, and important details:\n\n{input}"
+      enabled: true
+    format:
+      model: "qwen2.5:7b"
+      system_prompt: "You are a formatter. Format extracted information into clear, readable markdown with appropriate headings, lists, and sections."
+      user_prompt_template: "Format this extracted information into clean markdown with sections for Topics, Decisions, Action Items, and Details:\n\n{input}"
+      enabled: true
+    validate:
+      model: "phi3:mini"
+      system_prompt: "You are a validator. Check if the formatted output contains all required sections and has no errors."
+      user_prompt_template: "Validate this formatted transcript output. Check for Topics, Decisions, Action Items sections. Return 'VALID' or 'INVALID: reason':\n\n{input}"
+      enabled: false
+
+global:
+  temperature: 0.1
+  max_tokens: 4096

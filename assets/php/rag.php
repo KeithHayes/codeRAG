@@ -374,6 +374,21 @@ class RAGSystem {
         ];
         return $response;
     }
+    
+    public function socialismtask($message) {
+        // Independent code path for Socialism configuration
+        $searchResults = $this->search_vector_store($message, 15);
+        $context = $this->build_rag_context($searchResults, $message);
+        $prompt = $this->build_prompt($message, $context);
+        $response_text = $this->query_ollama($prompt);
+        $response = [
+            'response' => $response_text,
+            'model' => $this->get_current_model(),
+            'profile' => $this->get_current_profile(),
+            'timestamp' => time()
+        ];
+        return $response;
+    }
 }
 
 while (ob_get_level()) {
@@ -455,6 +470,9 @@ try {
                 case 'plantdiseases':
                     $response = $rag->plantdiseasestask($message);
                     break;
+                case 'socialism':
+                    $response = $rag->socialismtask($message);
+                    break;
                 default:
                     throw new Exception('Unknown profile: ' . $profile);
             }
@@ -502,4 +520,3 @@ try {
 }
 
 exit;
-?>
