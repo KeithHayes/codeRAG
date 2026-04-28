@@ -10,7 +10,7 @@ Output the full code file exactly as it should exist on disk — including impor
 Do not explain anything inside code blocks.  Only make file changes related to the task and errors.
  
 
-All code for a revised file will be shown in a single download box, One box for each file.
+All code for a revised file will be shown in a single download box, One box for each file.  Files will be drop in replacements.
 
 Do not use terminating ';' at the end of javascript lines.
 

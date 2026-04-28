@@ -49,7 +49,9 @@ def create_report():
         os.path.join(base_path, 'assets', 'docs', 'task.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'backannotate.txt'),
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
-        os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
+        #os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
+        os.path.join(base_path, 'assets','data','transcripts', 'rawtranscript.txt'),
+        os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
     ]
 
     css_files = [
@@ -83,6 +85,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'update_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'save_transcript_output.php'),
     ]
 
     py_files = [

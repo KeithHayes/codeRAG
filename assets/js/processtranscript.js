@@ -127,6 +127,31 @@ const transcriptmodule = (function () {
     }
   }
 
+  async function saveTranscriptOutput(output) {
+    try {
+      const response = await fetch('assets/php/save_transcript_output.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ output: output })
+      })
+      const data = await response.json()
+      if (data.success) {
+        console.log(`Transcript output saved to: ${data.path}`)
+        const statusDiv = document.getElementById('status')
+        if (statusDiv) {
+          statusDiv.textContent = `Transcript output saved to: ${data.path}`
+        }
+        return true
+      } else {
+        console.error(`Failed to save transcript output: ${data.error}`)
+        return false
+      }
+    } catch (error) {
+      console.error(`Failed to save transcript output:`, error)
+      return false
+    }
+  }
+
   async function loadPipelineConfig() {
     const response = await fetch('assets/yaml/transcript.yaml?_=' + Date.now())
     const yamlText = await response.text()
@@ -263,6 +288,8 @@ const transcriptmodule = (function () {
     
     internalstate.last = currentOutput
     internalstate.completedStages = enabledStages.map(s => s.name)
+    
+    await saveTranscriptOutput(currentOutput)
     
     return currentOutput
   }
