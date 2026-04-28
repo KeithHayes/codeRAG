@@ -84,6 +84,30 @@ class RAGSystem {
         return ($http_code === 200);
     }
     
+    public function get_gpu_power() {
+        $cmd = 'nvidia-smi --query-gpu=name,power.draw --format=csv,noheader,nounits';
+        $output = shell_exec($cmd);
+        if ($output === null || trim($output) === '') {
+            return ['power' => 'Err', 'gpu_name' => 'GPU', 'timestamp' => date('H:i:s')];
+        }
+        $lines = explode("\n", trim($output));
+        $firstLine = $lines[0];
+        $parts = str_getcsv($firstLine, ',');
+        if (count($parts) < 2) {
+            return ['power' => 'Err', 'gpu_name' => 'GPU', 'timestamp' => date('H:i:s')];
+        }
+        $gpuName = trim($parts[0]);
+        $power = trim($parts[1]);
+        if (!is_numeric($power)) {
+            return ['power' => 'Err', 'gpu_name' => $gpuName, 'timestamp' => date('H:i:s')];
+        }
+        return [
+            'power' => $power . ' W',
+            'gpu_name' => $gpuName,
+            'timestamp' => date('H:i:s')
+        ];
+    }
+    
     public function search_vector_store($query, $k = 15) {
         if (!file_exists($this->python_path)) {
             $this->python_path = trim(shell_exec('which python3'));
@@ -121,7 +145,6 @@ class RAGSystem {
             return [];
         }
         
-        // Separate and boost JavaScript results
         $js_results = [];
         $php_results = [];
         $py_results = [];
@@ -149,14 +172,12 @@ class RAGSystem {
             }
         }
         
-        // Sort each group by score
         usort($js_results, function($a, $b) { return $b['score'] <=> $a['score']; });
         usort($php_results, function($a, $b) { return $b['score'] <=> $a['score']; });
         usort($py_results, function($a, $b) { return $b['score'] <=> $a['score']; });
         usort($css_results, function($a, $b) { return $b['score'] <=> $a['score']; });
         usort($other_results, function($a, $b) { return $b['score'] <=> $a['score']; });
         
-        // Merge with priority: JS first, then PHP, then PY, then CSS, then others
         $merged = array_merge($js_results, $php_results, $py_results, $css_results, $other_results);
         
         return array_slice($merged, 0, $k);
@@ -167,7 +188,6 @@ class RAGSystem {
             return "No relevant documents found.\n\n";
         }
         
-        // Filter and score relevance based on query terms
         $query_terms = explode(' ', strtolower($query));
         $relevant_results = [];
         
@@ -176,7 +196,6 @@ class RAGSystem {
             $source = $doc['metadata']['source'] ?? '';
             $score = $doc['score'];
             
-            // Calculate term relevance
             $term_matches = 0;
             foreach ($query_terms as $term) {
                 if (strpos($content, $term) !== false) {
@@ -186,7 +205,6 @@ class RAGSystem {
             
             $relevance = $score + ($term_matches * 0.05);
             
-            // Boost JavaScript files
             if (strpos($source, '.js') !== false) {
                 $relevance += 0.2;
             }
@@ -197,12 +215,10 @@ class RAGSystem {
             ];
         }
         
-        // Sort by our calculated relevance
         usort($relevant_results, function($a, $b) {
             return $b['relevance'] <=> $a['relevance'];
         });
         
-        // Take top 5 most relevant
         $relevant_results = array_slice($relevant_results, 0, 5);
         
         $context = "=== CODE CONTEXT ===\n\n";
@@ -250,7 +266,7 @@ class RAGSystem {
             'stream' => false,
             'options' => [
                 'temperature' => 0.3,
-                'num_predict' => 1000
+                'num_predict' => 4096
             ]
         ];
         
@@ -259,7 +275,7 @@ class RAGSystem {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 180);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         
         $response = curl_exec($ch);
@@ -306,7 +322,6 @@ class RAGSystem {
     }
 
     public function ragcodetask($message) {
-        // Independent code path for RAGcode configuration
         $searchResults = $this->search_vector_store($message, 15);
         $context = $this->build_rag_context($searchResults, $message);
         $prompt = $this->build_prompt($message, $context);
@@ -321,9 +336,12 @@ class RAGSystem {
     }
     
     public function doomsteadtask($message) {
-        // Independent code path for Doomstead configuration (placeholder)
+        $searchResults = $this->search_vector_store($message, 15);
+        $context = $this->build_rag_context($searchResults, $message);
+        $prompt = $this->build_prompt($message, $context);
+        $response_text = $this->query_ollama($prompt);
         return [
-            'response' => "Doomstead task not yet implemented",
+            'response' => $response_text,
             'model' => $this->get_current_model(),
             'profile' => $this->get_current_profile(),
             'timestamp' => time()
@@ -331,9 +349,12 @@ class RAGSystem {
     }
     
     public function mainpagetask($message) {
-        // Independent code path for Mainpage configuration (placeholder)
+        $searchResults = $this->search_vector_store($message, 15);
+        $context = $this->build_rag_context($searchResults, $message);
+        $prompt = $this->build_prompt($message, $context);
+        $response_text = $this->query_ollama($prompt);
         return [
-            'response' => "Mainpage task not yet implemented",
+            'response' => $response_text,
             'model' => $this->get_current_model(),
             'profile' => $this->get_current_profile(),
             'timestamp' => time()
@@ -341,9 +362,12 @@ class RAGSystem {
     }
     
     public function ragdocstask($message) {
-        // Independent code path for RAGdocs configuration (placeholder)
+        $searchResults = $this->search_vector_store($message, 15);
+        $context = $this->build_rag_context($searchResults, $message);
+        $prompt = $this->build_prompt($message, $context);
+        $response_text = $this->query_ollama($prompt);
         return [
-            'response' => "RAGdocs task not yet implemented",
+            'response' => $response_text,
             'model' => $this->get_current_model(),
             'profile' => $this->get_current_profile(),
             'timestamp' => time()
@@ -351,17 +375,194 @@ class RAGSystem {
     }
     
     public function transcripttask($message) {
-        // Independent code path for Transcript configuration (placeholder)
+        $transcript_file = __DIR__ . '/../data/transcripts/rawtranscript.txt';
+        
+        if (!file_exists($transcript_file)) {
+            return [
+                'response' => 'No transcript found. Please paste a transcript first using the Paste Transcript button.',
+                'model' => $this->get_current_model(),
+                'profile' => $this->get_current_profile(),
+                'timestamp' => time()
+            ];
+        }
+        
+        $transcript = file_get_contents($transcript_file);
+        
+        if (empty(trim($transcript))) {
+            return [
+                'response' => 'Transcript file is empty.',
+                'model' => $this->get_current_model(),
+                'profile' => $this->get_current_profile(),
+                'timestamp' => time()
+            ];
+        }
+        
+        $yaml_file = __DIR__ . "/../yaml/{$this->current_profile}.yaml";
+        $pipeline_stages = $this->load_pipeline_config($yaml_file);
+        
+        $current_output = $transcript;
+        $stage_results = [];
+        
+        foreach ($pipeline_stages as $stage_name => $stage_config) {
+            if (!$stage_config['enabled']) {
+                error_log("Stage {$stage_name} is disabled, skipping");
+                continue;
+            }
+            
+            error_log("Running stage: {$stage_name} using model: {$stage_config['model']}");
+            
+            $stage_prompt = str_replace('{input}', $current_output, $stage_config['user_prompt_template']);
+            
+            $original_model = $this->current_model;
+            if ($stage_config['model'] !== $this->current_model) {
+                $this->current_model = $stage_config['model'];
+                error_log("Switched model from {$original_model} to {$this->current_model}");
+            }
+            
+            try {
+                $stage_result = $this->query_ollama_with_prompts($stage_config['system_prompt'], $stage_prompt);
+                $stage_results[$stage_name] = $stage_result;
+                $current_output = $stage_result;
+                error_log("Stage {$stage_name} completed successfully");
+            } catch (Exception $e) {
+                error_log("Stage {$stage_name} failed: " . $e->getMessage());
+                $stage_results[$stage_name] = "ERROR: " . $e->getMessage();
+            }
+            
+            $this->current_model = $original_model;
+        }
+        
+        $final_output = "# Transcript Analysis Pipeline Results\n\n";
+        foreach ($stage_results as $stage_name => $result) {
+            $final_output .= "## " . strtoupper(str_replace('_', ' ', $stage_name)) . "\n\n";
+            $final_output .= $result . "\n\n";
+            $final_output .= "---\n\n";
+        }
+        
+        $output_file = __DIR__ . '/../data/transcripts/transcriptoutput.txt';
+        file_put_contents($output_file, $final_output);
+        
         return [
-            'response' => "Transcript task not yet implemented",
+            'response' => $final_output,
             'model' => $this->get_current_model(),
             'profile' => $this->get_current_profile(),
             'timestamp' => time()
         ];
     }
     
+    private function load_pipeline_config($yaml_file) {
+        $content = file_get_contents($yaml_file);
+        $stages = [];
+        
+        $lines = explode("\n", $content);
+        $in_pipeline = false;
+        $in_stages = false;
+        $current_stage = null;
+        $stage_indent = 0;
+        
+        for ($i = 0; $i < count($lines); $i++) {
+            $line = $lines[$i];
+            $trimmed = trim($line);
+            
+            if ($trimmed === 'pipeline:') {
+                $in_pipeline = true;
+                continue;
+            }
+            
+            if ($in_pipeline && preg_match('/^\s{2}stages:/', $line)) {
+                $in_stages = true;
+                continue;
+            }
+            
+            if ($in_stages && preg_match('/^\s{4}(\w+):/', $line, $matches)) {
+                $current_stage = $matches[1];
+                $stages[$current_stage] = [
+                    'enabled' => false,
+                    'model' => '',
+                    'system_prompt' => '',
+                    'user_prompt_template' => ''
+                ];
+                $stage_indent = 4;
+                continue;
+            }
+            
+            if ($current_stage && $line && strlen($line) > $stage_indent && substr($line, 0, $stage_indent) === str_repeat(' ', $stage_indent)) {
+                if (preg_match('/enabled:\s*(true|false)/', $line, $e_match)) {
+                    $stages[$current_stage]['enabled'] = ($e_match[1] === 'true');
+                }
+                if (preg_match('/model:\s*"([^"]+)"/', $line, $m_match)) {
+                    $stages[$current_stage]['model'] = $m_match[1];
+                }
+                if (preg_match('/system_prompt:\s*"([^"]*)"/', $line, $s_match)) {
+                    $stages[$current_stage]['system_prompt'] = str_replace('\\n', "\n", $s_match[1]);
+                }
+                if (preg_match('/user_prompt_template:\s*"([^"]*)"/', $line, $u_match)) {
+                    $stages[$current_stage]['user_prompt_template'] = str_replace('\\n', "\n", $u_match[1]);
+                }
+            }
+            
+            if ($current_stage && $line && strlen($line) < $stage_indent && trim($line) !== '') {
+                $current_stage = null;
+            }
+        }
+        
+        error_log("Loaded pipeline stages: " . json_encode(array_keys($stages)));
+        foreach ($stages as $name => $config) {
+            error_log("Stage {$name}: enabled=" . ($config['enabled'] ? 'true' : 'false') . ", model={$config['model']}");
+        }
+        
+        return $stages;
+    }
+    
+    private function query_ollama_with_prompts($system_prompt, $user_prompt) {
+        if (!$this->is_ollama_running()) {
+            throw new Exception("Ollama service is not running");
+        }
+        
+        $data = [
+            'model' => $this->current_model,
+            'messages' => [
+                ['role' => 'system', 'content' => $system_prompt],
+                ['role' => 'user', 'content' => $user_prompt]
+            ],
+            'stream' => false,
+            'options' => [
+                'temperature' => 0.1,
+                'num_predict' => 4096
+            ]
+        ];
+        
+        $ch = curl_init($this->ollama_url . '/api/chat');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 180);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($curl_error) {
+            throw new Exception("Curl error: " . $curl_error);
+        }
+        
+        if ($http_code !== 200) {
+            throw new Exception("Ollama API returned HTTP code: $http_code");
+        }
+        
+        $result = json_decode($response, true);
+        
+        if (!isset($result['message']['content'])) {
+            throw new Exception("Missing message.content in Ollama response");
+        }
+        
+        return $result['message']['content'];
+    }
+    
     public function plantdiseasestask($message) {
-        // Independent code path for PlantDiseases configuration
         $searchResults = $this->search_vector_store($message, 15);
         $context = $this->build_rag_context($searchResults, $message);
         $prompt = $this->build_prompt($message, $context);
@@ -376,7 +577,6 @@ class RAGSystem {
     }
     
     public function socialismtask($message) {
-        // Independent code path for Socialism configuration
         $searchResults = $this->search_vector_store($message, 15);
         $context = $this->build_rag_context($searchResults, $message);
         $prompt = $this->build_prompt($message, $context);
@@ -418,6 +618,10 @@ try {
     $response = null;
     
     switch ($action) {
+        case 'gpu_power':
+            $response = $rag->get_gpu_power();
+            break;
+            
         case 'save_transcript':
             $transcript = $input['transcript'] ?? '';
             if (empty($transcript)) {
@@ -478,7 +682,6 @@ try {
             }
             break;
         case 'get_model_name':
-            // Read current profile from config.json fresh
             $config_file = __DIR__ . '/../data/config.json';
             $profile = 'ragcode';
             
@@ -488,7 +691,6 @@ try {
                 $profile = $config_data['filesetconfig'] ?? 'ragcode';
             }
             
-            // Read model name from YAML file fresh
             $yaml_file = __DIR__ . "/../yaml/{$profile}.yaml";
             $model_name = 'unknown';
             

@@ -99,6 +99,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'report.py'),
         os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'start_api_server.py'),
+        os.path.join(base_path, 'assets', 'py', 'gpu_monitor.py'),
         os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
     ]
 

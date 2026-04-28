@@ -64,7 +64,7 @@
     SOCIALISM_VECTORDB_BUILT: 'socialism_vectordb_built',
     SOCIALISM_VECTORDB_FAILED: 'socialism_vectordb_failed',
     PROFILE_SWITCHING: 'profile_switching',
-    MODELS_CHECKING: 'models_checking',
+    RUNNING_PIPELINE: 'running_pipeline',
     IDLE: 'idle',
     ERROR: 'error'
   }
@@ -119,7 +119,7 @@
     [StatusState.SOCIALISM_VECTORDB_BUILT]: 'Socialism vector store build completed',
     [StatusState.SOCIALISM_VECTORDB_FAILED]: 'Socialism vector store build failed',
     [StatusState.PROFILE_SWITCHING]: 'Switching to {profileName} profile...',
-    [StatusState.MODELS_CHECKING]: 'Checking available models...',
+    [StatusState.RUNNING_PIPELINE]: 'Running transcript pipeline...',
     [StatusState.IDLE]: '',
     [StatusState.ERROR]: 'Error: {errorMsg}'
   }
@@ -234,7 +234,7 @@
         }, 5000)
         break
         
-      case StatusState.MODELS_CHECKING:
+      case StatusState.RUNNING_PIPELINE:
         autoTransitionTimeout = setTimeout(() => {
           transitionTo(StatusState.IDLE)
         }, 3000)
@@ -295,8 +295,6 @@
   }
   
   // ========== START/STOP REMOVED ==========
-  // handleStackButtonClick function has been removed
-  // The homeserver button now only shows status, no click action
   
   function rebuild_vectorstore() {
     let buildingState = null
@@ -467,7 +465,6 @@
         failedState = StatusState.RAGCODE_MODEL_FAILED
     }
     
-    // FIRST CALL - Get model name only
     fetch(`assets/php/rag.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -477,12 +474,9 @@
       .then(nameData => {
         const modelName = nameData.model_name || 'unknown'
         
-        // Update status message IMMEDIATELY before second AJAX call
         transitionTo(loadingState, { modelName: modelName })
         
-        // Force DOM update by using setTimeout to ensure message renders
         setTimeout(() => {
-          // SECOND CALL - Actually load the model
           fetch(`assets/php/force_reload_model.php?_=${Date.now()}`)
             .then(response => response.json())
             .then(loadData => {
@@ -533,7 +527,7 @@
   }
   
   async function handleruntasksClick() {
-    transitionTo(StatusState.MODELS_CHECKING)
+    transitionTo(StatusState.RUNNING_PIPELINE)
     
     try {
       const currentProfileName = await getCurrentProfile()
@@ -874,7 +868,7 @@
       stub: 'Refresh Vector Store',
       homeserver: 'Stack Status',
       loadmodel: 'Load Model',
-      runtask: 'Check Models',
+      runtask: 'Run Pipeline',
       pastetranscript: 'Paste Transcript',
       choosemodel: 'Models',
       homepage: 'Homepage',
@@ -1006,7 +1000,7 @@
     buttonlist.appendChild(addbutton('choosemodel', 'horuseyeBTN', 'left', false))
     buttonlist.appendChild(addbutton('stub', 'dbrefreshBTN', 'left', false))
     buttonlist.appendChild(addbutton('homepage', 'targetBTN', 'right', false))
-    buttonlist.appendChild(addbutton('line5', 'dividerBTN', 'right', true))
+    buttonlist.appendChild(addbutton('line2', 'dividerBTN', 'right', true))
     buttonlist.appendChild(addbutton('book', 'bookBTN', 'right', false))
 
     const statusLi = document.createElement('li')
@@ -1049,13 +1043,11 @@
       }
     }
 
-    // ========== HOMESERVER BUTTON - STATUS ONLY, NO START/STOP ==========
     const stackButton = document.querySelector('#button_homeserver a')
     if (stackButton) {
       stackButton.onclick = function(e) {
         e.preventDefault()
         e.stopPropagation()
-        // Status only - no start/stop action
         if (stackRunning) {
           transitionTo(StatusState.STACK_RUNNING)
         } else {

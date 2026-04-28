@@ -1,6 +1,4 @@
-=== modified: assets/py/api_server.py ===
-#!/usr/bin/env python3
-"""Python API server to replace PHP endpoints"""
+"""Python API server"""
 
 import json
 import subprocess
@@ -12,6 +10,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import time
 import traceback
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -39,6 +38,26 @@ def is_ollama_running():
         log_message(f"Status check - Ollama API not responding: {e}")
     
     return False
+
+# ========== GPU Monitoring Functions ==========
+
+def get_gpu_power():
+    """Returns power draw as a string (e.g., '125.4') or None on error."""
+    try:
+        cmd = [
+            'nvidia-smi',
+            '--query-gpu=power.draw',
+            '--format=csv,noheader,nounits'
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        power = result.stdout.strip()
+        if not power:
+            return None
+        return power
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+# ========== Existing PHP Replacement Routes ==========
 
 @app.route('/assets/php/ollama_api.php', methods=['GET', 'POST', 'OPTIONS'])
 def ollama_api():
@@ -167,7 +186,7 @@ def force_reload_model():
             config = json.load(f)
             profile = config.get('filesetconfig', 'ragcode')
     
-    yaml_file = PROJECT_ROOT / f'assets/py/{profile}.yaml'
+    yaml_file = PROJECT_ROOT / f'assets/yaml/{profile}.yaml'
     model = 'deepseek-coder:6.7b'
     
     if yaml_file.exists():
@@ -340,7 +359,7 @@ def auto_load_model():
             config = json.load(f)
             profile = config.get('filesetconfig', 'ragcode')
     
-    yaml_file = PROJECT_ROOT / f'assets/py/{profile}.yaml'
+    yaml_file = PROJECT_ROOT / f'assets/yaml/{profile}.yaml'
     model = 'deepseek-coder:6.7b'
     
     if yaml_file.exists():
@@ -395,7 +414,7 @@ def update_model():
     if not model:
         return jsonify({'success': False, 'error': 'No model specified'})
     
-    yaml_file = PROJECT_ROOT / f'assets/py/{profile}.yaml'
+    yaml_file = PROJECT_ROOT / f'assets/yaml/{profile}.yaml'
     
     if not yaml_file.exists():
         return jsonify({'success': False, 'error': f'Config file not found: {yaml_file}'})
@@ -414,6 +433,60 @@ def update_model():
     
     return jsonify({'success': True, 'model': model, 'profile': profile})
 
+# ========== GPU Monitoring Endpoints ==========
+
+@app.route('/api/power', methods=['GET', 'OPTIONS'])
+def api_power():
+    """Returns JSON with power and timestamp for frontend consumption."""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    power = get_gpu_power()
+    if power is None:
+        return jsonify({'power': 'Err', 'timestamp': datetime.now().strftime("%H:%M:%S")})
+    return jsonify({'power': power + ' W', 'timestamp': datetime.now().strftime("%H:%M:%S")})
+
+@app.route('/gpu', methods=['GET'])
+def gpu_html():
+    """Simple HTML page to view GPU power."""
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>RTX 3060 Power Monitor</title>
+        <meta http-equiv="refresh" content="2">
+        <style>
+            body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #f0f0f0; }
+            .card { background: white; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 8px rgba(0,0,0,0.1);}
+            .wattage { font-size: 80px; font-weight: bold; color: #76b900; }
+            .unit { font-size: 30px; color: gray; }
+        </style>
+        <script>
+            async function updatePower() {
+                try {
+                    const response = await fetch('/api/power');
+                    const data = await response.json();
+                    document.getElementById('power').textContent = data.power.replace(' W', '');
+                    document.getElementById('timestamp').textContent = data.timestamp;
+                } catch(e) {
+                    document.getElementById('power').textContent = 'Err';
+                }
+            }
+            setInterval(updatePower, 2000);
+            window.onload = updatePower;
+        </script>
+    </head>
+    <body>
+        <div class="card">
+            <h1>RTX 3060 Power Draw</h1>
+            <div class="wattage"><span id="power">--</span> <span class="unit">Watts</span></div>
+            <p>Last updated: <span id="timestamp">--:--:--</span></p>
+        </div>
+    </body>
+    </html>
+    """
+
 if __name__ == '__main__':
     log_message("Starting API Server on port 5000")
+    # Run with threaded=True to handle concurrent requests
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

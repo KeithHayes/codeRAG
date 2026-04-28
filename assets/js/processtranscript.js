@@ -4,6 +4,7 @@ const transcriptmodule = (function () {
   let currentStage = ''
   let stageStartTime = 0
   let completedOutputs = {}
+  let stageMetadata = {} // Store outputs for later stages
 
   class StageError extends Error {
     constructor(stage, reason, details = {}) {
@@ -46,7 +47,7 @@ const transcriptmodule = (function () {
     return data.message.content
   }
 
-  async function executeStage(stageName, stageConfig, input) {
+  async function executeStage(stageName, stageConfig, input, metadata = {}) {
     currentStage = stageName
     stageStartTime = Date.now()
     
@@ -59,11 +60,25 @@ const transcriptmodule = (function () {
     console.log(`[${new Date().toISOString()}] Stage: ${stageName.toUpperCase()} → using ${stageConfig.model} (${input ? input.length : 0} chars input)`)
     
     try {
-      const prompt = stageConfig.user_prompt_template.replace('{input}', input)
+      let systemPrompt = stageConfig.system_prompt
+      let userPrompt = stageConfig.user_prompt_template.replace('{input}', input)
+      
+      // Replace metadata placeholders in system prompt and user prompt
+      if (metadata.type) {
+        systemPrompt = systemPrompt.replace('{type}', metadata.type)
+        userPrompt = userPrompt.replace('{type}', metadata.type)
+      }
+      if (metadata.speaker_info) {
+        userPrompt = userPrompt.replace('{speaker_info}', metadata.speaker_info)
+      } else if (metadata) {
+        const speakerInfo = JSON.stringify(metadata)
+        userPrompt = userPrompt.replace('{speaker_info}', speakerInfo)
+      }
+      
       const output = await callOllama(
         stageConfig.model,
-        stageConfig.system_prompt,
-        prompt,
+        systemPrompt,
+        userPrompt,
         0.1,
         4096
       )
@@ -239,6 +254,20 @@ const transcriptmodule = (function () {
     return parseYamlToConfig(yamlText)
   }
 
+  // Helper to parse JSON from LLM output, handling possible extra text
+  function parseJsonFromOutput(output) {
+    try {
+      const jsonMatch = output.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0])
+      }
+      return null
+    } catch (e) {
+      console.error('Failed to parse JSON from detection stage:', e)
+      return null
+    }
+  }
+
   async function processtranscript(input) {
     if (!input || input.trim().length === 0) {
       throw new StageError('input', 'Empty transcript provided')
@@ -257,6 +286,7 @@ const transcriptmodule = (function () {
     }
     
     let currentOutput = input
+    let metadataForNextStage = {}  // Pass data between stages
     
     for (let i = 0; i < enabledStages.length; i++) {
       const stage = enabledStages[i]
@@ -266,9 +296,34 @@ const transcriptmodule = (function () {
       console.log(`[${new Date().toISOString()}] Stage ${stageNumber}/${totalStages}: ${stage.name.toUpperCase()} → using ${stage.config.model}`)
       
       try {
-        currentOutput = await executeStage(stage.name, stage.config, currentOutput)
+        // For detection stage, we pass empty metadata; for summary stage, we pass previous metadata
+        let stageMetadataInput = {}
+        if (stage.name === 'detailed_summary' && metadataForNextStage.type) {
+          stageMetadataInput = metadataForNextStage
+        }
+        currentOutput = await executeStage(stage.name, stage.config, currentOutput, stageMetadataInput)
         completedOutputs[stage.name] = currentOutput
         await saveDebugOutput(stage.name, currentOutput)
+        
+        // If this is the detection stage, parse its output to extract metadata
+        if (stage.name === 'detect_transcript_type') {
+          const parsed = parseJsonFromOutput(currentOutput)
+          if (parsed && parsed.type) {
+            metadataForNextStage = {
+              type: parsed.type,
+              speaker_info: JSON.stringify({
+                speakers: parsed.speakers || [],
+                interviewer: parsed.interviewer || null,
+                interviewee: parsed.interviewee || null,
+                estimated_speaker_count: parsed.estimated_speaker_count || 0
+              })
+            }
+            console.log(`[${new Date().toISOString()}] Detection stage output: type=${parsed.type}, metadata=${metadataForNextStage.speaker_info}`)
+          } else {
+            console.warn(`[${new Date().toISOString()}] Could not parse detection output, using fallback`)
+            metadataForNextStage = { type: 'conversation', speaker_info: '{}' }
+          }
+        }
       } catch (error) {
         if (error instanceof StageError) {
           console.log(`[${new Date().toISOString()}] Pipeline halted at stage ${error.stage.toUpperCase()}.`)

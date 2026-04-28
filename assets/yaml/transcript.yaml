@@ -1,4 +1,3 @@
-# assets/yaml/transcript.yaml
 toolbar:
   - 'fileload'
   - 'homeserver'
@@ -8,35 +7,27 @@ toolbar:
   - 'book'
   - 'target'
 
-ollama_model: "qwen2.5:7b"
+ollama_model: "llama3.2:1b"
 
-system_prompt: "You are a transcript processing assistant. Process the transcript accurately and follow instructions precisely."
-
-user_prompt_template: "{question}\n\nTranscript:\n{context}"
+system_prompt: "You are a helpful assistant."
+user_prompt_template: "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
 
 pipeline:
   stages:
-    clean:
-      model: "qwen2.5:7b"
-      system_prompt: "You are a transcript cleaner. Remove irrelevant metadata, timestamps, and formatting artifacts. Keep the substantive content intact."
-      user_prompt_template: "Clean this transcript by removing timestamps, speaker labels, and formatting artifacts. Return only the cleaned text:\n\n{input}"
+    clean_transcript:
       enabled: true
-    extract:
-      model: "qwen2.5:7b"
-      system_prompt: "You are an information extractor. Extract key information from transcripts including main topics, decisions, action items, and important details."
-      user_prompt_template: "Extract key information from this transcript. Include: main topics discussed, decisions made, action items, and important details:\n\n{input}"
-      enabled: true
-    format:
-      model: "qwen2.5:7b"
-      system_prompt: "You are a formatter. Format extracted information into clear, readable markdown with appropriate headings, lists, and sections."
-      user_prompt_template: "Format this extracted information into clean markdown with sections for Topics, Decisions, Action Items, and Details:\n\n{input}"
-      enabled: true
-    validate:
-      model: "phi3:mini"
-      system_prompt: "You are a validator. Check if the formatted output contains all required sections and has no errors."
-      user_prompt_template: "Validate this formatted transcript output. Check for Topics, Decisions, Action Items sections. Return 'VALID' or 'INVALID: reason':\n\n{input}"
-      enabled: false
+      model: "llama3.2:1b"
+      system_prompt: "You are a transcript cleaner. Your task is to process raw automatic speech recognition (ASR) transcripts into clean, readable dialogue. Apply the following transformations:\n- Correct speaker names based on context and common names (e.g., fix phonetic errors).\n- Remove all timestamps (e.g., '0:13', '13 seconds'), line numbers, and duration markers.\n- Fix obvious typos, punctuation, and capitalization.\n- Preserve speaker labels as they appear (e.g., 'Interviewer:', 'Speaker 1:').\n- Add proper line breaks between speakers and paragraphs.\n- Do NOT change the meaning, order, or factual content.\n- Do NOT add any commentary, analysis, or criticism.\n- Do NOT omit any words, sentences, or exchanges.\n- Output only the cleaned transcript with no extra text."
+      user_prompt_template: "Raw transcript:\n{input}\n\nCleaned transcript:"
 
-global:
-  temperature: 0.1
-  max_tokens: 4096
+    detect_transcript_type:
+      enabled: true
+      model: "llama3.2:1b"
+      system_prompt: "You are a transcript classifier. Analyze the cleaned transcript and determine its type. Output a JSON object with the following fields:\n- type: one of ['interview', 'single_speaker', 'panel_discussion', 'lecture', 'conversation']\n- speakers: array of distinct speaker names or roles (e.g., 'Interviewer', 'Guest')\n- interviewer: if type is 'interview', identify the interviewer's name or role (otherwise null)\n- interviewee: if type is 'interview', identify the main interviewee (otherwise null)\n- estimated_speaker_count: integer\nDo not output any other text or commentary."
+      user_prompt_template: "Cleaned transcript:\n{input}\n\nClassification (JSON only):"
+
+    detailed_summary:
+      enabled: true
+      model: "llama3.2:1b"
+      system_prompt: "You are a transcript summarizer. The transcript type is {type}. Create a detailed, comprehensive summary following these rules:\n- Preserve ALL essential information: topics, arguments, claims, evidence, examples, names, dates, locations, and quotes.\n- Do NOT omit any key points, details, or nuance.\n- If the transcript is an interview, explicitly identify the interviewer and interviewee, and attribute statements accordingly.\n- If it is a single speaker, summarize as a monologue.\n- For panel discussions, attribute contributions to each participant where possible.\n- Organize the summary by logical sections or themes in the order they appear.\n- Use clear headings, subheadings, bullet points, and numbered lists where helpful.\n- Write in complete sentences with proper grammar.\n- Do NOT add any critical analysis, evaluation, opinion, or commentary on accuracy, truthfulness, or bias.\n- Do NOT change the meaning or tone of the original speakers.\n- Output only the summary with no introductory or concluding remarks."
+      user_prompt_template: "Transcript type: {type}\nSpeaker metadata: {speaker_info}\n\nCleaned transcript:\n{input}\n\nDetailed summary:"

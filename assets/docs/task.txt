@@ -1,1 +1,1 @@
-The output of the tanscript processing pipeline goes to the correct location.  But we also want a copy written to the file transcriptoutput.txt in the same directory that rawtranscript.txt is in.
+the power monitor in the sidebar is not working 

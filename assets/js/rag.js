@@ -101,6 +101,68 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
     
+    // GPU Power Monitoring – fixed to ensure widget updates properly
+    async function fetchGPUPower() {
+        const powerElement = document.getElementById('gpuPower')
+        const timestampElement = document.getElementById('gpuTimestamp')
+        const gpuLabelSpan = document.querySelector('.gpu-label')
+        const gpuWidget = document.getElementById('gpuWidget')
+        
+        // If widget doesn't exist in DOM, exit silently
+        if (!gpuWidget) return
+        
+        try {
+            const response = await fetch("assets/php/rag.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "gpu_power" })
+            })
+            if (!response.ok) throw new Error('HTTP ' + response.status)
+            const data = await response.json()
+            
+            // Update GPU name if available
+            if (gpuLabelSpan && data.gpu_name && data.gpu_name !== 'GPU') {
+                gpuLabelSpan.innerHTML = `🎮 ${data.gpu_name}`
+            }
+            
+            // Extract numeric power value
+            let powerValue = data.power
+            if (typeof powerValue === 'string') {
+                powerValue = powerValue.replace(' W', '')
+            }
+            const watts = parseFloat(powerValue)
+            
+            if (powerElement) {
+                if (isNaN(watts)) {
+                    powerElement.textContent = '--'
+                    powerElement.style.color = '#888'
+                } else {
+                    powerElement.textContent = Math.round(watts)
+                    if (watts > 150) {
+                        powerElement.style.color = '#ff6b6b'
+                    } else if (watts > 100) {
+                        powerElement.style.color = '#ffd93d'
+                    } else {
+                        powerElement.style.color = '#6bcb77'
+                    }
+                }
+            }
+            
+            if (timestampElement && data.timestamp) {
+                timestampElement.textContent = data.timestamp
+            }
+        } catch (error) {
+            console.error('GPU Monitor Error:', error)
+            if (powerElement) {
+                powerElement.textContent = 'Err'
+                powerElement.style.color = '#ff6b6b'
+            }
+            if (timestampElement) {
+                timestampElement.textContent = '--:--:--'
+            }
+        }
+    }
+    
     if (sendBtn) sendBtn.addEventListener("click", sendPrompt)
     if (promptInput) {
         promptInput.addEventListener("keypress", (e) => {
@@ -111,9 +173,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     
     loadModelFromConfig()
+    
+    // Start GPU monitoring if widget exists – with error recovery
+    if (document.getElementById('gpuWidget')) {
+        // Initial fetch
+        fetchGPUPower()
+        // Set up interval (every 2 seconds)
+        const intervalId = setInterval(fetchGPUPower, 2000)
+        // Optional: clear interval on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(intervalId)
+        })
+    }
 })
 
 window.updatestatus = window.updatestatus || function(text) {
-    const statusDiv = document.getElementById('status');
-    if (statusDiv) statusDiv.textContent = text;
+    const statusDiv = document.getElementById('status')
+    if (statusDiv) statusDiv.textContent = text
 }

@@ -120,3 +120,51 @@ h1 {
     border: 0.0625em solid #ffdba9;
     color: #523A28;
 }
+
+.gpu-widget {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 20px;
+    color: #fff;
+    font-family: monospace;
+    border-left: 3px solid #76b900;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.gpu-label {
+    color: #76b900;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+.gpu-power-container {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+}
+
+.gpu-power {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: white;
+}
+
+.gpu-unit {
+    font-size: 0.7em;
+    color: #888;
+}
+
+.gpu-timestamp {
+    font-size: 0.7em;
+    color: #888;
+}
+
+.gpu-error {
+    color: #ff6b6b;
+    font-size: 0.8em;
+}
