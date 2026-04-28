@@ -1,3 +1,4 @@
+/* assets/css/rag.css */
 body {
     font-family: Arial, sans-serif;
     margin: 30px;
@@ -122,13 +123,13 @@ h1 {
 }
 
 .gpu-widget {
-    background: #1a1a1a;
+    background: #ffedd4;
+    border: 8px solid #523A28;
     border-radius: 8px;
     padding: 10px 12px;
     margin-bottom: 20px;
-    color: #fff;
+    color: #523A28;
     font-family: monospace;
-    border-left: 3px solid #76b900;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -137,7 +138,7 @@ h1 {
 }
 
 .gpu-label {
-    color: #76b900;
+    color: #523A28;
     font-weight: bold;
     font-size: 0.85em;
 }
@@ -151,20 +152,20 @@ h1 {
 .gpu-power {
     font-size: 1.3em;
     font-weight: bold;
-    color: white;
+    color: #523A28;
 }
 
 .gpu-unit {
     font-size: 0.7em;
-    color: #888;
+    color: #523A28;
 }
 
 .gpu-timestamp {
     font-size: 0.7em;
-    color: #888;
+    color: #523A28;
 }
 
 .gpu-error {
-    color: #ff6b6b;
+    color: #b90E0A;
     font-size: 0.8em;
 }

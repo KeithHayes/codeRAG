@@ -84,6 +84,80 @@ class RAGSystem {
         return ($http_code === 200);
     }
     
+    // NEW: Ensure the model is loaded before querying
+    private function ensure_model_loaded() {
+        if (!$this->is_ollama_running()) {
+            throw new Exception("Ollama service is not running");
+        }
+        
+        // Get currently running model
+        $ch = curl_init($this->ollama_url . '/api/ps');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        $current_model = null;
+        if ($http_code === 200 && $response) {
+            $data = json_decode($response, true);
+            if (isset($data['models']) && !empty($data['models'])) {
+                $current_model = $data['models'][0]['name'];
+            }
+        }
+        
+        if ($current_model === $this->current_model) {
+            return; // already loaded
+        }
+        
+        // Stop any other model
+        if ($current_model) {
+            $ch = curl_init($this->ollama_url . '/api/generate');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['model' => $current_model, 'keep_alive' => 0]));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_exec($ch);
+            curl_close($ch);
+            usleep(500000);
+        }
+        
+        // Load target model with 24h keep_alive
+        $ch = curl_init($this->ollama_url . '/api/generate');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+            'model' => $this->current_model,
+            'prompt' => '',
+            'keep_alive' => 86400
+        ]));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_exec($ch);
+        curl_close($ch);
+        
+        // Wait for model to be ready
+        $loaded = false;
+        for ($i = 0; $i < 30; $i++) {
+            sleep(1);
+            $ch = curl_init($this->ollama_url . '/api/ps');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            $resp = curl_exec($ch);
+            curl_close($ch);
+            if ($resp) {
+                $data = json_decode($resp, true);
+                if (isset($data['models']) && !empty($data['models']) && $data['models'][0]['name'] === $this->current_model) {
+                    $loaded = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!$loaded) {
+            throw new Exception("Failed to load model: {$this->current_model}");
+        }
+    }
+    
     public function get_gpu_power() {
         $cmd = 'nvidia-smi --query-gpu=name,power.draw --format=csv,noheader,nounits';
         $output = shell_exec($cmd);
@@ -253,9 +327,8 @@ class RAGSystem {
     }
     
     public function query_ollama($prompt) {
-        if (!$this->is_ollama_running()) {
-            throw new Exception("Ollama service is not running");
-        }
+        // Ensure the model is loaded before attempting the query
+        $this->ensure_model_loaded();
         
         $data = [
             'model' => $this->current_model,
@@ -515,9 +588,7 @@ class RAGSystem {
     }
     
     private function query_ollama_with_prompts($system_prompt, $user_prompt) {
-        if (!$this->is_ollama_running()) {
-            throw new Exception("Ollama service is not running");
-        }
+        $this->ensure_model_loaded();
         
         $data = [
             'model' => $this->current_model,
@@ -722,3 +793,4 @@ try {
 }
 
 exit;
+?>

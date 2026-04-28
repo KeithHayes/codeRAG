@@ -1,39 +1,31 @@
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'fullbuild'
+  - 'loadmodel'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
+
+ollama_model: "deepseek-r1:8b"
+
+system_prompt: "You are an expert agricultural assistant specializing in plant diseases. Answer based on the provided context. Be specific, cite symptoms, causes, and treatments when possible. Use the code context if relevant."
+
+user_prompt_template: "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
+
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   chunk_size: 800
   chunk_overlap: 150
-  vector_db_type: "faiss"
-  text_parsing:
-    strategy: "semantic"
-    preserve_comments: true
-    detect_paragraphs: true
-    min_chunk_size: 200
-    separators:
-      - "\n\n"
-      - "\n"
-      - ". "
-      - "! "
-      - "? "
-      - " "
-  code_dirs:
-    txt:
-      - "assets/data/plant_diseases"
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - "! "
+    - "? "
+    - " "
+  code_dirs: {}
   pdf:
-    - "assets/data/plant_diseases"
-  specification_files:
-    - "assets/docs/plant_diseases_spec.txt"
-  vector_db_path: "assets/data/plantdiseases/faiss_index"
-  collection_name: "plantdiseases"
-  min_score: "0.25"
-  ollama_model: "deepseek-coder:6.7b"
-  system_prompt: "You are a helpful assistant for plant diseases. Answer based on the provided context. Focus on plant disease identification, symptoms, treatments, and prevention."
-  user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the plant disease context above. Be specific about symptoms, causes, and treatments."
-  toolbar:
-    - "fileload"
-    - "homeserver"
-    - "fullbuild"
-    - "loadmodel"
-    - "choosemodel"
-    - "book"
-    - "target"
+    - "assets/data/plantdiseases"
+  specification_files: []

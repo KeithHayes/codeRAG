@@ -1,5 +1,5 @@
 <?php
-// auto_load_model.php - Load model from config on page refresh using Ollama REST API
+// auto_load_model.php - Load model with 24h keep_alive on page load
 header('Content-Type: application/json');
 
 function is_ollama_running() {
@@ -67,15 +67,15 @@ $running_model = get_running_model();
 $is_running = ($running_model === $model);
 
 if (!$is_running) {
-    // Load the model
+    // Load the model with 24h keep_alive
     $ch = curl_init('http://localhost:11434/api/generate');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
         'model' => $model,
-        'prompt' => 'Hello',
+        'prompt' => '',
         'stream' => false,
-        'keep_alive' => 3600
+        'keep_alive' => 86400
     ]));
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_exec($ch);

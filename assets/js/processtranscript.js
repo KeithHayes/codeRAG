@@ -4,7 +4,7 @@ const transcriptmodule = (function () {
   let currentStage = ''
   let stageStartTime = 0
   let completedOutputs = {}
-  let stageMetadata = {} // Store outputs for later stages
+  let stageMetadata = {}
 
   class StageError extends Error {
     constructor(stage, reason, details = {}) {
@@ -14,6 +14,18 @@ const transcriptmodule = (function () {
       this.reason = reason
       this.details = details
     }
+  }
+
+  // Remove lines that contain timestamps/durations like "0:13", "13 seconds", "1 minute, 1 second"
+  function removeTimestampLines(rawText) {
+    const lines = rawText.split(/\r?\n/)
+    const timestampPattern = /^\s*\d+:\d+|\d+\s+(seconds?|minutes?)|^\s*\d+\.\d+/
+    const filtered = lines.filter(line => {
+      return !timestampPattern.test(line.trim())
+    })
+    let cleaned = filtered.join('\n')
+    cleaned = cleaned.replace(/\n\s*\n/g, '\n\n').trim()
+    return cleaned
   }
 
   async function callOllama(model, systemPrompt, userPrompt, temperature = 0.1, maxTokens = 4096) {
@@ -33,93 +45,55 @@ const transcriptmodule = (function () {
         }
       })
     })
-
-    if (!response.ok) {
-      throw new Error(`Model not found or API error: ${response.status}`)
-    }
-
+    if (!response.ok) throw new Error(`Model error: ${response.status}`)
     const data = await response.json()
-    
-    if (!data.message || !data.message.content) {
-      throw new Error('Empty response from model')
-    }
-
+    if (!data.message || !data.message.content) throw new Error('Empty response')
     return data.message.content
   }
 
   async function executeStage(stageName, stageConfig, input, metadata = {}) {
     currentStage = stageName
     stageStartTime = Date.now()
-    
     const statusDiv = document.getElementById('status')
     if (statusDiv) {
-      const inputLength = input ? input.length : 0
-      statusDiv.textContent = `Stage: ${stageName.toUpperCase()} → using ${stageConfig.model} (${inputLength} chars input)`
+      statusDiv.textContent = `Stage: ${stageName.toUpperCase()} → using ${stageConfig.model} (${input.length} chars)`
     }
+    console.log(`[${new Date().toISOString()}] Stage: ${stageName.toUpperCase()} → ${stageConfig.model}`)
+    console.log(`[${new Date().toISOString()}] Input preview: ${input.substring(0, 300)}`)
     
-    console.log(`[${new Date().toISOString()}] Stage: ${stageName.toUpperCase()} → using ${stageConfig.model} (${input ? input.length : 0} chars input)`)
+    const temperature = stageConfig.temperature ?? 0.1
+    const maxTokens = stageConfig.max_tokens ?? 4096
     
     try {
       let systemPrompt = stageConfig.system_prompt
       let userPrompt = stageConfig.user_prompt_template.replace('{input}', input)
-      
-      // Replace metadata placeholders in system prompt and user prompt
       if (metadata.type) {
         systemPrompt = systemPrompt.replace('{type}', metadata.type)
         userPrompt = userPrompt.replace('{type}', metadata.type)
       }
       if (metadata.speaker_info) {
         userPrompt = userPrompt.replace('{speaker_info}', metadata.speaker_info)
-      } else if (metadata) {
-        const speakerInfo = JSON.stringify(metadata)
-        userPrompt = userPrompt.replace('{speaker_info}', speakerInfo)
       }
-      
-      const output = await callOllama(
-        stageConfig.model,
-        systemPrompt,
-        userPrompt,
-        0.1,
-        4096
-      )
-      
+      const output = await callOllama(stageConfig.model, systemPrompt, userPrompt, temperature, maxTokens)
       const elapsed = ((Date.now() - stageStartTime) / 1000).toFixed(1)
       console.log(`[${new Date().toISOString()}] Stage ${stageName.toUpperCase()} completed in ${elapsed}s`)
-      
-      if (!output || output.trim().length === 0) {
-        throw new Error('Empty response')
-      }
-      
+      if (!output || output.trim().length === 0) throw new Error('Empty response')
       return output
     } catch (error) {
       const elapsed = ((Date.now() - stageStartTime) / 1000).toFixed(1)
-      
       let reason = error.message
-      if (error.message.includes('Empty response')) {
-        reason = `empty response after ${elapsed}s`
-      } else if (error.message.includes('not found') || error.message.includes('404')) {
-        reason = `model not found: ${stageConfig.model}`
-      } else if (error.message.includes('timeout')) {
-        reason = `timeout after ${elapsed}s`
-      } else if (error.message.includes('memory')) {
-        reason = `out of memory`
-      } else if (error.message.includes('JSON')) {
-        reason = `malformed output`
-      }
-      
+      if (error.message.includes('Empty response')) reason = `empty after ${elapsed}s`
+      else if (error.message.includes('not found')) reason = `model not found: ${stageConfig.model}`
+      else if (error.message.includes('timeout')) reason = `timeout after ${elapsed}s`
+      else if (error.message.includes('memory')) reason = 'out of memory'
       console.log(`[${new Date().toISOString()}] Stage ${stageName.toUpperCase()} → FAILED: ${reason}`)
-      
-      if (statusDiv) {
-        statusDiv.textContent = `Stage ${stageName.toUpperCase()} failed: ${reason}`
-      }
-      
-      throw new StageError(stageName, reason, { elapsed, inputLength: input ? input.length : 0 })
+      if (statusDiv) statusDiv.textContent = `Stage ${stageName.toUpperCase()} failed: ${reason}`
+      throw new StageError(stageName, reason, { elapsed, inputLength: input.length })
     }
   }
 
   async function saveDebugOutput(stageName, output) {
     try {
-      const debugDir = 'assets/data/debug'
       const response = await fetch('assets/php/save_debug.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,15 +104,9 @@ const transcriptmodule = (function () {
         })
       })
       const data = await response.json()
-      if (data.success) {
-        console.log(`Stage ${stageName} output saved to: ${data.path}`)
-        const statusDiv = document.getElementById('status')
-        if (statusDiv) {
-          statusDiv.textContent = `Stage ${stageName} output saved to: ${data.path}`
-        }
-      }
+      if (data.success) console.log(`Stage ${stageName} saved to: ${data.path}`)
     } catch (error) {
-      console.error(`Failed to save debug output for stage ${stageName}:`, error)
+      console.error(`Failed to save debug output:`, error)
     }
   }
 
@@ -153,14 +121,10 @@ const transcriptmodule = (function () {
       if (data.success) {
         console.log(`Transcript output saved to: ${data.path}`)
         const statusDiv = document.getElementById('status')
-        if (statusDiv) {
-          statusDiv.textContent = `Transcript output saved to: ${data.path}`
-        }
+        if (statusDiv) statusDiv.textContent = `Output saved to: ${data.path}`
         return true
-      } else {
-        console.error(`Failed to save transcript output: ${data.error}`)
-        return false
       }
+      return false
     } catch (error) {
       console.error(`Failed to save transcript output:`, error)
       return false
@@ -170,30 +134,16 @@ const transcriptmodule = (function () {
   async function loadPipelineConfig() {
     const response = await fetch('assets/yaml/transcript.yaml?_=' + Date.now())
     const yamlText = await response.text()
-    
     function parseYamlToConfig(yaml) {
       const lines = yaml.split('\n')
       const config = { stages: {}, global: {} }
       let currentSection = null
       let currentStage = null
-      
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i]
-        
-        if (line.match(/^pipeline:/)) {
-          currentSection = 'pipeline'
-          continue
-        }
-        
-        if (line.match(/^global:/)) {
-          currentSection = 'global'
-          continue
-        }
-        
-        if (currentSection === 'pipeline' && line.match(/^\s{2}stages:/)) {
-          continue
-        }
-        
+        if (line.match(/^pipeline:/)) { currentSection = 'pipeline'; continue }
+        if (line.match(/^global:/)) { currentSection = 'global'; continue }
+        if (currentSection === 'pipeline' && line.match(/^\s{2}stages:/)) continue
         if (currentSection === 'pipeline' && line.match(/^\s{4}(\w+):/)) {
           const match = line.match(/^\s{4}(\w+):/)
           if (match) {
@@ -202,68 +152,52 @@ const transcriptmodule = (function () {
           }
           continue
         }
-        
         if (currentStage && line.match(/^\s{6}(\w+):\s*(.*)/)) {
           const match = line.match(/^\s{6}(\w+):\s*(.*)/)
           if (match) {
-            const key = match[1]
             let value = match[2].trim()
-            
-            if (value === 'true') {
-              value = true
-            } else if (value === 'false') {
-              value = false
-            } else if (value.match(/^".*"$/)) {
-              value = value.slice(1, -1)
-            } else if (value.match(/^\d+$/)) {
-              value = parseInt(value, 10)
-            } else if (value.match(/^\d+\.\d+$/)) {
-              value = parseFloat(value)
-            }
-            
-            config.stages[currentStage][key] = value
+            if (value === 'true') value = true
+            else if (value === 'false') value = false
+            else if (value.match(/^".*"$/)) value = value.slice(1, -1)
+            else if (value.match(/^\d+$/)) value = parseInt(value, 10)
+            else if (value.match(/^\d+\.\d+$/)) value = parseFloat(value)
+            config.stages[currentStage][match[1]] = value
           }
         }
-        
         if (currentSection === 'global' && line.match(/^\s{2}(\w+):\s*(.*)/)) {
           const match = line.match(/^\s{2}(\w+):\s*(.*)/)
           if (match) {
-            const key = match[1]
             let value = match[2].trim()
-            
-            if (value === 'true') {
-              value = true
-            } else if (value === 'false') {
-              value = false
-            } else if (value.match(/^".*"$/)) {
-              value = value.slice(1, -1)
-            } else if (value.match(/^\d+$/)) {
-              value = parseInt(value, 10)
-            } else if (value.match(/^\d+\.\d+$/)) {
-              value = parseFloat(value)
-            }
-            
-            config.global[key] = value
+            if (value === 'true') value = true
+            else if (value === 'false') value = false
+            else if (value.match(/^".*"$/)) value = value.slice(1, -1)
+            else if (value.match(/^\d+$/)) value = parseInt(value, 10)
+            else if (value.match(/^\d+\.\d+$/)) value = parseFloat(value)
+            config.global[match[1]] = value
           }
         }
       }
-      
+      for (const stageName in config.stages) {
+        const stage = config.stages[stageName]
+        if (stage.temperature === undefined && config.global.default_temperature !== undefined)
+          stage.temperature = config.global.default_temperature
+        if (stage.max_tokens === undefined && config.global.default_max_tokens !== undefined)
+          stage.max_tokens = config.global.default_max_tokens
+        if (stage.model === undefined && config.global.default_model !== undefined)
+          stage.model = config.global.default_model
+      }
       return config
     }
-    
     return parseYamlToConfig(yamlText)
   }
 
-  // Helper to parse JSON from LLM output, handling possible extra text
   function parseJsonFromOutput(output) {
     try {
       const jsonMatch = output.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0])
-      }
+      if (jsonMatch) return JSON.parse(jsonMatch[0])
       return null
     } catch (e) {
-      console.error('Failed to parse JSON from detection stage:', e)
+      console.error('Failed to parse JSON:', e)
       return null
     }
   }
@@ -272,40 +206,35 @@ const transcriptmodule = (function () {
     if (!input || input.trim().length === 0) {
       throw new StageError('input', 'Empty transcript provided')
     }
-    
-    console.log(`[${new Date().toISOString()}] Pipeline started`)
-    
+    console.log(`[${new Date().toISOString()}] Pipeline started, raw length: ${input.length}`)
+    await saveDebugOutput('input_raw', input)
+
+    // Remove timestamp lines deterministically
+    const cleanedInput = removeTimestampLines(input)
+    console.log(`[${new Date().toISOString()}] After removing timestamps, length: ${cleanedInput.length}`)
+    console.log(`[${new Date().toISOString()}] Cleaned preview: ${cleanedInput.substring(0, 500)}`)
+    await saveDebugOutput('step1_clean_timestamps', cleanedInput)
+
+    if (cleanedInput.length === 0) {
+      throw new StageError('cleaning', 'No content left after removing timestamps')
+    }
+
     const config = await loadPipelineConfig()
-    
     const enabledStages = Object.entries(config.stages)
       .filter(([_, stageConfig]) => stageConfig.enabled === true)
       .map(([name, stageConfig]) => ({ name, config: stageConfig }))
-    
-    if (enabledStages.length === 0) {
-      throw new StageError('pipeline', 'No enabled stages in configuration')
-    }
-    
-    let currentOutput = input
-    let metadataForNextStage = {}  // Pass data between stages
-    
+
+    if (enabledStages.length === 0) throw new StageError('pipeline', 'No enabled stages')
+
+    let currentOutput = cleanedInput
+    let metadataForNextStage = {}
+
     for (let i = 0; i < enabledStages.length; i++) {
       const stage = enabledStages[i]
-      const stageNumber = i + 1
-      const totalStages = enabledStages.length
-      
-      console.log(`[${new Date().toISOString()}] Stage ${stageNumber}/${totalStages}: ${stage.name.toUpperCase()} → using ${stage.config.model}`)
-      
+      console.log(`[${new Date().toISOString()}] Running stage: ${stage.name}`)
       try {
-        // For detection stage, we pass empty metadata; for summary stage, we pass previous metadata
-        let stageMetadataInput = {}
-        if (stage.name === 'detailed_summary' && metadataForNextStage.type) {
-          stageMetadataInput = metadataForNextStage
-        }
-        currentOutput = await executeStage(stage.name, stage.config, currentOutput, stageMetadataInput)
-        completedOutputs[stage.name] = currentOutput
-        await saveDebugOutput(stage.name, currentOutput)
-        
-        // If this is the detection stage, parse its output to extract metadata
+        currentOutput = await executeStage(stage.name, stage.config, currentOutput, metadataForNextStage)
+        await saveDebugOutput(`stage_${stage.name}`, currentOutput)
         if (stage.name === 'detect_transcript_type') {
           const parsed = parseJsonFromOutput(currentOutput)
           if (parsed && parsed.type) {
@@ -318,38 +247,24 @@ const transcriptmodule = (function () {
                 estimated_speaker_count: parsed.estimated_speaker_count || 0
               })
             }
-            console.log(`[${new Date().toISOString()}] Detection stage output: type=${parsed.type}, metadata=${metadataForNextStage.speaker_info}`)
+            console.log(`[${new Date().toISOString()}] Detection: type=${parsed.type}`)
           } else {
             console.warn(`[${new Date().toISOString()}] Could not parse detection output, using fallback`)
             metadataForNextStage = { type: 'conversation', speaker_info: '{}' }
           }
         }
       } catch (error) {
-        if (error instanceof StageError) {
-          console.log(`[${new Date().toISOString()}] Pipeline halted at stage ${error.stage.toUpperCase()}.`)
-          console.log(`[${new Date().toISOString()}] To retry: change model variable for stage ${error.stage} and rerun.`)
-          
-          for (const [completedStage, output] of Object.entries(completedOutputs)) {
-            console.log(`[${new Date().toISOString()}] Stage ${completedStage} output saved to: debug/${completedStage}_output.txt`)
-          }
-          
-          throw error
-        }
+        if (error instanceof StageError) throw error
         throw error
       }
     }
-    
-    console.log(`[${new Date().toISOString()}] Pipeline completed successfully`)
-    
+
+    console.log(`[${new Date().toISOString()}] Pipeline completed`)
     internalstate.last = currentOutput
     internalstate.completedStages = enabledStages.map(s => s.name)
-    
     await saveTranscriptOutput(currentOutput)
-    
     return currentOutput
   }
 
-  return {
-    processtranscript: processtranscript
-  }
+  return { processtranscript }
 })()

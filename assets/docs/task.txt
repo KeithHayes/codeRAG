@@ -1,1 +1,1 @@
-the power monitor in the sidebar is not working 
+The power monitor in the sidebar has an appearance that does not match the user interface.  Look at the css files and modify the power monitor to have a background that matches the user interface.  Use matching text colors .  We want to keep our css in css files.  Please remember that when making changes.

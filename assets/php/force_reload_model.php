@@ -1,5 +1,5 @@
 <?php
-// assets/php/force_reload_model.php - Load model using Ollama REST API
+// assets/php/force_reload_model.php - Load model with 24h keep_alive
 header('Content-Type: application/json');
 
 function ollama_api_request($endpoint, $method = 'GET', $data = null) {
@@ -54,7 +54,6 @@ if (file_exists($yaml_file)) {
     }
 }
 
-// Quick check - if Ollama not running, return fast
 if (!is_ollama_running()) {
     echo json_encode([
         'success' => false,
@@ -109,21 +108,32 @@ if ($tags_data && isset($tags_data['models'])) {
 }
 
 if (!$model_exists) {
+    error_log("Model $model not found – pulling...");
     $ch = curl_init('http://localhost:11434/api/pull');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['model' => $model]));
-    curl_setopt($ch, CURLOPT_TIMEOUT, 300);
-    curl_exec($ch);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 600);
+    $pull_response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    if ($http_code !== 200) {
+        error_log("Pull failed with HTTP $http_code");
+        echo json_encode([
+            'success' => false,
+            'message' => "Failed to pull model $model",
+            'profile' => $profile
+        ]);
+        exit;
+    }
     sleep(2);
 }
 
-// Load the model by sending a keep_alive request
+// Load model with 24h keep_alive (86400 seconds)
 $ch = curl_init('http://localhost:11434/api/generate');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['model' => $model, 'prompt' => '', 'keep_alive' => 3600]));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['model' => $model, 'prompt' => '', 'keep_alive' => 86400]));
 curl_setopt($ch, CURLOPT_TIMEOUT, 5);
 curl_exec($ch);
 curl_close($ch);
@@ -149,6 +159,6 @@ echo json_encode([
     'old_model' => $current_model,
     'new_model' => $model,
     'status' => $loaded ? 'loaded' : 'loading',
-    'message' => $loaded ? "Model loaded" : "Loading model, please wait..."
+    'message' => $loaded ? "Model loaded and will stay for 24 hours" : "Loading model, please wait..."
 ]);
 ?>

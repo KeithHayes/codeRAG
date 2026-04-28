@@ -62,7 +62,10 @@ def create_report():
     ]
 
     log_files = [
-        #os.path.join(base_path, 'assets', 'logs', 'faiss_build_ragcode.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'input_raw_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'clean_transcript_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'detect_transcript_type_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'detailed_summary_output.log'),
     ]
 
     js_files = [
@@ -144,7 +147,7 @@ def create_report():
             for log_file in log_files:
                 if os.path.exists(log_file):
                     with open(log_file, 'r', encoding='utf-8') as f:
-                        report.write(f"=== LOGS assets/logs/{os.path.basename(log_file)} ===\n")
+                        report.write(f"=== LOGS assets/data/debug/{os.path.basename(log_file)} ===\n")
                         report.write(f.read())
                         report.write("\n\n")
             # JS section

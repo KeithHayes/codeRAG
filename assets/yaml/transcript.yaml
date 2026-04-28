@@ -1,3 +1,4 @@
+# assets/yaml/transcript.yaml
 toolbar:
   - 'fileload'
   - 'homeserver'
@@ -7,7 +8,7 @@ toolbar:
   - 'book'
   - 'target'
 
-ollama_model: "llama3.2:1b"
+ollama_model: "deepseek-coder:6.7b"
 
 system_prompt: "You are a helpful assistant."
 user_prompt_template: "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
@@ -16,18 +17,67 @@ pipeline:
   stages:
     clean_transcript:
       enabled: true
-      model: "llama3.2:1b"
-      system_prompt: "You are a transcript cleaner. Your task is to process raw automatic speech recognition (ASR) transcripts into clean, readable dialogue. Apply the following transformations:\n- Correct speaker names based on context and common names (e.g., fix phonetic errors).\n- Remove all timestamps (e.g., '0:13', '13 seconds'), line numbers, and duration markers.\n- Fix obvious typos, punctuation, and capitalization.\n- Preserve speaker labels as they appear (e.g., 'Interviewer:', 'Speaker 1:').\n- Add proper line breaks between speakers and paragraphs.\n- Do NOT change the meaning, order, or factual content.\n- Do NOT add any commentary, analysis, or criticism.\n- Do NOT omit any words, sentences, or exchanges.\n- Output only the cleaned transcript with no extra text."
-      user_prompt_template: "Raw transcript:\n{input}\n\nCleaned transcript:"
+      model: "deepseek-coder:6.7b"
+      temperature: 0.0
+      max_tokens: 8192
+      system_prompt: |
+        You are a transcript cleaner. Follow these rules exactly. Do not add any commentary, explanations, greetings, or meta remarks. Do not say "It seems like", "I'm here to help", "placeholder", or any similar phrase. Output only the cleaned transcript.
+
+        Rules:
+        1. Delete every line that contains a timestamp or duration. Examples: "0:13", "13 seconds", "1 minute, 1 second", "0:47", "47 seconds", "0:20", "20 seconds". Remove these lines completely.
+        2. Keep ALL other lines exactly as they are, including the first line (metadata). Do not reorder, summarize, or delete any spoken content.
+        3. Fix only obvious spelling errors (e.g., "commed" -> "comrade", "Lceras" -> "Lleras") when certain.
+        4. Add proper punctuation and capitalization where missing.
+        5. Join broken sentences that are split across consecutive lines.
+        6. If the input is already clean, output it unchanged. Never refuse to process.
+      user_prompt_template: |
+        Raw transcript (timestamps to delete):
+        {input}
 
     detect_transcript_type:
       enabled: true
-      model: "llama3.2:1b"
-      system_prompt: "You are a transcript classifier. Analyze the cleaned transcript and determine its type. Output a JSON object with the following fields:\n- type: one of ['interview', 'single_speaker', 'panel_discussion', 'lecture', 'conversation']\n- speakers: array of distinct speaker names or roles (e.g., 'Interviewer', 'Guest')\n- interviewer: if type is 'interview', identify the interviewer's name or role (otherwise null)\n- interviewee: if type is 'interview', identify the main interviewee (otherwise null)\n- estimated_speaker_count: integer\nDo not output any other text or commentary."
-      user_prompt_template: "Cleaned transcript:\n{input}\n\nClassification (JSON only):"
+      model: "deepseek-coder:6.7b"
+      temperature: 0.0
+      max_tokens: 512
+      system_prompt: |
+        Output a single JSON object with this exact schema. No other text, no markdown, no explanations.
+        {"type": "...", "speakers": ["..."], "interviewer": "...", "interviewee": "...", "estimated_speaker_count": 0}
+        type must be one of: "interview", "single_speaker", "panel_discussion", "lecture", "conversation".
+        speakers: array of distinct speaker names or roles as they appear in the transcript.
+        If type is "interview", set interviewer to the person asking questions, interviewee to the person answering. Otherwise set both to null.
+        Do not output anything else.
+      user_prompt_template: |
+        Cleaned transcript:
+        {input}
 
     detailed_summary:
       enabled: true
-      model: "llama3.2:1b"
-      system_prompt: "You are a transcript summarizer. The transcript type is {type}. Create a detailed, comprehensive summary following these rules:\n- Preserve ALL essential information: topics, arguments, claims, evidence, examples, names, dates, locations, and quotes.\n- Do NOT omit any key points, details, or nuance.\n- If the transcript is an interview, explicitly identify the interviewer and interviewee, and attribute statements accordingly.\n- If it is a single speaker, summarize as a monologue.\n- For panel discussions, attribute contributions to each participant where possible.\n- Organize the summary by logical sections or themes in the order they appear.\n- Use clear headings, subheadings, bullet points, and numbered lists where helpful.\n- Write in complete sentences with proper grammar.\n- Do NOT add any critical analysis, evaluation, opinion, or commentary on accuracy, truthfulness, or bias.\n- Do NOT change the meaning or tone of the original speakers.\n- Output only the summary with no introductory or concluding remarks."
-      user_prompt_template: "Transcript type: {type}\nSpeaker metadata: {speaker_info}\n\nCleaned transcript:\n{input}\n\nDetailed summary:"
+      model: "deepseek-r1:7b"
+      temperature: 0.1
+      max_tokens: 8192
+      system_prompt: |
+        You are a structured summarizer. The transcript type is {type} and speaker metadata is {speaker_info}.
+        Produce a markdown report with exactly these sections:
+
+        ## Metadata
+        Extract date, location, host/interviewer, guest/interviewee, and main topics from the transcript.
+
+        ## Detailed Summary (by speaker)
+        For each speaker, list their key points, arguments, claims, evidence, and important quotes.
+        Attribute each statement using **Speaker:** "quote" or point.
+
+        ## Key Quotes
+        Include any notable verbatim quotes.
+
+        Rules:
+        - Do NOT omit factual content, examples, or arguments.
+        - Do NOT add opinions, evaluations, or criticism.
+        - Do NOT change meaning or tone.
+        - Use bullet points and clear headings.
+        - Output ONLY the summary – no extra commentary.
+      user_prompt_template: |
+        Type: {type}
+        Speaker Info: {speaker_info}
+        Cleaned transcript:
+        {input}
+        Summary:

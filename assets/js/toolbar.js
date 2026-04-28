@@ -526,6 +526,7 @@
     }
   }
   
+  // ========== FIXED: handleruntasksClick with cache-proof transcript fetch ==========
   async function handleruntasksClick() {
     transitionTo(StatusState.RUNNING_PIPELINE)
     
@@ -553,13 +554,21 @@
       }
       
       const transcriptPath = 'assets/data/transcripts/rawtranscript.txt'
-      const transcriptResponse = await fetch(transcriptPath + '?_=' + Date.now())
+      console.log("Fetching transcript from:", transcriptPath)
+      
+      // Force no-cache and add timestamp to bust any server-side caching
+      const transcriptResponse = await fetch(transcriptPath + '?_=' + Date.now(), {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      })
       
       if (!transcriptResponse.ok) {
         throw new Error('Transcript file not found. Please paste a transcript first using the Paste Transcript button.')
       }
       
       const transcript = await transcriptResponse.text()
+      console.log("Transcript length:", transcript.length)
+      console.log("First 200 chars:", transcript.substring(0,200))
       
       if (!transcript || transcript.trim().length === 0) {
         throw new Error('Transcript file is empty')
