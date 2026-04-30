@@ -56,6 +56,7 @@ def create_report():
 
     debug_files = [
         os.path.join(base_path, 'assets', 'data', 'debug', 'disfluency_removal_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'final_output_output.log'),
         os.path.join(base_path, 'assets', 'data', 'debug', 'input_raw_output.txt'),
         os.path.join(base_path, 'assets', 'data', 'debug', 'semantic_merge_split_output.log'),
         os.path.join(base_path, 'assets', 'data', 'debug', 'speaker_labeling_output.txt'),

@@ -1,12 +1,13 @@
 --- PROMPT START ---
 
-Code in this project is a collection of tasks defined by .yaml files.  Do not modify code that does not have to change to accomplish this task.  The configuration for this task is in transcript.yaml.  That file has settings that define the toolbar and task set for this configuration.  Code specific to other configurations may not be changed.  Do not break or disregard other functionality.  Code may not be changed or disregarded unless it relates to the transcript task.
+Code in this project is a collection of tasks defined by .yaml files.  Do not modify code that does not have to change to accomplish this task.  The configuration for this task is in transcript.yaml.  That file has settings that define the toolbar initial model and task set for this configuration.  Code specific to other configurations may not be changed.  Do not break or disregard other functionality.  Code may not be changed or disregarded unless it relates to the transcript task.  Make sure the model and toolbar are defined as in the original yaml file.
 
-Make sure the model and toolbar are defined as in the original yaml file.
+You are a transcript editor. Your task is to produce a clean, readable transcript with accurate speaker turns and labels.  Development is iterative so you sohould evaluate the files and make changes to accomplish the rules.
 
-You are a transcript editor. Your task is to produce a clean, readable transcript with accurate speaker turns and labels.
+INPUT: A plain, timestamped transcript.
 
-INPUT: A plain, un-timestamped transcript that may contain separate lines with timestamps (e.g., "0:13", "13 seconds", "1 minute, 1 second") as well as spoken timestamps within sentences.
+The task for this session is to perform the next step in the iterative development of this project and correct the transcript pipeline so that a clean speaker labeled transcript is produced with transcript timestamps removed.
+
 
 RULES:
 
