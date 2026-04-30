@@ -54,16 +54,19 @@ def create_report():
         os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
     ]
 
+    debug_files = [
+        os.path.join(base_path, 'assets', 'data', 'debug', 'disfluency_removal_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'input_raw_output.txt'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'semantic_merge_split_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'speaker_labeling_output.txt'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'step1_keep_all_lines_output.txt'),
+    ]
+
     css_files = [
         os.path.join(base_path, 'assets', 'css', 'rag.css'),
         os.path.join(base_path, 'assets', 'css', 'toolbar.css'),
         os.path.join(base_path, 'assets', 'css', 'toolbarbuttons.css'),
         #os.path.join(base_path, 'assets', 'css', 'w3.css'),
-    ]
-
-    debug_files = [
-        os.path.join(base_path, 'assets', 'data', 'debug', 'input_raw_output.log'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'step1_clean_timestamps_output.txt'),
     ]
 
     js_files = [

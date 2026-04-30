@@ -225,7 +225,13 @@ const transcriptmodule = (function () {
     console.log(`[${new Date().toISOString()}] Pipeline completed`)
     internalstate.last = currentOutput
     internalstate.completedStages = enabledStages.map(s => s.name)
+    
+    // Save final output to regular transcript file
     await saveTranscriptOutput(currentOutput)
+    
+    // ADDITIONAL: Save final output to a diagnostic debug file
+    await saveDebugOutput('final_output', currentOutput)
+    
     return currentOutput
   }
 
