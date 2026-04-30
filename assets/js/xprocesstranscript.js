@@ -16,9 +16,16 @@ const transcriptmodule = (function () {
     }
   }
 
-  // No timestamp removal – keep all lines including spoken timestamps
-  function keepAllLines(rawText) {
-    return rawText
+  // Remove lines that contain timestamps/durations like "0:13", "13 seconds", "1 minute, 1 second"
+  function removeTimestampLines(rawText) {
+    const lines = rawText.split(/\r?\n/)
+    const timestampPattern = /^\s*\d+:\d+|\d+\s+(seconds?|minutes?)|^\s*\d+\.\d+/
+    const filtered = lines.filter(line => {
+      return !timestampPattern.test(line.trim())
+    })
+    let cleaned = filtered.join('\n')
+    cleaned = cleaned.replace(/\n\s*\n/g, '\n\n').trim()
+    return cleaned
   }
 
   async function callOllama(model, systemPrompt, userPrompt, temperature = 0.1, maxTokens = 4096) {
@@ -184,6 +191,17 @@ const transcriptmodule = (function () {
     return parseYamlToConfig(yamlText)
   }
 
+  function parseJsonFromOutput(output) {
+    try {
+      const jsonMatch = output.match(/\{[\s\S]*\}/)
+      if (jsonMatch) return JSON.parse(jsonMatch[0])
+      return null
+    } catch (e) {
+      console.error('Failed to parse JSON:', e)
+      return null
+    }
+  }
+
   async function processtranscript(input) {
     if (!input || input.trim().length === 0) {
       throw new StageError('input', 'Empty transcript provided')
@@ -191,13 +209,14 @@ const transcriptmodule = (function () {
     console.log(`[${new Date().toISOString()}] Pipeline started, raw length: ${input.length}`)
     await saveDebugOutput('input_raw', input)
 
-    // Keep all lines – timestamps are spoken content
-    const keptInput = keepAllLines(input)
-    console.log(`[${new Date().toISOString()}] Keeping all lines (no timestamp removal), length: ${keptInput.length}`)
-    await saveDebugOutput('step1_keep_all_lines', keptInput)
+    // Remove timestamp lines deterministically
+    const cleanedInput = removeTimestampLines(input)
+    console.log(`[${new Date().toISOString()}] After removing timestamps, length: ${cleanedInput.length}`)
+    console.log(`[${new Date().toISOString()}] Cleaned preview: ${cleanedInput.substring(0, 500)}`)
+    await saveDebugOutput('step1_clean_timestamps', cleanedInput)
 
-    if (keptInput.length === 0) {
-      throw new StageError('cleaning', 'No content after keeping all lines')
+    if (cleanedInput.length === 0) {
+      throw new StageError('cleaning', 'No content left after removing timestamps')
     }
 
     const config = await loadPipelineConfig()
@@ -207,7 +226,7 @@ const transcriptmodule = (function () {
 
     if (enabledStages.length === 0) throw new StageError('pipeline', 'No enabled stages')
 
-    let currentOutput = keptInput
+    let currentOutput = cleanedInput
     let metadataForNextStage = {}
 
     for (let i = 0; i < enabledStages.length; i++) {
@@ -215,7 +234,25 @@ const transcriptmodule = (function () {
       console.log(`[${new Date().toISOString()}] Running stage: ${stage.name}`)
       try {
         currentOutput = await executeStage(stage.name, stage.config, currentOutput, metadataForNextStage)
-        await saveDebugOutput(stage.name, currentOutput)
+        await saveDebugOutput(`stage_${stage.name}`, currentOutput)
+        if (stage.name === 'detect_transcript_type') {
+          const parsed = parseJsonFromOutput(currentOutput)
+          if (parsed && parsed.type) {
+            metadataForNextStage = {
+              type: parsed.type,
+              speaker_info: JSON.stringify({
+                speakers: parsed.speakers || [],
+                interviewer: parsed.interviewer || null,
+                interviewee: parsed.interviewee || null,
+                estimated_speaker_count: parsed.estimated_speaker_count || 0
+              })
+            }
+            console.log(`[${new Date().toISOString()}] Detection: type=${parsed.type}`)
+          } else {
+            console.warn(`[${new Date().toISOString()}] Could not parse detection output, using fallback`)
+            metadataForNextStage = { type: 'conversation', speaker_info: '{}' }
+          }
+        }
       } catch (error) {
         if (error instanceof StageError) throw error
         throw error

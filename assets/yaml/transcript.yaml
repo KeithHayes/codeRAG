@@ -8,76 +8,35 @@ toolbar:
   - 'book'
   - 'target'
 
-ollama_model: "deepseek-coder:6.7b"
+ollama_model: "llama3.2:1b"
 
-system_prompt: "You are a helpful assistant."
-user_prompt_template: "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
+global:
+  default_model: "llama3.2:1b"
+  default_temperature: 0.1
+  default_max_tokens: 4096
 
 pipeline:
   stages:
-    clean_transcript:
+    disfluency_removal:
       enabled: true
-      model: "deepseek-coder:6.7b"
-      temperature: 0.0
-      max_tokens: 8192
-      system_prompt: |
-        You are a transcript cleaner. Follow these rules exactly. Do not add any commentary, explanations, greetings, or meta remarks. Do not say "It seems like", "I'm here to help", "placeholder", or any similar phrase. Output only the cleaned transcript.
-
-        Rules:
-        1. Delete every line that contains a timestamp or duration. Examples: "0:13", "13 seconds", "1 minute, 1 second", "0:47", "47 seconds", "0:20", "20 seconds". Remove these lines completely.
-        2. Keep ALL other lines exactly as they are, including the first line (metadata). Do not reorder, summarize, or delete any spoken content.
-        3. Fix only obvious spelling errors (e.g., "commed" -> "comrade", "Lceras" -> "Lleras") when certain.
-        4. Add proper punctuation and capitalization where missing.
-        5. Join broken sentences that are split across consecutive lines.
-        6. If the input is already clean, output it unchanged. Never refuse to process.
-      user_prompt_template: |
-        Raw transcript (timestamps to delete):
-        {input}
-
-    detect_transcript_type:
-      enabled: true
-      model: "deepseek-coder:6.7b"
-      temperature: 0.0
-      max_tokens: 512
-      system_prompt: |
-        Output a single JSON object with this exact schema. No other text, no markdown, no explanations.
-        {"type": "...", "speakers": ["..."], "interviewer": "...", "interviewee": "...", "estimated_speaker_count": 0}
-        type must be one of: "interview", "single_speaker", "panel_discussion", "lecture", "conversation".
-        speakers: array of distinct speaker names or roles as they appear in the transcript.
-        If type is "interview", set interviewer to the person asking questions, interviewee to the person answering. Otherwise set both to null.
-        Do not output anything else.
-      user_prompt_template: |
-        Cleaned transcript:
-        {input}
-
-    detailed_summary:
-      enabled: true
-      model: "deepseek-r1:7b"
+      model: "llama3.2:1b"
       temperature: 0.1
-      max_tokens: 8192
-      system_prompt: |
-        You are a structured summarizer. The transcript type is {type} and speaker metadata is {speaker_info}.
-        Produce a markdown report with exactly these sections:
+      max_tokens: 4096
+      system_prompt: "You are a transcript editor. Remove disfluencies: filler words (uh, um, ah, you know), stutters/repeats (e.g., 'I I I'), false starts. Fix obvious typos in proper names/places when unambiguous (e.g., 'Dimmitri' -> 'Demetri', 'Kamata' -> 'Kalamata'). Correct punctuation and capitalization. Normalize sentence boundaries. Preserve factual claims and quoted text verbatim. Do not change meaning. Output only the cleaned text without any additional commentary."
+      user_prompt_template: "Clean the following transcript:\n\n{input}\n\nCleaned transcript:"
 
-        ## Metadata
-        Extract date, location, host/interviewer, guest/interviewee, and main topics from the transcript.
+    speaker_labeling:
+      enabled: true
+      model: "llama3.2:1b"
+      temperature: 0.1
+      max_tokens: 4096
+      system_prompt: "You are a transcript editor. Identify speaker turns in the transcript. For each turn, output a line with the speaker label in format 'Speaker Name:' followed by the speaker's text. Use explicit names when known (e.g., 'Demetri Lceras', 'Laith Maru'). For unidentified voices, use 'Host', 'Guest', or 'Speaker N' consistently. Ensure each speaker turn represents a coherent idea, not just line breaks. Preserve all cleaned text exactly. Do not add or remove content. Output only the labeled transcript with one blank line between speaker turns. Do not include any extra text."
+      user_prompt_template: "Add speaker labels to the following cleaned transcript:\n\n{input}\n\nLabeled transcript:"
 
-        ## Detailed Summary (by speaker)
-        For each speaker, list their key points, arguments, claims, evidence, and important quotes.
-        Attribute each statement using **Speaker:** "quote" or point.
-
-        ## Key Quotes
-        Include any notable verbatim quotes.
-
-        Rules:
-        - Do NOT omit factual content, examples, or arguments.
-        - Do NOT add opinions, evaluations, or criticism.
-        - Do NOT change meaning or tone.
-        - Use bullet points and clear headings.
-        - Output ONLY the summary – no extra commentary.
-      user_prompt_template: |
-        Type: {type}
-        Speaker Info: {speaker_info}
-        Cleaned transcript:
-        {input}
-        Summary:
+    semantic_merge_split:
+      enabled: true
+      model: "llama3.2:1b"
+      temperature: 0.1
+      max_tokens: 4096
+      system_prompt: "You are a transcript editor. Merge very short adjacent turns by the same speaker into a single turn if they are part of the same idea. Split long turns when the speaker clearly changes topic or another speaker replies. Preserve all speaker labels and text exactly, only adjust turn boundaries. Output the final transcript with speaker labels and blank lines between turns. Do not add any commentary."
+      user_prompt_template: "Merge or split speaker turns as needed:\n\n{input}\n\nFinal transcript:"

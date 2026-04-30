@@ -61,11 +61,9 @@ def create_report():
         #os.path.join(base_path, 'assets', 'css', 'w3.css'),
     ]
 
-    log_files = [
+    debug_files = [
         os.path.join(base_path, 'assets', 'data', 'debug', 'input_raw_output.log'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'clean_transcript_output.log'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'detect_transcript_type_output.log'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'detailed_summary_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'step1_clean_timestamps_output.txt'),
     ]
 
     js_files = [
@@ -86,6 +84,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'process_transcript.php'),
         os.path.join(base_path, 'assets', 'php', 'rag.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
+        os.path.join(base_path, 'assets', 'php', 'save_debug.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'update_model.php'),
         os.path.join(base_path, 'assets', 'php', 'save_transcript_output.php'),
@@ -144,10 +143,10 @@ def create_report():
                         report.write("\n\n")
 
             # LOG section
-            for log_file in log_files:
-                if os.path.exists(log_file):
-                    with open(log_file, 'r', encoding='utf-8') as f:
-                        report.write(f"=== LOGS assets/data/debug/{os.path.basename(log_file)} ===\n")
+            for debug_file in debug_files:
+                if os.path.exists(debug_file):
+                    with open(debug_file, 'r', encoding='utf-8') as f:
+                        report.write(f"=== LOGS assets/data/debug/{os.path.basename(debug_file)} ===\n")
                         report.write(f.read())
                         report.write("\n\n")
             # JS section
