@@ -35,7 +35,26 @@ window.transcriptmodule = (function() {
   }
 
   // --------------------------------------------------------------
-  //  Regex stage helper
+  //  Save stage output to file via PHP
+  // --------------------------------------------------------------
+  async function saveStageOutput(stageName, output) {
+    try {
+      await fetch('assets/php/save_stage_output.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stage: stageName,
+          output: output,
+          timestamp: new Date().toISOString()
+        })
+      })
+    } catch (err) {
+      console.error(`Failed to save stage output for ${stageName}:`, err)
+    }
+  }
+
+  // --------------------------------------------------------------
+  //  Apply regex stage (if needed, though not used now)
   // --------------------------------------------------------------
   function applyRegexStage(stage, input) {
     const flags = stage.flags || 'g'
@@ -68,6 +87,10 @@ window.transcriptmodule = (function() {
       }
       const elapsed = ((Date.now() - start) / 1000).toFixed(1)
       console.log(`[${new Date().toISOString()}] Stage ${stageName} done in ${elapsed}s`)
+
+      // Save output for this stage
+      await saveStageOutput(stageName, output)
+
       return output
     } catch (err) {
       console.error(`[${new Date().toISOString()}] Stage ${stageName} FAILED:`, err)
@@ -80,7 +103,9 @@ window.transcriptmodule = (function() {
           replacement: stage.fallback_replacement || '',
           flags: stage.flags || 'g'
         }
-        return applyRegexStage(fallbackStage, input)
+        const fallbackOutput = applyRegexStage(fallbackStage, input)
+        await saveStageOutput(stageName + '_fallback', fallbackOutput)
+        return fallbackOutput
       }
       throw err
     }
