@@ -55,12 +55,12 @@ def create_report():
     ]
 
     debug_files = [
-        os.path.join(base_path, 'assets', 'data', 'debug', 'disfluency_removal_output.log'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'final_output_output.log'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'after_timestamp_removal_output.txt'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'correct_spelling_output.txt'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'final_output_output.txt'),
         os.path.join(base_path, 'assets', 'data', 'debug', 'input_raw_output.txt'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'semantic_merge_split_output.log'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'speaker_labeling_output.txt'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'step1_keep_all_lines_output.txt'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'mark_inaudible_output.txt'),
+        os.path.join(base_path, 'assets', 'data', 'debug', 'remove_disfluencies_output'),
     ]
 
     css_files = [
@@ -95,28 +95,28 @@ def create_report():
     ]
 
     py_files = [
-        os.path.join(base_path, 'assets', 'py', 'api_server.py'),
-        os.path.join(base_path, 'assets', 'py', 'chunker.py'),
-        os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
-        os.path.join(base_path, 'assets', 'py', 'faiss_builder.py'),
-        os.path.join(base_path, 'assets', 'py', 'faiss_query_wrapper.py'),
-        os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
-        os.path.join(base_path, 'assets', 'py', 'logger.py'),
-        os.path.join(base_path, 'assets', 'py', 'report.py'),
-        os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
-        os.path.join(base_path, 'assets', 'py', 'start_api_server.py'),
-        os.path.join(base_path, 'assets', 'py', 'gpu_monitor.py'),
-        os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
+        #os.path.join(base_path, 'assets', 'py', 'api_server.py'),
+        #os.path.join(base_path, 'assets', 'py', 'chunker.py'),
+        #os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
+        #os.path.join(base_path, 'assets', 'py', 'faiss_builder.py'),
+        #os.path.join(base_path, 'assets', 'py', 'faiss_query_wrapper.py'),
+        #os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
+        #os.path.join(base_path, 'assets', 'py', 'logger.py'),
+        #os.path.join(base_path, 'assets', 'py', 'report.py'),
+        #os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
+        #os.path.join(base_path, 'assets', 'py', 'start_api_server.py'),
+        #os.path.join(base_path, 'assets', 'py', 'gpu_monitor.py'),
+        #os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
     ]
 
     yaml_files = [
-        os.path.join(base_path, 'assets', 'yaml', 'doomstead.yaml'),
-        os.path.join(base_path, 'assets', 'yaml', 'mainpage.yaml'),
-        os.path.join(base_path, 'assets', 'yaml', 'ragcode.yaml'),
-        os.path.join(base_path, 'assets', 'yaml', 'ragdocs.yaml '),
+        #os.path.join(base_path, 'assets', 'yaml', 'doomstead.yaml'),
+        #os.path.join(base_path, 'assets', 'yaml', 'mainpage.yaml'),
+        #os.path.join(base_path, 'assets', 'yaml', 'ragcode.yaml'),
+        #os.path.join(base_path, 'assets', 'yaml', 'ragdocs.yaml '),
         os.path.join(base_path, 'assets', 'yaml', 'transcript.yaml '),
-        os.path.join(base_path, 'assets', 'yaml', 'plantdiseases.yaml '),
-        os.path.join(base_path, 'assets', 'yaml', 'socialism.yaml '),
+        #os.path.join(base_path, 'assets', 'yaml', 'plantdiseases.yaml '),
+        #os.path.join(base_path, 'assets', 'yaml', 'socialism.yaml '),
     ]
 
     file_files = [

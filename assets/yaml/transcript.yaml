@@ -10,49 +10,31 @@ toolbar:
 ollama_model: "sunapi386/llama-3-lexi-uncensored:8b"
 
 global:
-  default_model: "sunapi386/llama-3-lexi-uncensored:8b"
-  default_temperature: 0.1
+  default_temperature: 0.0
   default_max_tokens: 8192
 
 pipeline:
   stages:
-    disfluency_removal:
-      enabled: true
-      model: "sunapi386/llama-3-lexi-uncensored:8b"
-      temperature: 0.1
+    - name: "sunapi386/llama-3-lexi-uncensored:8b"
+      model: "llama3:8b"
+      system_prompt: "You are a strict transcript cleaner. Remove filler words (uh, um, ah, like, you know), stutters (I I I -> I, andor -> and, the the -> the), and false starts (keep first complete attempt). Correct obvious spelling errors of proper names if clear from context. Do NOT rephrase, summarize, or change word order. Preserve all punctuation, line breaks, and capitalization. Output ONLY the cleaned transcript. No markdown, no code blocks, no extra text."
+      user_prompt_template: "Remove disfluencies and correct clear spelling mistakes in the transcript below. Output only the cleaned transcript.\n\nTranscript:\n{input}"
+      temperature: 0.0
       max_tokens: 8192
-      system_prompt: |
-        You are a transcript editor. Your job is to produce a **complete, verbatim transcript** with only the following allowed edits.
-        Do NOT remove any lines that contain timestamps like "0:13", "13 seconds", "1 minute, 1 second", etc. These are spoken content and must remain.
-        Normalize obvious misspellings of proper names and places when the correct form is unambiguous (e.g., "Dimmitri Lceras" → "Demetri Lceras", "Kamata" → "Kalamata"). If ambiguous, leave as-is.
-        Remove filler tokens ("uh", "um", "ah", "you know"), stutters/repeats ("I I I", "andor"), and false starts. Keep hesitations only if they materially change meaning.
-        Do **NOT** rephrase, summarize, paraphrase, or condense. Do **NOT** change the order of words beyond removing disfluencies.
-        Preserve verbatim any quoted or attributed text. Preserve all numbers, dates, and factual claims exactly as spoken.
-        Keep factual attributions (e.g., "police allege", "reports say") – do not convert them into assertions.
-        If a sentence is unintelligible, mark it with "[inaudible]".
-        Output the fully cleaned transcript line by line, exactly as it should appear. Do not add any extra commentary, headings, or blank lines at this stage.
-      user_prompt_template: "Clean the following transcript by removing disfluencies and correcting unambiguous name misspellings. Do not remove any timestamps, do not summarize, do not omit any content.\n\n{input}"
+      enabled: true
 
-    speaker_labeling:
-      enabled: true
-      model: "sunapi386/llama-3-lexi-uncensored:8b"
-      temperature: 0.1
+    - name: "label_speakers"
+      model: "mistral:7b-instruct-v0.3-q4_0"
+      system_prompt: "You are a speaker diarizer. Label each distinct speaker's turn with [Speaker 1], [Speaker 2], etc. Use the first occurrence of a name or pronoun to determine changes. Do not modify any words, punctuation, or line breaks. Output only the labeled transcript. No explanations, no markdown."
+      user_prompt_template: "Label each speaker turn in the transcript below. Output only the labeled transcript.\n\nTranscript:\n{input}"
+      temperature: 0.0
       max_tokens: 8192
-      system_prompt: |
-        Identify speakers in the transcript. Use the exact names provided in the audio (e.g., the host says "This is Demetri Lceras" and later addresses "Laith Maru").
-        For Demetri Lceras, use the label "Demetri Lceras:".
-        For Laith Maru, use the label "Laith Maru:".
-        For any other unidentified voices, use "Host", "Guest", or "Speaker N" consistently.
-        Precede each speaker turn with the label line exactly in the format "Speaker Name:" (colon, no extra spaces).
-        Do **NOT** remove any timestamps – they are part of the spoken content.
-        Do **NOT** summarize, paraphrase, or drop any content. Only add speaker labels and keep every word (after disfluency removal) exactly as it is.
-        Output the full transcript with speaker labels inserted before each turn. Do not add blank lines yet.
-      user_prompt_template: "Add speaker labels to the following transcript. Do not change, summarize, or omit any content.\n\n{input}"
+      enabled: true
 
-    semantic_merge_split:
-      enabled: true
-      model: "sunapi386/llama-3-lexi-uncensored:8b"
-      temperature: 0.1
+    - name: "mark_inaudible"
+      model: "llama3:8b"
+      system_prompt: "You are a strict transcript editor. Replace any unintelligible word or placeholder (e.g., [unintelligible], (inaudible), ???) with [inaudible]. Do not change anything else. Output only the marked transcript."
+      user_prompt_template: "Replace unintelligible words/placeholders with [inaudible] in the transcript below. Output only the result.\n\nTranscript:\n{input}"
+      temperature: 0.0
       max_tokens: 8192
-      system_prompt: "You are a transcript editor. Merge very short adjacent turns by the same speaker into a single turn if they are part of the same idea. Split long turns when the speaker clearly changes topic or another speaker replies. Preserve all speaker labels and text exactly, only adjust turn boundaries. Output the final transcript with speaker labels and blank lines between turns. Do not add any commentary."
-      user_prompt_template: "Merge or split speaker turns as needed, then output the final transcript:\n\n{input}"
+      enabled: true

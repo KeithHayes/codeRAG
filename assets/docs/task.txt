@@ -1,45 +1,21 @@
---- PROMPT START ---
+We need to fix the transcript processing pipeline. The issue: after timestamp removal, the LLM stage (remove_disfluencies) is losing content, producing placeholder output like "It seems like you've entered a placeholder...". This is likely because the LLM is not following the prompt correctly or the prompt is too complex. The user wants to rewrite the prompt to be simpler and more direct, focusing only on disfluency removal (since timestamps are now removed in JS). Also need to adjust the YAML to have a single stage that does disfluency removal, spelling correction, and [inaudible] marking? Or keep separate but with simplified prompts.
 
-Code in this project is a collection of tasks defined by .yaml files.  Do not modify code that does not have to change to accomplish this task.  The configuration for this task is in transcript.yaml.  That file has settings that define the toolbar initial model and task set for this configuration.  Code specific to other configurations may not be changed.  Do not break or disregard other functionality.  Code may not be changed or disregarded unless it relates to the transcript task.  Make sure the model and toolbar are defined as in the original yaml file.
+Given the debug output shows that after timestamp removal, the transcript content is fine (the long transcript shown), but the remove_disfluencies_output.txt is the placeholder. So the LLM is failing. We need to change the prompt to be extremely simple and explicit, and possibly change the system prompt to instruct the model to output exactly the cleaned transcript without any extra text. Also ensure the model used is correct.
 
-You are a transcript editor. Your task is to produce a clean, readable transcript with accurate speaker turns and labels.  Development is iterative so you sohould evaluate the files and make changes to accomplish the rules.
+The user wants to rewrite the "PROMPT Which Generated Code START" section to reflect changes so far. That prompt is the one used in the YAML? Actually the YAML contains system_prompt and user_prompt_template. The user is showing a long prompt that includes timestamp removal rules. But since we now remove timestamps in JavaScript, we should remove those rules from the LLM prompt. So the new prompt should only focus on disfluency removal, spelling correction, and marking [inaudible] - but perhaps combine into one stage.
 
-INPUT: A plain, timestamped transcript.
+Given the user says "the transcript has timestamps removed but all content was lost after that" - meaning the remove_disfluencies stage produced garbage. So we need to simplify that stage's prompt drastically.
 
-The task for this session is to perform the next step in the iterative development of this project and correct the transcript pipeline so that a clean speaker labeled transcript is produced with transcript timestamps removed.
+Also need to update the YAML file to reflect the new simplified prompts and possibly combine stages into one for reliability.
 
+Let's produce the corrected YAML with:
 
-RULES:
+    toolbar and ollama_model as specified
 
-1. **Remove non-spoken timestamp lines.**  
-   - If a line consists only of a timestamp (e.g., "0:13", "13 seconds", "1 minute, 1 second") and is not part of a speaker's utterance, remove it completely.  
-   - However, if a timestamp is spoken within a sentence (e.g., "I waited 13 seconds"), keep it as part of the text.
+    global settings
 
-2. **Clean disfluencies.**  
-   - Remove filler words ("uh", "um", "ah", "you know"), stutters/repeats ("I I I", "andor"), and false starts.  
-   - Do NOT rephrase, summarize, or reorder any words. Only remove the disfluencies.
+    one stage "clean_transcript" that does all three tasks (disfluencies, spelling, [inaudible]) with a very simple, strict prompt.
 
-3. **Correct unambiguous misspellings.**  
-   - Fix obvious misspellings of proper names and places when the correct form is clear from context (e.g., "Dimmitri" → "Demetri").  
-   - If ambiguous, leave as-is.
+We'll keep the same model and max tokens.
 
-4. **Identify and label speakers.**  
-   - Infer speaker names from the transcript itself (e.g., someone says "This is X" or "I'm Y"). Use those names as labels.  
-   - For speakers that cannot be identified, use generic labels like "Speaker 1", "Speaker 2", etc., in order of first appearance.  
-   - Do NOT hardcode any specific names from example transcripts.
-
-5. **Format speaker turns.**  
-   - Each turn begins with the speaker label followed by a colon and a space, then the spoken text:  
-     `SpeakerName: The spoken text.`  
-   - After each turn, add one blank line before the next speaker's label.
-
-6. **Preserve all content.**  
-   - Do not delete any words except fillers and non-spoken timestamp lines.  
-   - Keep all numbers, dates, quoted text, and attributions (e.g., "police allege").  
-   - Do NOT summarize, paraphrase, or condense.  
-   - If a word is unintelligible, mark it as `[inaudible]`.
-
-OUTPUT: Only the cleaned, labeled transcript with blank lines between turns. No extra commentary.
-
-
---- PROMPT END ---
+We'll output the full transcript.yaml file.
