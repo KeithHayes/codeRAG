@@ -7,78 +7,40 @@ toolbar:
   - 'book'
   - 'target'
 
-ollama_model: "sunapi386/llama-3-lexi-uncensored:8b"
+ollama_model: "deepseek-r1:7b"
 
 stages:
-  - name: "remove_definition_blocks"
-    type: regex
+  - name: 'clean_disfluencies'
+    type: 'llm'
     enabled: true
-    pattern: '\[\d+\]\s+The\s+"[^"]+"\s+refers\s+to\s+[^\n]+\n?'
-    replacement: ''
-    flags: 'g'
-    description: "Remove repetitive definition blocks (not present in this transcript but kept for safety)"
-
-  - name: "clean_timestamps"
-    type: regex
-    enabled: true
-    pattern: '^\s*(?:\d+:\d+(?::\d+)?|\d+\s+seconds?|\d+\s+minutes?\s*(?:,?\s*\d+\s+seconds?)?)\s*$'
-    replacement: ''
-    flags: 'gm'
-    description: "Remove lines that contain only timestamps (0:13, 13 seconds, 1 minute, 1 second)"
-
-  - name: "extract_speaker_lines"
-    type: llm
-    enabled: true
-    model: "ollama/sunapi386/llama-3-lexi-uncensored:8b"
-    system_prompt: |
-      You are a transcript processor. Extract only the dialogue lines with speaker labels.
-      Remove any non-dialogue text such as descriptions, editorial comments, timestamps, or false starts (like "Start over").
-      Normalize speaker names:
-        - "Demetri", "Dimitri", "Dimmitri", "Dmitri" → "Demetri"
-        - "Laith", "Leith", "Le", "Leth" → "Laith"
-      Output only the cleaned dialogue with each line starting with "Speaker: " followed by the spoken text.
-      Preserve the order of turns. Do not add any extra commentary.
-    user_prompt_template: "Clean the following transcript and output only the dialogue lines with normalized speaker names:\n\n{input}"
-    temperature: 0.2
-    max_tokens: 16384
-    fallback_regex: '^(Demetri|Laith|Dimitri|Dimmitri|Leith|Le|Leth|Host|Guest):.*$'
-    fallback_replacement: '$&\n'
-    flags: 'gm'
-
-  - name: "merge_and_format"
-    type: llm
-    enabled: true
-    model: "ollama/sunapi386/llama-3-lexi-uncensored:8b"
-    system_prompt: |
-      You are a transcript formatter. Merge split sentences that are broken across lines (e.g., a sentence that ends with a line break in the middle).
-      Add missing punctuation at the end of sentences where appropriate.
-      Ensure each speaker turn is separated by a single blank line.
-      Do not change the speaker labels or the content of the speech.
-      Output the formatted transcript.
-    user_prompt_template: "Format the following dialogue transcript:\n\n{input}\n\nMerge split lines, add punctuation where missing, and add blank lines between speaker turns."
-    temperature: 0.1
+    model: 'deepseek-r1:7b'
+    system_prompt: "You are a transcript cleaning assistant. Your only task is to remove disfluencies from the transcript. Do NOT rephrase, summarize, or reorder any words. Only remove filler words (e.g., 'uh', 'um', 'ah', 'you know'), stutters/repeats (e.g., 'I I I', 'andor'), and false starts. Preserve all other content exactly as is. Do not add or remove anything else."
+    user_prompt_template: "Clean the following transcript by removing disfluencies:\n\n{input}"
+    temperature: 0.0
     max_tokens: 16384
 
-  - name: "add_header"
-    type: llm
+  - name: 'correct_misspellings'
+    type: 'llm'
     enabled: true
-    model: "ollama/sunapi386/llama-3-lexi-uncensored:8b"
-    system_prompt: |
-      You are a transcript processor. Extract the episode title, host name, guest name, and date from the beginning of the transcript.
-      Then prepend a header in this exact format:
+    model: 'deepseek-r1:7b'
+    system_prompt: "You are a proofreading assistant. Fix obvious misspellings of proper names and places when the correct form is clear from context. Examples: 'Dimmitri' -> 'Demetri', 'Kamata' -> 'Kalamata', 'Leith Maru' -> 'Laith Maru', 'commed' -> 'comrade'. If ambiguous, leave as-is. Do not change any other words. Do not rephrase or summarize."
+    user_prompt_template: "Correct unambiguous misspellings in the following transcript:\n\n{input}"
+    temperature: 0.0
+    max_tokens: 16384
 
-      Reason to Resist – Episode Transcript
+  - name: 'label_speakers_and_format'
+    type: 'llm'
+    enabled: true
+    model: 'deepseek-r1:7b'
+    system_prompt: |-
+      You are a transcript formatter. Identify speakers from the transcript itself (e.g., someone says "This is X" or "I'm Y"). Use those names as labels. For speakers that cannot be identified, use generic labels like "Speaker 1", "Speaker 2" in order of first appearance.
 
-      Host: [host]
-      Guest: [guest]
-      Date: [date]
+      Format each speaker turn as:
+      SpeakerName: The spoken text.
 
-      ---
+      After each turn, add exactly one blank line before the next speaker's label. Preserve all numbers, dates, quotes, and attributions. Do not delete any words except those already removed in previous steps. Do not summarize. If a word is unintelligible, write [inaudible].
 
-      [full transcript]
-
-      If the date is not found, use "April 27, 2026". If host not found, use "Demetri Lceras". If guest not found, use "Laith Maru".
-      Output only the full transcript with the header.
-    user_prompt_template: "Add a header to this transcript:\n\n{input}\n\nOutput the entire transcript with the header as described."
-    temperature: 0.2
-    max_tokens: 5000
+      Output ONLY the cleaned, labeled transcript with blank lines between turns. No extra commentary.
+    user_prompt_template: "Format the following transcript with speaker labels and blank lines:\n\n{input}"
+    temperature: 0.0
+    max_tokens: 16384

@@ -526,7 +526,7 @@
     }
   }
   
-  // ========== FIXED: handleruntasksClick with cache-proof transcript fetch ==========
+  // ========== FIXED: handleruntasksClick with Python timestamp removal ==========
   async function handleruntasksClick() {
     transitionTo(StatusState.RUNNING_PIPELINE)
     
@@ -553,25 +553,36 @@
         return
       }
       
-      const transcriptPath = 'assets/data/transcripts/rawtranscript.txt'
-      console.log("Fetching transcript from:", transcriptPath)
+      // ----- Step 1: Remove timestamps using Python -----
+      transitionTo(StatusState.RUNNING_PIPELINE, { profileName: 'Removing timestamps...' })
+      const cleanResponse = await fetch('assets/php/remove_timestamps.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+      const cleanData = await cleanResponse.json()
+      if (!cleanData.success) {
+        throw new Error('Failed to remove timestamps: ' + (cleanData.output || 'Unknown error'))
+      }
       
-      // Force no-cache and add timestamp to bust any server-side caching
+      // ----- Step 2: Read the cleaned transcript -----
+      const transcriptPath = 'assets/data/transcripts/sanstimestamps.txt'
+      console.log("Fetching cleaned transcript from:", transcriptPath)
+      
       const transcriptResponse = await fetch(transcriptPath + '?_=' + Date.now(), {
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       })
       
       if (!transcriptResponse.ok) {
-        throw new Error('Transcript file not found. Please paste a transcript first using the Paste Transcript button.')
+        throw new Error('Cleaned transcript file not found. Please paste a transcript first using the Paste Transcript button.')
       }
       
       const transcript = await transcriptResponse.text()
-      console.log("Transcript length:", transcript.length)
-      console.log("First 200 chars:", transcript.substring(0,200))
+      console.log("Transcript length after cleaning:", transcript.length)
       
       if (!transcript || transcript.trim().length === 0) {
-        throw new Error('Transcript file is empty')
+        throw new Error('Cleaned transcript is empty')
       }
       
       transitionTo(StatusState.PROFILE_SWITCHING, { profileName: 'Processing transcript...' })
@@ -595,10 +606,10 @@
       let errorMessage = error.message
       if (error.name === 'StageError') {
         errorMessage = `Pipeline failed at stage ${error.stage}: ${error.reason}`
-      } else if (error.message.includes('Transcript file not found')) {
+      } else if (error.message.includes('Cleaned transcript file not found')) {
         errorMessage = error.message
-      } else if (error.message.includes('Empty transcript')) {
-        errorMessage = 'Transcript file is empty. Please paste a valid transcript.'
+      } else if (error.message.includes('Empty')) {
+        errorMessage = 'Cleaned transcript is empty. Please paste a valid transcript.'
       } else {
         errorMessage = 'Failed to process transcript: ' + error.message
       }
@@ -1181,4 +1192,4 @@
       window.loadtoolbar()
     }
   }
-})()
+})();

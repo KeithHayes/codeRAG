@@ -51,7 +51,8 @@ def create_report():
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
         os.path.join(base_path, 'assets','data','transcripts', 'rawtranscript.txt'),
-        os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
+        os.path.join(base_path, 'assets','data','transcripts', 'sanstimestamps.txt'),
+        #os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
     ]
 
     debug_files = [
@@ -87,6 +88,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
         os.path.join(base_path, 'assets', 'php', 'process_transcript.php'),
         os.path.join(base_path, 'assets', 'php', 'rag.php'),
+        os.path.join(base_path, 'assets', 'php', 'remove_ttimestamps.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
         os.path.join(base_path, 'assets', 'php', 'save_debug.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
@@ -102,6 +104,7 @@ def create_report():
         #os.path.join(base_path, 'assets', 'py', 'faiss_query_wrapper.py'),
         #os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
         #os.path.join(base_path, 'assets', 'py', 'logger.py'),
+        os.path.join(base_path, 'assets', 'py', 'remove_ttimestamps.py'),
         #os.path.join(base_path, 'assets', 'py', 'report.py'),
         #os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
         #os.path.join(base_path, 'assets', 'py', 'start_api_server.py'),

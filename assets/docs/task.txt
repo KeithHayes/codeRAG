@@ -1,88 +1,58 @@
-PROMPT
+--- PROMPT START ---
 
-Context:
-I have two files from an older commit (after a git hard reset):
+Code in this project is a collection of tasks defined by .yaml files.  Do not modify code that does not need to change to accomplish this task.  The configuration for this task is defined in transcript.yaml.  That file has settings that define the toolbar initial model which muust be preserved if transcript.yaml is changed.  
 
-    processtranscript.js – currently outputs JSON.
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'pastetranscript'
+  - 'runtask'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
 
-    transcript.yaml – defines processing stages, currently oriented toward JSON extraction.
+ollama_model: "deepseek-r1:7b"
 
-The goal is to transform raw transcript text (containing timestamps, repetitive definition blocks, and scattered speaker lines) into a clean, readable conversation – exactly like the formatted transcript shown below:
+This header must appear in transcript.yaml.
 
-    Reason to Resist – Episode Transcript
+Code specific to other configurations may not be changed.  Do not break or disregard other functionality.  Code may not be changed or disregarded unless it relates to the transcript task.  
 
-    Host: Demetri Lceras (from Kalamata, Greece)
-    Guest: Laith Maru (Executive Director of Free Palestine TV, Beirut, Lebanon)
-    Date: April 27, 2026
 
-    Demetri: Good day. This is Demetri Lceras coming to you from Kalamata, Greece...
-    Laith: Good to be with you, Demetri...
-    (etc.)
+The tas is to produce a clean, readable transcript with accurate speaker turns and labels.  Development is iterative so you should evaluate the files and make changes to accomplish the rules.  Currenttly the rules are incorrectly implemented.
 
-Requirements for the rewritten files:
+INPUT: A plain, transcript cleaned of timestamps.
 
-    No JSON output – the final output must be plain text, formatted as a coherent dialogue.
+The task for this session is to perform the next step in the iterative development of this project and correct the transcript pipeline so that a clean speaker labeled transcript is produced with transcript timestamps removed.
 
-    Multiple stages – the pipeline must break the task into separate, sequential stages (e.g., remove definition blocks, clean timestamps, extract speaker turns, merge split lines, add header).
 
-    Multiple models – each stage must be able to use a different model (e.g., regex for simple removal, GPT-4o for speaker extraction, Claude for formatting, Gemini for correction). The YAML config must specify the model per stage.
+RULES:
 
-    Input flexibility – the script should accept raw transcript from stdin or a file.
 
-    Output – clean transcript text printed to stdout.
+1. **Clean disfluencies.**  
+   - Remove filler words ("uh", "um", "ah", "you know"), stutters/repeats ("I I I", "andor"), and false starts.  
+   - Do NOT rephrase, summarize, or reorder any words. Only remove the disfluencies.
 
-What you must do with the old files:
+2. **Correct unambiguous misspellings.**  
+   - Fix obvious misspellings of proper names and places when the correct form is clear from context (e.g., "Dimmitri" → "Demetri").  
+   - If ambiguous, leave as-is.
 
-    Rewrite processtranscript.js to:
+3. **Identify and label speakers.**  
+   - Infer speaker names from the transcript itself (e.g., someone says "This is X" or "I'm Y"). Use those names as labels.  
+   - For speakers that cannot be identified, use generic labels like "Speaker 1", "Speaker 2", etc., in order of first appearance.  
+   - Do NOT hardcode any specific names from example transcripts.
 
-        Read the YAML pipeline configuration.
+4. **Format speaker turns.**  
+   - Each turn begins with the speaker label followed by a colon and a space, then the spoken text:  
+     `SpeakerName: The spoken text.`  
+   - After each turn, add one blank line before the next speaker's label.
 
-        Execute each stage in order.
+5. **Preserve all content.**  
+   - Do not delete any words except fillers and non-spoken timestamp lines.  
+   - Keep all numbers, dates, quoted text, and attributions (e.g., "police allege").  
+   - Do NOT summarize, paraphrase, or condense.  
+   - If a word is unintelligible, mark it as `[inaudible]`.
 
-        For regex stages: apply pattern replacement.
+OUTPUT: Only the cleaned, labeled transcript with blank lines between turns. No extra commentary.
 
-        For LLM stages: make API calls to the specified model (OpenAI, Anthropic, Gemini, or local via Ollama). Include placeholder functions that can be easily swapped with real API keys.
 
-        Never output JSON; only print the accumulated text after all stages.
-
-    Rewrite transcript.yaml to define at least these stages (you can add more):
-
-        remove_definition_blocks – use regex to delete lines like [808] The "Zionist colony" refers to...
-
-        clean_timestamps – remove lines like 0:13, 13 seconds, 1 minute, 1 second.
-
-        extract_speaker_lines – use an LLM (GPT-4o-mini) to identify which lines belong to Demetri vs. Laith, normalize speaker names, and remove all non‑dialogue text.
-
-        merge_and_format – merge split sentences, ensure proper punctuation, add blank lines between speaker turns.
-
-        add_header – prepend the title, host/guest, date (extracted from transcript or set manually).
-
-    Provide clear comments and instructions in both files so that anyone can adapt the models (e.g., switch from OpenAI to local Ollama) without breaking the pipeline.
-
-Example of a raw input fragment (what the old pipeline fails to clean):
-text
-
-"Zionist colony" refers to Israel's occupation of Palestinian territory. [808] The "Caspian Sea" is a body of water... [809] The "Axis of Resistance" is a term...
-0:13
-13 seconds
-Demetri: Good day. This is Demetri Lceras...
-0:20
-20 seconds
-Laith: Good to be with you...
-
-Expected output for that fragment:
-text
-
-Demetri: Good day. This is Demetri Lceras...
-Laith: Good to be with you...
-
-Constraints:
-
-    Do not hardcode model names in the JavaScript; read them from the YAML.
-
-    Handle API rate limits and errors gracefully (e.g., fallback to regex if LLM fails).
-
-    The final output must be indistinguishable from the manually cleaned transcript shared earlier.
-
-Your task:
-Rewrite processtranscript.js and transcript.yaml exactly as described. Provide the complete code for both files. Use placeholders for API keys (e.g., process.env.OPENAI_API_KEY). Ensure the script works in a Node.js environment with js-yaml installed.
+--- PROMPT END ---
