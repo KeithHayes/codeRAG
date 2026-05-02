@@ -1,3 +1,4 @@
+
 toolbar:
   - 'fileload'
   - 'homeserver'
@@ -10,37 +11,25 @@ toolbar:
 ollama_model: "deepseek-r1:7b"
 
 stages:
-  - name: 'clean_disfluencies'
-    type: 'llm'
+  - name: 'remove_definition_blocks'
+    type: 'regex'
+    pattern: '```[\s\S]*?```'
+    replacement: ''
+    flags: 'g'
     enabled: true
-    model: 'deepseek-r1:7b'
-    system_prompt: "You are a transcript cleaning assistant. Your only task is to remove disfluencies from the transcript. Do NOT rephrase, summarize, or reorder any words. Only remove filler words (e.g., 'uh', 'um', 'ah', 'you know'), stutters/repeats (e.g., 'I I I', 'andor'), and false starts. Preserve all other content exactly as is. Do not add or remove anything else."
-    user_prompt_template: "Clean the following transcript by removing disfluencies:\n\n{input}"
-    temperature: 0.0
-    max_tokens: 16384
 
-  - name: 'correct_misspellings'
-    type: 'llm'
+  - name: 'remove_extra_whitespace'
+    type: 'regex'
+    pattern: '\n\s*\n+'
+    replacement: '\n\n'
+    flags: 'g'
     enabled: true
-    model: 'deepseek-r1:7b'
-    system_prompt: "You are a proofreading assistant. Fix obvious misspellings of proper names and places when the correct form is clear from context. Examples: 'Dimmitri' -> 'Demetri', 'Kamata' -> 'Kalamata', 'Leith Maru' -> 'Laith Maru', 'commed' -> 'comrade'. If ambiguous, leave as-is. Do not change any other words. Do not rephrase or summarize."
-    user_prompt_template: "Correct unambiguous misspellings in the following transcript:\n\n{input}"
-    temperature: 0.0
-    max_tokens: 16384
 
-  - name: 'label_speakers_and_format'
+  - name: 'format_paragraphs'
     type: 'llm'
-    enabled: true
     model: 'deepseek-r1:7b'
-    system_prompt: |-
-      You are a transcript formatter. Identify speakers from the transcript itself (e.g., someone says "This is X" or "I'm Y"). Use those names as labels. For speakers that cannot be identified, use generic labels like "Speaker 1", "Speaker 2" in order of first appearance.
-
-      Format each speaker turn as:
-      SpeakerName: The spoken text.
-
-      After each turn, add exactly one blank line before the next speaker's label. Preserve all numbers, dates, quotes, and attributions. Do not delete any words except those already removed in previous steps. Do not summarize. If a word is unintelligible, write [inaudible].
-
-      Output ONLY the cleaned, labeled transcript with blank lines between turns. No extra commentary.
-    user_prompt_template: "Format the following transcript with speaker labels and blank lines:\n\n{input}"
-    temperature: 0.0
-    max_tokens: 16384
+    system_prompt: "You are a transcript formatting assistant. Format the transcript into clean, readable paragraphs while preserving all factual content. Do not add or remove information. Just organize the text into coherent paragraphs."
+    user_prompt_template: "Format the following transcript into clean paragraphs:\n\n{input}"
+    temperature: 0.1
+    max_tokens: 8192
+    enabled: true

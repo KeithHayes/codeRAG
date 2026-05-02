@@ -2,8 +2,6 @@
 
 Code generation boilerplate:
 
-Fix the prompt and code as needed to give better results based on user feedback.
-
 Please generate full, complete code files as needed which meet the following non-negotiable requirements:
 No partial code in any file. Do not skip sections or use placeholders like “...”, “# unchanged”, or “rest of code”.
 Preserve all existing code and comments which are not related to the current task. Do not rewrite or refine unrelated features.

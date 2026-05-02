@@ -52,16 +52,12 @@ def create_report():
         #os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
         os.path.join(base_path, 'assets','data','transcripts', 'rawtranscript.txt'),
         os.path.join(base_path, 'assets','data','transcripts', 'sanstimestamps.txt'),
+        os.path.join(base_path, 'assets','data','transcripts', 'sansdisfluencies.txt'),
         #os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
     ]
 
     debug_files = [
-        os.path.join(base_path, 'assets', 'data', 'debug', 'after_timestamp_removal_output.txt'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'correct_spelling_output.txt'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'final_output_output.txt'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'input_raw_output.txt'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'mark_inaudible_output.txt'),
-        os.path.join(base_path, 'assets', 'data', 'debug', 'remove_disfluencies_output'),
+        #os.path.join(base_path, 'assets', 'data', 'debug', 'after_timestamp_removal_output.txt'),
     ]
 
     css_files = [
@@ -83,6 +79,7 @@ def create_report():
     php_files = [
         os.path.join(base_path, 'index.php'),
         os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'clean_disfluencies.php'),
         os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
         os.path.join(base_path, 'assets', 'php', 'fullbuilder.php'),
         os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
@@ -91,6 +88,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'remove_ttimestamps.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
         os.path.join(base_path, 'assets', 'php', 'save_debug.php'),
+        os.path.join(base_path, 'assets', 'php', 'save_disfluencies.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'update_model.php'),
         os.path.join(base_path, 'assets', 'php', 'save_transcript_output.php'),
@@ -99,17 +97,19 @@ def create_report():
     py_files = [
         #os.path.join(base_path, 'assets', 'py', 'api_server.py'),
         #os.path.join(base_path, 'assets', 'py', 'chunker.py'),
+        os.path.join(base_path, 'assets', 'py', 'disfluencies.py'),
         #os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
         #os.path.join(base_path, 'assets', 'py', 'faiss_builder.py'),
         #os.path.join(base_path, 'assets', 'py', 'faiss_query_wrapper.py'),
         #os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
         #os.path.join(base_path, 'assets', 'py', 'logger.py'),
-        os.path.join(base_path, 'assets', 'py', 'remove_ttimestamps.py'),
+        #os.path.join(base_path, 'assets', 'py', 'remove_timestamps.py'),
         #os.path.join(base_path, 'assets', 'py', 'report.py'),
         #os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
         #os.path.join(base_path, 'assets', 'py', 'start_api_server.py'),
         #os.path.join(base_path, 'assets', 'py', 'gpu_monitor.py'),
         #os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
+        #os.path.join(base_path, 'assets', 'py', 'youtube_rag.py'),
     ]
 
     yaml_files = [

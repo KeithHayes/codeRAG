@@ -294,8 +294,6 @@
     switchProfile('Socialism', 'socialism', 'Socialism RAG')
   }
   
-  // ========== START/STOP REMOVED ==========
-  
   function rebuild_vectorstore() {
     let buildingState = null
     let builtState = null
@@ -526,7 +524,6 @@
     }
   }
   
-  // ========== FIXED: handleruntasksClick with Python timestamp removal ==========
   async function handleruntasksClick() {
     transitionTo(StatusState.RUNNING_PIPELINE)
     
@@ -553,7 +550,7 @@
         return
       }
       
-      // ----- Step 1: Remove timestamps using Python -----
+      // ----- Step 1: Remove timestamps -----
       transitionTo(StatusState.RUNNING_PIPELINE, { profileName: 'Removing timestamps...' })
       const cleanResponse = await fetch('assets/php/remove_timestamps.php', {
         method: 'POST',
@@ -562,32 +559,70 @@
       })
       const cleanData = await cleanResponse.json()
       if (!cleanData.success) {
-        throw new Error('Failed to remove timestamps: ' + (cleanData.output || 'Unknown error'))
+        throw new Error('Failed to remove timestamps: ' + (cleanData.error || 'Unknown error'))
       }
       
-      // ----- Step 2: Read the cleaned transcript -----
-      const transcriptPath = 'assets/data/transcripts/sanstimestamps.txt'
-      console.log("Fetching cleaned transcript from:", transcriptPath)
+      // ----- Step 2: Apply disfluency cleaning -----
+      transitionTo(StatusState.RUNNING_PIPELINE, { profileName: 'Cleaning disfluencies...' })
       
-      const transcriptResponse = await fetch(transcriptPath + '?_=' + Date.now(), {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      const disfluencyResponse = await fetch('assets/php/clean_disfluencies.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
       })
       
-      if (!transcriptResponse.ok) {
-        throw new Error('Cleaned transcript file not found. Please paste a transcript first using the Paste Transcript button.')
+      if (!disfluencyResponse.ok) {
+        const text = await disfluencyResponse.text()
+        throw new Error('HTTP ' + disfluencyResponse.status + ': ' + text.substring(0, 200))
       }
       
-      const transcript = await transcriptResponse.text()
-      console.log("Transcript length after cleaning:", transcript.length)
+      const disfluencyData = await disfluencyResponse.json()
       
-      if (!transcript || transcript.trim().length === 0) {
-        throw new Error('Cleaned transcript is empty')
+      if (!disfluencyData.success) {
+        throw new Error('Failed to clean disfluencies: ' + (disfluencyData.error || 'Unknown error') + 
+                       (disfluencyData.details ? ' - ' + disfluencyData.details : ''))
+      }
+      
+      // Wait for file system to flush
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // ----- Step 3: Read from sansdisfluencies.txt -----
+      const disfluencyCleanedPath = 'assets/data/transcripts/sansdisfluencies.txt'
+      console.log("Fetching disfluency-cleaned transcript from:", disfluencyCleanedPath)
+      
+      let finalTranscript = null
+      let retries = 5
+      while (retries > 0 && !finalTranscript) {
+        const finalResponse = await fetch(disfluencyCleanedPath + '?_=' + Date.now(), {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+        })
+        
+        if (finalResponse.ok) {
+          finalTranscript = await finalResponse.text()
+          break
+        }
+        
+        retries--
+        if (retries > 0) {
+          console.log(`File not found, retrying... (${retries} attempts left)`)
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      }
+      
+      if (!finalTranscript) {
+        throw new Error('Disfluency-cleaned transcript file not found at: ' + disfluencyCleanedPath)
+      }
+      
+      console.log("Final transcript length:", finalTranscript.length)
+      
+      if (!finalTranscript || finalTranscript.trim().length === 0) {
+        throw new Error('Final transcript is empty')
       }
       
       transitionTo(StatusState.PROFILE_SWITCHING, { profileName: 'Processing transcript...' })
       
-      const result = await transcriptmodule.processtranscript(transcript)
+      const result = await transcriptmodule.processtranscript(finalTranscript)
       
       const chatbox = document.getElementById('chatbox')
       if (chatbox) {
@@ -606,10 +641,10 @@
       let errorMessage = error.message
       if (error.name === 'StageError') {
         errorMessage = `Pipeline failed at stage ${error.stage}: ${error.reason}`
-      } else if (error.message.includes('Cleaned transcript file not found')) {
+      } else if (error.message.includes('transcript file not found')) {
         errorMessage = error.message
       } else if (error.message.includes('Empty')) {
-        errorMessage = 'Cleaned transcript is empty. Please paste a valid transcript.'
+        errorMessage = 'Transcript is empty. Please paste a valid transcript.'
       } else {
         errorMessage = 'Failed to process transcript: ' + error.message
       }
@@ -1192,4 +1227,4 @@
       window.loadtoolbar()
     }
   }
-})();
+})()

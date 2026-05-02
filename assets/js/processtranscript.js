@@ -54,7 +54,7 @@ window.transcriptmodule = (function() {
   }
 
   // --------------------------------------------------------------
-  //  Apply regex stage (if needed, though not used now)
+  //  Apply regex stage
   // --------------------------------------------------------------
   function applyRegexStage(stage, input) {
     const flags = stage.flags || 'g'
@@ -88,13 +88,11 @@ window.transcriptmodule = (function() {
       const elapsed = ((Date.now() - start) / 1000).toFixed(1)
       console.log(`[${new Date().toISOString()}] Stage ${stageName} done in ${elapsed}s`)
 
-      // Save output for this stage
       await saveStageOutput(stageName, output)
 
       return output
     } catch (err) {
       console.error(`[${new Date().toISOString()}] Stage ${stageName} FAILED:`, err)
-      // Optional fallback to regex if defined
       if (stage.type === 'llm' && stage.fallback_regex) {
         console.log(`[${new Date().toISOString()}] Falling back to regex for ${stageName}`)
         const fallbackStage = {
@@ -119,7 +117,6 @@ window.transcriptmodule = (function() {
     if (!response.ok) throw new Error(`Failed to load YAML: ${response.status}`)
     const yamlText = await response.text()
     
-    // Simple YAML parser for the "stages" array
     const config = { stages: [] }
     const lines = yamlText.split('\n')
     let inStages = false
@@ -135,7 +132,6 @@ window.transcriptmodule = (function() {
       }
       if (!inStages) continue
       
-      // Start of a new stage: e.g., "  - name: 'remove_definition_blocks'"
       const dashMatch = line.match(/^\s{2}-\s+name:\s*['"]([^'"]+)['"]/)
       if (dashMatch) {
         if (currentStage) config.stages.push(currentStage)
@@ -144,12 +140,10 @@ window.transcriptmodule = (function() {
       }
       
       if (currentStage && trimmed !== '' && !trimmed.startsWith('-')) {
-        // Parse key: value pairs inside a stage (indented by 4 spaces)
         const kvMatch = line.match(/^\s{4}(\w+):\s*(.*)/)
         if (kvMatch) {
           let key = kvMatch[1]
           let value = kvMatch[2].trim()
-          // Remove surrounding quotes and unescape newlines
           if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
             value = value.slice(1, -1).replace(/\\n/g, '\n')
           } else if (value === 'true') value = true
@@ -159,7 +153,6 @@ window.transcriptmodule = (function() {
         }
       }
       
-      // End of the stages list when we hit a line that is not indented
       if (line.length > 0 && line[0] !== ' ' && line[0] !== '-' && trimmed !== 'stages:' && trimmed !== '') {
         inStages = false
         if (currentStage) {
@@ -175,15 +168,15 @@ window.transcriptmodule = (function() {
   }
 
   // --------------------------------------------------------------
-  //  Main public function
+  //  Main public function - reads from sansdisfluencies.txt
   // --------------------------------------------------------------
-  async function processtranscript(rawText) {
-    if (!rawText || rawText.trim().length === 0) {
+  async function processtranscript(cleanedTranscript) {
+    if (!cleanedTranscript || cleanedTranscript.trim().length === 0) {
       throw new Error('Empty transcript provided')
     }
-    console.log(`[Pipeline] Starting, input length: ${rawText.length}`)
+    console.log(`[Pipeline] Starting, input length: ${cleanedTranscript.length}`)
     const stages = await loadPipelineConfig()
-    let current = rawText
+    let current = cleanedTranscript
     for (const stage of stages) {
       if (stage.enabled === false) continue
       current = await executeStage(stage, current)

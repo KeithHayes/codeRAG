@@ -84,13 +84,11 @@ class RAGSystem {
         return ($http_code === 200);
     }
     
-    // NEW: Ensure the model is loaded before querying
     private function ensure_model_loaded() {
         if (!$this->is_ollama_running()) {
             throw new Exception("Ollama service is not running");
         }
         
-        // Get currently running model
         $ch = curl_init($this->ollama_url . '/api/ps');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
@@ -107,10 +105,9 @@ class RAGSystem {
         }
         
         if ($current_model === $this->current_model) {
-            return; // already loaded
+            return;
         }
         
-        // Stop any other model
         if ($current_model) {
             $ch = curl_init($this->ollama_url . '/api/generate');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -122,7 +119,6 @@ class RAGSystem {
             usleep(500000);
         }
         
-        // Load target model with 24h keep_alive
         $ch = curl_init($this->ollama_url . '/api/generate');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -135,7 +131,6 @@ class RAGSystem {
         curl_exec($ch);
         curl_close($ch);
         
-        // Wait for model to be ready
         $loaded = false;
         for ($i = 0; $i < 30; $i++) {
             sleep(1);
@@ -327,7 +322,6 @@ class RAGSystem {
     }
     
     public function query_ollama($prompt) {
-        // Ensure the model is loaded before attempting the query
         $this->ensure_model_loaded();
         
         $data = [
@@ -448,11 +442,11 @@ class RAGSystem {
     }
     
     public function transcripttask($message) {
-        $transcript_file = __DIR__ . '/../data/transcripts/rawtranscript.txt';
+        $transcript_file = __DIR__ . '/../data/transcripts/sansdisfluencies.txt';
         
         if (!file_exists($transcript_file)) {
             return [
-                'response' => 'No transcript found. Please paste a transcript first using the Paste Transcript button.',
+                'response' => 'No transcript found. Please run the pipeline first (Sailboat button) to clean the transcript.',
                 'model' => $this->get_current_model(),
                 'profile' => $this->get_current_profile(),
                 'timestamp' => time()
@@ -463,7 +457,7 @@ class RAGSystem {
         
         if (empty(trim($transcript))) {
             return [
-                'response' => 'Transcript file is empty.',
+                'response' => 'Transcript file is empty. Please run the pipeline first.',
                 'model' => $this->get_current_model(),
                 'profile' => $this->get_current_profile(),
                 'timestamp' => time()
