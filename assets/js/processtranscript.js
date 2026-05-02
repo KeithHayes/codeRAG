@@ -2,9 +2,6 @@
 // Browser‑based transcript processor – calls Ollama directly
 
 window.transcriptmodule = (function() {
-  // --------------------------------------------------------------
-  //  Direct Ollama call (no PHP proxy)
-  // --------------------------------------------------------------
   async function callOllama(model, systemPrompt, userPrompt, temperature = 0.0, maxTokens = 8192) {
     const ollamaUrl = 'http://localhost:11434/api/chat'
     const response = await fetch(ollamaUrl, {
@@ -34,9 +31,6 @@ window.transcriptmodule = (function() {
     return data.message.content.trim()
   }
 
-  // --------------------------------------------------------------
-  //  Save stage output to file via PHP
-  // --------------------------------------------------------------
   async function saveStageOutput(stageName, output) {
     try {
       await fetch('assets/php/save_stage_output.php', {
@@ -53,18 +47,52 @@ window.transcriptmodule = (function() {
     }
   }
 
-  // --------------------------------------------------------------
-  //  Apply regex stage
-  // --------------------------------------------------------------
+  async function formatText() {
+    console.log('[Pipeline] Formatting text via textformat.py')
+    const response = await fetch('assets/php/format_text.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(600000)
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Format text failed with status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Unknown error during text formatting')
+    }
+    
+    console.log(`[Pipeline] Text formatting complete. Length: ${data.formatted_length}`)
+    return data
+  }
+
+  async function readFormattedText() {
+    console.log('[Pipeline] Reading formatted text...')
+    const response = await fetch('assets/php/read_formatted_text.php')
+    
+    if (!response.ok) {
+      throw new Error(`Failed to read formatted text: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (!data.success || !data.content || data.content.trim().length === 0) {
+      throw new Error('Formatted text file is empty or missing')
+    }
+    
+    console.log(`[Pipeline] Loaded formatted text, length: ${data.length}`)
+    return data.content
+  }
+
   function applyRegexStage(stage, input) {
     const flags = stage.flags || 'g'
     const regex = new RegExp(stage.pattern, flags)
     return input.replace(regex, stage.replacement || '')
   }
 
-  // --------------------------------------------------------------
-  //  Execute one stage (regex or llm)
-  // --------------------------------------------------------------
   async function executeStage(stage, input) {
     const stageName = stage.name
     console.log(`[${new Date().toISOString()}] Stage: ${stageName} (${stage.type})`)
@@ -109,9 +137,6 @@ window.transcriptmodule = (function() {
     }
   }
 
-  // --------------------------------------------------------------
-  //  Load pipeline config from YAML
-  // --------------------------------------------------------------
   async function loadPipelineConfig() {
     const response = await fetch('assets/yaml/transcript.yaml?_=' + Date.now())
     if (!response.ok) throw new Error(`Failed to load YAML: ${response.status}`)
@@ -167,16 +192,21 @@ window.transcriptmodule = (function() {
     return config.stages
   }
 
-  // --------------------------------------------------------------
-  //  Main public function - reads from sansdisfluencies.txt
-  // --------------------------------------------------------------
   async function processtranscript(cleanedTranscript) {
-    if (!cleanedTranscript || cleanedTranscript.trim().length === 0) {
-      throw new Error('Empty transcript provided')
+    console.log('[Pipeline] Starting text formatting step...')
+    
+    await formatText()
+    
+    const transcriptToProcess = await readFormattedText()
+    
+    if (!transcriptToProcess || transcriptToProcess.trim().length === 0) {
+      throw new Error('Formatted text is empty - formatting failed')
     }
-    console.log(`[Pipeline] Starting, input length: ${cleanedTranscript.length}`)
+    
+    console.log(`[Pipeline] Processing transcript, input length: ${transcriptToProcess.length}`)
+    
     const stages = await loadPipelineConfig()
-    let current = cleanedTranscript
+    let current = transcriptToProcess
     for (const stage of stages) {
       if (stage.enabled === false) continue
       current = await executeStage(stage, current)

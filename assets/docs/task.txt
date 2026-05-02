@@ -1,9 +1,17 @@
 --- PROMPT START ---
 
-The task is to refine the disfluency chunking in the transcript configurations so that chunks are properly created and assembled.  Chunks should overlap for accuracy of the removal operation and then chunks must be combined correctly without the overlap.
+Text is not being formatted correctly in the process pipeline.
 
-Look at example_code for suggestions, However we do not know if example code input matches our input exactly so direct transfer may not work.
+Failed to process transcript: Python script failed with exit code: 1
 
-conceptually our input must first have line breaks eliminated and then this one big long string is chunked processed and re-assembled correctly.
+
+
+
+
+The output is to be a formatted copy of the input.  Content does not change, it is formatted. 
+
+
+Punctuation is the presentation of the text content.  Our goal is to pass the text content punctuated into sentences and paragraphs.  The prompts and llm design are not supporting text processing as exteraneous information is added and there should be none of that.
+
 
 --- PROMPT END ---

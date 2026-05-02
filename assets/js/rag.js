@@ -139,11 +139,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 } else {
                     powerElement.textContent = Math.round(watts)
                     if (watts > 150) {
-                        powerElement.style.color = '#ff6b6b'
+                        powerElement.style.color = '#840909'
                     } else if (watts > 100) {
-                        powerElement.style.color = '#ffd93d'
+                        powerElement.style.color = '#964b00'
                     } else {
-                        powerElement.style.color = '#6bcb77'
+                        powerElement.style.color = '#4a7021'
                     }
                 }
             }
