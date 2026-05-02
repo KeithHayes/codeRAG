@@ -41,59 +41,135 @@ def call_qwen_api(messages, max_tokens=1000, temperature=0.0):
     output_text = result.stdout.strip()
     return {"choices": [{"message": {"content": output_text}}]}
 
-def split_into_overlapping_chunks(text, chunk_size=1500, overlap=300):
+def eliminate_line_breaks(text):
     """
-    Split text into overlapping chunks for accurate disfluency removal.
-    Line breaks are removed first, then chunks are created with overlap.
-    After processing, chunks are reassembled by removing overlap and stitching.
+    Eliminate all line breaks from the input text to create a single 
+    continuous string for proper chunk processing.
     
     Args:
-        text: Input transcript text
+        text: Input text with line breaks
+    
+    Returns:
+        Single continuous string without line breaks
+    """
+    # Replace all newlines and carriage returns with spaces
+    text = text.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+    # Collapse multiple spaces into single space
+    text = re.sub(r'\s+', ' ', text)
+    # Remove space before punctuation
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)
+    return text.strip()
+
+def split_into_overlapping_chunks(text, chunk_size=2000, overlap=500):
+    """
+    Split text into overlapping chunks for accurate disfluency removal.
+    Preserves sentence boundaries when possible.
+    
+    Args:
+        text: Input transcript text (line breaks already eliminated)
         chunk_size: Maximum characters per chunk
         overlap: Number of characters to overlap between chunks
     
     Returns:
-        List of overlapping chunk strings
+        List of overlapping chunk strings with overlap metadata
     """
-    # Remove all line breaks and collapse spaces
-    continuous_text = ' '.join(text.splitlines())
-    continuous_text = re.sub(r'\s+', ' ', continuous_text)
-    
     chunks = []
+    chunk_boundaries = []
     start = 0
-    text_length = len(continuous_text)
+    text_length = len(text)
     
     while start < text_length:
         end = min(start + chunk_size, text_length)
         
-        # Try to find a good breaking point (sentence boundary)
+        # Try to find a sentence boundary near the end of the chunk
         if end < text_length:
-            # Look for sentence boundary within last 200 chars
-            search_start = max(start + chunk_size - 200, start)
-            search_text = continuous_text[search_start:end + 100]
+            # Look for sentence endings within the overlap region
+            search_end = end
+            search_start = max(end - overlap, start)
+            boundary_pos = -1
             
-            # Find sentence boundaries
-            sentence_end = -1
-            for boundary in ['. ', '! ', '? ', '.\n', '!\n', '?\n']:
-                pos = search_text.rfind(boundary, 0, chunk_size - (search_start - start))
-                if pos > sentence_end:
-                    sentence_end = pos
+            # Find the last sentence boundary in the overlap region
+            for i in range(search_end - 1, search_start - 1, -1):
+                if text[i] in '.!?' and i + 1 < text_length and text[i + 1] in ' ':
+                    boundary_pos = i + 2  # Include the sentence ending and space
+                    break
             
-            if sentence_end > 0:
-                end = search_start + sentence_end + len(boundary) - 1
+            if boundary_pos > start and boundary_pos <= end:
+                end = boundary_pos
         
-        chunks.append(continuous_text[start:end])
-        start = end - overlap if (end - overlap > start and end < text_length) else end
+        chunk = text[start:end]
+        chunks.append(chunk)
+        chunk_boundaries.append((start, end))
+        
+        # Next chunk starts with overlap from the previous chunk end
+        if end < text_length:
+            # Start new chunk at overlap distance back from current end
+            new_start = max(end - overlap, start + 1)
+            if new_start <= start:
+                new_start = start + 1  # Ensure forward progress
+            start = new_start
+        else:
+            start = end
     
-    return chunks
+    return chunks, chunk_boundaries
 
-def combine_overlapping_chunks(chunks, overlap=300):
+def create_overlap_reference(chunk, overlap_size=500):
     """
-    Combine overlapping chunks by removing duplicate overlapping portions.
+    Extract reference text from the end of a chunk for overlap matching.
+    Returns the last `overlap_size` characters as reference.
+    
+    Args:
+        chunk: Processed chunk text
+        overlap_size: Number of characters to use as overlap reference
+    
+    Returns:
+        Reference text string
+    """
+    if len(chunk) <= overlap_size:
+        return chunk
+    return chunk[-overlap_size:]
+
+def find_overlap_position(reference, next_chunk, min_match=20):
+    """
+    Find the position in next_chunk where the reference text matches.
+    Uses longest common substring approach to find the best match.
+    
+    Args:
+        reference: Reference text from end of previous chunk
+        next_chunk: Next chunk text to search for overlap
+        min_match: Minimum number of matching characters required
+    
+    Returns:
+        Position in next_chunk where overlap ends, or -1 if not found
+    """
+    # Try progressively shorter reference strings to find match
+    for ref_len in range(len(reference), min_match - 1, -1):
+        ref_substring = reference[-ref_len:]
+        pos = next_chunk.find(ref_substring)
+        if pos != -1:
+            return pos + len(ref_substring)
+    
+    # If no match found, try word-level matching
+    ref_words = reference.split()
+    next_words = next_chunk.split()
+    
+    # Try to find a sequence of matching words at the start of next_chunk
+    for word_count in range(min(len(ref_words), 20), 2, -1):
+        ref_phrase = ' '.join(ref_words[-word_count:])
+        pos = next_chunk.find(ref_phrase)
+        if pos != -1:
+            return pos + len(ref_phrase)
+    
+    return -1
+
+def combine_overlapping_chunks(chunks, overlap_size=500):
+    """
+    Combine overlapping chunks by finding and removing duplicate content.
+    Uses reference text matching to find overlap boundaries.
     
     Args:
         chunks: List of processed overlapping chunks
-        overlap: Overlap size used during splitting
+        overlap_size: Overlap size used during splitting
     
     Returns:
         Combined text without overlaps
@@ -106,43 +182,47 @@ def combine_overlapping_chunks(chunks, overlap=300):
     for i in range(1, len(chunks)):
         current = chunks[i]
         
-        # Find best overlap point to stitch
-        if len(combined) > overlap:
-            # Look at the end of combined and beginning of current
-            overlap_region_end = combined[-overlap:] if len(combined) >= overlap else combined
-            overlap_region_start = current[:overlap] if len(current) >= overlap else current
-            
-            # Find the longest common suffix/prefix match
-            best_match_len = 0
-            min_len = min(len(overlap_region_end), len(overlap_region_start))
-            
-            for match_len in range(min_len, int(min_len * 0.7), -1):
-                if overlap_region_end[-match_len:] == overlap_region_start[:match_len]:
-                    best_match_len = match_len
-                    break
-            
-            if best_match_len > 0:
-                combined = combined + current[best_match_len:]
-            else:
-                combined += " " + current
+        # Skip empty chunks
+        if not current.strip():
+            continue
+        
+        # Get reference from the end of combined text
+        reference = create_overlap_reference(combined, overlap_size)
+        
+        # Find where the overlap ends in the current chunk
+        overlap_end = find_overlap_position(reference, current)
+        
+        if overlap_end > 0:
+            # Append only the new part after the overlap
+            new_content = current[overlap_end:].lstrip()
+            if new_content:
+                # Add space between if needed
+                if combined and not combined[-1].isspace() and new_content and not new_content[0].isspace():
+                    combined += " "
+                combined += new_content
         else:
-            combined += " " + current
+            # No overlap found, append entire chunk with a space separator
+            if combined and not combined[-1].isspace():
+                combined += " "
+            combined += current
     
     return combined
 
 def process_chunk(chunk):
     """
     Process a single chunk with Qwen2.5:0.5b to remove disfluencies.
-    Preserves sentence structure and meaning.
     """
     messages = [
         {
             "role": "system",
             "content": (
-                "Remove disfluencies from the transcript text. Remove filler words like 'uh', 'um', 'like', 'you know', "
-                "'i mean', 'so', 'well', 'actually', 'basically', 'literally', 'kind of', 'sort of', 'you see', "
-                "'the thing is', 'start over', 'go ahead'. Preserve the original meaning and sentence structure. "
-                "Do not add extra spaces or punctuation. Return only the cleaned text."
+                "You are a transcript cleaner. Remove disfluencies from the transcript text. "
+                "Remove filler words like 'uh', 'um', 'like', 'you know', 'i mean', 'so', 'well', "
+                "'actually', 'basically', 'literally', 'kind of', 'sort of', 'you see', "
+                "'the thing is', 'start over', 'go ahead', 'wait', 'let me see'. "
+                "Also remove repeated words (e.g., 'the the', 'and and'). "
+                "Preserve the original meaning, punctuation, and sentence structure. "
+                "Return only the cleaned text without any explanations."
             )
         },
         {"role": "user", "content": chunk}
@@ -150,25 +230,62 @@ def process_chunk(chunk):
     result = call_qwen_api(messages, max_tokens=2000, temperature=0.0)
     return result["choices"][0]["message"]["content"].strip()
 
+def post_process_cleaned_text(text):
+    """
+    Apply additional regex cleaning to catch disfluencies the LLM might have missed.
+    """
+    # Remove standalone filler words
+    fillers = [
+        r'\buh\b', r'\bum\b', r'\ber\b', r'\bah\b', r'\boh\b',
+        r'\blike\b', r'\byou know\b', r'\bi mean\b', r'\bso\b',
+        r'\bwell\b', r'\bactually\b', r'\bbasically\b', r'\bliterally\b',
+        r'\bkind of\b', r'\bsort of\b', r'\byou see\b', r'\bthe thing is\b'
+    ]
+    
+    for filler in fillers:
+        text = re.sub(filler, '', text, flags=re.IGNORECASE)
+    
+    # Remove repeated words
+    text = re.sub(r'\b(\w+)\s+\1\b', r'\1', text, flags=re.IGNORECASE)
+    
+    # Clean up extra spaces
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)
+    
+    # Restore proper spacing after punctuation
+    text = re.sub(r'([.!?])\s*', r'\1 ', text)
+    text = re.sub(r'\s+$', '', text)
+    
+    return text.strip()
+
 def remove_disfluencies(transcript_text):
     """
-    Split transcript text into overlapping chunks, process each with Ollama,
-    then combine the cleaned chunks by removing overlap.
+    Eliminate line breaks, split into overlapping chunks, process each with Ollama,
+    then combine the cleaned chunks by removing overlaps correctly.
     
     Args:
-        transcript_text: Raw transcript text with line breaks
+        transcript_text: Raw transcript text (sanstimestamps.txt content)
     
     Returns:
-        Cleaned transcript with natural line breaks restored
+        Cleaned transcript with disfluencies removed
     """
-    # First pass: split into overlapping chunks
-    chunks = split_into_overlapping_chunks(transcript_text)
-    print(f"Split transcript into {len(chunks)} overlapping chunks...", file=sys.stderr)
+    if not transcript_text or len(transcript_text.strip()) == 0:
+        return ""
     
-    # Process each chunk
+    print(f"Original text length: {len(transcript_text)}", file=sys.stderr)
+    
+    # Step 1: Eliminate all line breaks to create one continuous string
+    flat_text = eliminate_line_breaks(transcript_text)
+    print(f"Flattened text length: {len(flat_text)}", file=sys.stderr)
+    
+    # Step 2: Split into overlapping chunks
+    chunks, boundaries = split_into_overlapping_chunks(flat_text)
+    print(f"Split into {len(chunks)} overlapping chunks", file=sys.stderr)
+    
+    # Step 3: Process each chunk
     cleaned_chunks = []
     for i, chunk in enumerate(chunks):
-        print(f"Processing chunk {i+1}/{len(chunks)}...", file=sys.stderr)
+        print(f"Processing chunk {i+1}/{len(chunks)} (length: {len(chunk)})...", file=sys.stderr)
         try:
             cleaned = process_chunk(chunk)
             cleaned_chunks.append(cleaned)
@@ -176,17 +293,19 @@ def remove_disfluencies(transcript_text):
             print(f"Error processing chunk {i+1}: {e}, using original chunk", file=sys.stderr)
             cleaned_chunks.append(chunk)
     
-    # Combine chunks by removing overlap
+    # Step 4: Combine chunks by accurately removing overlaps
     combined_result = combine_overlapping_chunks(cleaned_chunks)
+    print(f"Combined result length: {len(combined_result)}", file=sys.stderr)
     
-    # Restore natural line breaks at sentence boundaries
-    combined_result = re.sub(r'([.!?])\s+', r'\1\n\n', combined_result)
+    # Step 5: Apply post-processing regex cleaning
+    final_result = post_process_cleaned_text(combined_result)
+    print(f"Final cleaned length: {len(final_result)}", file=sys.stderr)
     
-    # Clean up any excessive whitespace
-    combined_result = re.sub(r'\n{3,}', '\n\n', combined_result)
-    combined_result = re.sub(r' +', ' ', combined_result)
+    # Step 6: Restore line breaks at sentence boundaries for readability
+    final_result = re.sub(r'([.!?])\s+', r'\1\n\n', final_result)
+    final_result = re.sub(r'\n{3,}', '\n\n', final_result)
     
-    return combined_result.strip()
+    return final_result
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
