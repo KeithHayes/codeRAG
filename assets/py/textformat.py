@@ -12,8 +12,7 @@ import time
 import json
 import subprocess
 
-#SELECTED_MODEL = 'qwen2.5:7b'
-SELECTED_MODEL = 'deepseek-r1:7b'
+SELECTED_MODEL = 'qwen2.5:7b'
 MAX_CHUNK_SIZE = 2000
 
 def pull_model_if_needed():
