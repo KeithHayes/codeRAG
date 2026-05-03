@@ -68,18 +68,53 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    async function getCurrentProfile() {
+        try {
+            const res = await fetch('assets/data/config.json?_=' + Date.now())
+            const config = await res.json()
+            return config.filesetconfig || 'ragcode'
+        } catch (err) {
+            return 'ragcode'
+        }
+    }
+
     async function loadModelFromConfig() {
         if (window.transitionTo) {
             window.transitionTo('model_auto_loading')
         }
         
         try {
+            const profile = await getCurrentProfile()
             const res = await fetch("assets/php/auto_load_model.php")
             const data = await res.json()
             
             if (data.success && data.status === "loaded") {
+                let successState = 'model_ready'
+                switch (profile) {
+                    case 'plantdiseases':
+                        successState = 'plantdiseases_model_ready'
+                        break
+                    case 'socialism':
+                        successState = 'socialism_model_ready'
+                        break
+                    case 'transcript':
+                        successState = 'transcript_model_ready'
+                        break
+                    case 'ragdocs':
+                        successState = 'ragdocs_model_ready'
+                        break
+                    case 'mainpage':
+                        successState = 'mainpage_model_ready'
+                        break
+                    case 'doomstead':
+                        successState = 'doomstead_model_ready'
+                        break
+                    default:
+                        successState = 'model_ready'
+                }
+                
                 if (window.transitionTo) {
-                    window.transitionTo('model_ready', { modelName: data.model })
+                    window.transitionTo(successState, { modelName: data.model })
                 }
                 promptInput.disabled = false
                 sendBtn.disabled = false
@@ -88,7 +123,30 @@ document.addEventListener("DOMContentLoaded", function () {
             } else {
                 if (window.transitionTo) {
                     const errorMsg = data.message || 'Failed to load model'
-                    window.transitionTo('model_failed', { modelName: data.model || 'unknown', error: errorMsg })
+                    let failState = 'model_failed'
+                    switch (profile) {
+                        case 'plantdiseases':
+                            failState = 'plantdiseases_model_failed'
+                            break
+                        case 'socialism':
+                            failState = 'socialism_model_failed'
+                            break
+                        case 'transcript':
+                            failState = 'transcript_model_failed'
+                            break
+                        case 'ragdocs':
+                            failState = 'ragdocs_model_failed'
+                            break
+                        case 'mainpage':
+                            failState = 'mainpage_model_failed'
+                            break
+                        case 'doomstead':
+                            failState = 'doomstead_model_failed'
+                            break
+                        default:
+                            failState = 'model_failed'
+                    }
+                    window.transitionTo(failState, { modelName: data.model || 'unknown', error: errorMsg })
                 }
                 return false
             }
