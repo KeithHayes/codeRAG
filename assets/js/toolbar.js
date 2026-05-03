@@ -550,79 +550,10 @@
         return
       }
       
-      // ----- Step 1: Remove timestamps -----
-      transitionTo(StatusState.RUNNING_PIPELINE, { profileName: 'Removing timestamps...' })
-      const cleanResponse = await fetch('assets/php/remove_timestamps.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      })
-      const cleanData = await cleanResponse.json()
-      if (!cleanData.success) {
-        throw new Error('Failed to remove timestamps: ' + (cleanData.error || 'Unknown error'))
-      }
-      
-      // ----- Step 2: Apply disfluency cleaning -----
-      transitionTo(StatusState.RUNNING_PIPELINE, { profileName: 'Cleaning disfluencies...' })
-      
-      const disfluencyResponse = await fetch('assets/php/clean_disfluencies.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      })
-      
-      if (!disfluencyResponse.ok) {
-        const text = await disfluencyResponse.text()
-        throw new Error('HTTP ' + disfluencyResponse.status + ': ' + text.substring(0, 200))
-      }
-      
-      const disfluencyData = await disfluencyResponse.json()
-      
-      if (!disfluencyData.success) {
-        throw new Error('Failed to clean disfluencies: ' + (disfluencyData.error || 'Unknown error') + 
-                       (disfluencyData.details ? ' - ' + disfluencyData.details : ''))
-      }
-      
-      // Wait for file system to flush
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // ----- Step 3: Read from sansdisfluencies.txt -----
-      const disfluencyCleanedPath = 'assets/data/transcripts/sansdisfluencies.txt'
-      console.log("Fetching disfluency-cleaned transcript from:", disfluencyCleanedPath)
-      
-      let finalTranscript = null
-      let retries = 5
-      while (retries > 0 && !finalTranscript) {
-        const finalResponse = await fetch(disfluencyCleanedPath + '?_=' + Date.now(), {
-          cache: 'no-store',
-          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
-        })
-        
-        if (finalResponse.ok) {
-          finalTranscript = await finalResponse.text()
-          break
-        }
-        
-        retries--
-        if (retries > 0) {
-          console.log(`File not found, retrying... (${retries} attempts left)`)
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-      }
-      
-      if (!finalTranscript) {
-        throw new Error('Disfluency-cleaned transcript file not found at: ' + disfluencyCleanedPath)
-      }
-      
-      console.log("Final transcript length:", finalTranscript.length)
-      
-      if (!finalTranscript || finalTranscript.trim().length === 0) {
-        throw new Error('Final transcript is empty')
-      }
-      
+      // Only call the pipeline - no preprocessing here
       transitionTo(StatusState.PROFILE_SWITCHING, { profileName: 'Processing transcript...' })
       
-      const result = await transcriptmodule.processtranscript(finalTranscript)
+      const result = await transcriptmodule.processtranscript()
       
       const chatbox = document.getElementById('chatbox')
       if (chatbox) {

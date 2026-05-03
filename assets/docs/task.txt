@@ -1,17 +1,14 @@
 --- PROMPT START ---
 
-Text is not being formatted correctly in the process pipeline.
+save_sanstimestamps.php needs to be added the sanstimestamps.txt file is not being saved 
 
-Failed to process transcript: Python script failed with exit code: 1
+read_sanstimestamps.php is also a file we should have.  We want to pass the pipeline stages through files
 
+save_sanstimestamps.php is the result of removing timestamps.  check that it is saved after timestampst are removed.
 
-
-
-
-The output is to be a formatted copy of the input.  Content does not change, it is formatted. 
+read_sanstimestamps.php is used as the input to disfluency removal the output of which is saved as sansdisfluencies.txt
 
 
-Punctuation is the presentation of the text content.  Our goal is to pass the text content punctuated into sentences and paragraphs.  The prompts and llm design are not supporting text processing as exteraneous information is added and there should be none of that.
-
+verify the above
 
 --- PROMPT END ---

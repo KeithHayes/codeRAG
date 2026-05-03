@@ -1,4 +1,3 @@
-
 toolbar:
   - 'fileload'
   - 'homeserver'
@@ -11,13 +10,6 @@ toolbar:
 ollama_model: "deepseek-r1:7b"
 
 stages:
-  - name: 'remove_definition_blocks'
-    type: 'regex'
-    pattern: '```[\s\S]*?```'
-    replacement: ''
-    flags: 'g'
-    enabled: true
-
   - name: 'remove_extra_whitespace'
     type: 'regex'
     pattern: '\n\s*\n+'
@@ -28,8 +20,15 @@ stages:
   - name: 'format_paragraphs'
     type: 'llm'
     model: 'deepseek-r1:7b'
-    system_prompt: "You are a transcript formatting assistant. Format the transcript into clean, readable paragraphs while preserving all factual content. Do not add or remove information. Just organize the text into coherent paragraphs."
-    user_prompt_template: "Format the following transcript into clean paragraphs:\n\n{input}"
+    system_prompt: "You are a transcript formatting assistant. Output ONLY the formatted text. No JSON, no markdown, no code blocks, no explanations."
+    user_prompt_template: "Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{input}"
     temperature: 0.1
-    max_tokens: 8192
+    max_tokens: 16384
+    enabled: false
+
+  - name: 'clean_llm_json_artifacts'
+    type: 'regex'
+    pattern: '```[\s\S]*?```|```|`|\n{3,}'
+    replacement: ''
+    flags: 'g'
     enabled: true

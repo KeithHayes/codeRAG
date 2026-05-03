@@ -7,7 +7,7 @@ toolbar:
   - 'book'
   - 'target'
 
-ollama_model: "deepseek-r1:8b"
+ollama_model: "mixtral:8x7b"
 
 system_prompt: "You are an expert agricultural assistant specializing in plant diseases. Answer based on the provided context. Be specific, cite symptoms, causes, and treatments when possible. Use the code context if relevant."
 
