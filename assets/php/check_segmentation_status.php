@@ -1,16 +1,18 @@
 <?php
-// assets/php/check_diarization_status.php
-// Check the status of background diarization
+// assets/php/check_segmentation_status.php
+// Check the status of background segmentation
+
+// Disable error output to prevent HTML from corrupting JSON
+error_reporting(0);
+ini_set('display_errors', 0);
 
 header('Content-Type: application/json');
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 $transcript_dir = __DIR__ . '/../data/transcripts';
-$output_path = $transcript_dir . '/diarizatedtext.txt';
-$status_file = $transcript_dir . '/diarization_status.json';
-$pid_file = $transcript_dir . '/diarization.pid';
-$log_file = $transcript_dir . '/diarization.log';
+$output_path = $transcript_dir . '/segmentedtext.txt';
+$status_file = $transcript_dir . '/segmentation_status.json';
+$pid_file = $transcript_dir . '/segmentation.pid';
+$log_file = $transcript_dir . '/segmentation.log';
 
 $response = [
     'success' => true,
@@ -60,9 +62,10 @@ if (file_exists($status_file)) {
             $response['start_time'] = $status['start_time'] ?? null;
             $response['pid'] = $status['pid'] ?? null;
             
-            // Check if process is still alive
-            if ($response['pid']) {
-                $running = shell_exec("ps -p " . escapeshellarg($response['pid']) . " > /dev/null 2>&1 && echo 'running'");
+            // Check if process is still alive - FIXED: null-safe pid handling
+            if (!empty($response['pid'])) {
+                $pid = (string)$response['pid'];  // Convert to string to avoid null issues
+                $running = shell_exec("ps -p " . escapeshellarg($pid) . " > /dev/null 2>&1 && echo 'running'");
                 if (trim($running) !== 'running') {
                     // Process died but status says running - error
                     $response['running'] = false;
@@ -74,6 +77,10 @@ if (file_exists($status_file)) {
                         $response['log_tail'] = substr($log_content, -500);
                     }
                 }
+            } else {
+                // No PID but status says running - likely stale state
+                $response['running'] = false;
+                $response['error'] = 'Segmentation process has no PID';
             }
             
             echo json_encode($response);
@@ -83,6 +90,6 @@ if (file_exists($status_file)) {
 }
 
 // No status file and no output - not running
-$response['message'] = 'No diarization process running';
+$response['message'] = 'No segmentation process running';
 echo json_encode($response);
 ?>

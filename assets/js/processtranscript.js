@@ -1,4 +1,4 @@
-// assets/js/processtranscript.js - Complete pipeline processor with better error handling
+// assets/js/processtranscript.js - Complete pipeline processor with debugging
 
 window.transcriptmodule = (function() {
   async function callOllama(model, systemPrompt, userPrompt, temperature = 0.0, maxTokens = 8192) {
@@ -46,6 +46,26 @@ window.transcriptmodule = (function() {
     }
   }
 
+  // Debug wrapper for fetch JSON responses
+  async function fetchJSON(url, options = {}) {
+    console.log(`[DEBUG] Fetching: ${url}`);
+    const response = await fetch(url, options);
+    const text = await response.text();
+    console.log(`[DEBUG] Response from ${url} (first 300 chars):`, text.substring(0, 300));
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} from ${url}: ${text.substring(0, 200)}`);
+    }
+    
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error(`[ERROR] Failed to parse JSON from ${url}`);
+      console.error(`[ERROR] Full response:`, text);
+      throw new Error(`Invalid JSON from ${url}: ${e.message}\nFirst 500 chars: ${text.substring(0, 500)}`);
+    }
+  }
+
   async function readRawTranscript() {
     console.log('[Pipeline] Reading raw transcript from rawtranscript.txt...')
     const rawTranscriptPath = 'assets/data/transcripts/rawtranscript.txt'
@@ -84,17 +104,11 @@ window.transcriptmodule = (function() {
 
   async function removeTimestamps() {
     console.log('[Pipeline] Step 1: Removing timestamps from raw transcript...')
-    const response = await fetch('assets/php/remove_timestamps.php', {
+    const data = await fetchJSON('assets/php/remove_timestamps.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
     })
-    
-    if (!response.ok) {
-      throw new Error(`Timestamp removal failed: ${response.status}`)
-    }
-    
-    const data = await response.json()
     
     if (!data.success) {
       throw new Error(data.error || 'Unknown error during timestamp removal')
@@ -106,13 +120,7 @@ window.transcriptmodule = (function() {
 
   async function readSanstimestamps() {
     console.log('[Pipeline] Verifying sanstimestamps.txt exists with disfluencies...')
-    const response = await fetch('assets/php/read_sanstimestamps.php')
-    
-    if (!response.ok) {
-      throw new Error(`Failed to read sanstimestamps: ${response.status}`)
-    }
-    
-    const data = await response.json()
+    const data = await fetchJSON('assets/php/read_sanstimestamps.php')
     
     if (!data.success || !data.content || data.content.trim().length === 0) {
       throw new Error('sanstimestamps.txt file is empty or missing - timestamp removal failed')
@@ -124,17 +132,11 @@ window.transcriptmodule = (function() {
 
   async function cleanDisfluencies() {
     console.log('[Pipeline] Step 2: Cleaning disfluencies via disfluencies.py...')
-    const response = await fetch('assets/php/clean_disfluencies.php', {
+    const data = await fetchJSON('assets/php/clean_disfluencies.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(600000)
+      body: JSON.stringify({})
     })
-    
-    if (!response.ok) {
-      throw new Error(`Clean disfluencies failed with status: ${response.status}`)
-    }
-    
-    const data = await response.json()
     
     if (!data.success) {
       throw new Error(data.error || 'Unknown error during disfluency cleaning')
@@ -177,17 +179,11 @@ window.transcriptmodule = (function() {
 
   async function formatText() {
     console.log('[Pipeline] Step 3: Formatting text via textformat.py...')
-    const response = await fetch('assets/php/format_text.php', {
+    const data = await fetchJSON('assets/php/format_text.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(600000)
+      body: JSON.stringify({})
     })
-    
-    if (!response.ok) {
-      throw new Error(`Format text failed with status: ${response.status}`)
-    }
-    
-    const data = await response.json()
     
     if (!data.success) {
       throw new Error(data.error || 'Unknown error during text formatting')
@@ -199,13 +195,7 @@ window.transcriptmodule = (function() {
 
   async function readFormattedText() {
     console.log('[Pipeline] Verifying formattedtext.txt exists...')
-    const response = await fetch('assets/php/read_formatted_text.php')
-    
-    if (!response.ok) {
-      throw new Error(`Failed to read formatted text: ${response.status}`)
-    }
-    
-    const data = await response.json()
+    const data = await fetchJSON('assets/php/read_formatted_text.php')
     
     if (!data.success || !data.content || data.content.trim().length === 0) {
       throw new Error('formattedtext.txt file is empty or missing')
@@ -215,29 +205,23 @@ window.transcriptmodule = (function() {
     return data.content
   }
 
-  async function performDiarizationWithPolling() {
-    console.log('[Pipeline] Step 4: Starting speaker diarization (background)...')
+  async function performSegmentationWithPolling() {
+    console.log('[Pipeline] Step 4: Starting speaker segmentation (background)...')
     
-    const startResponse = await fetch('assets/php/diarize_transcript.php', {
+    const startData = await fetchJSON('assets/php/segment_transcript.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
     })
     
-    if (!startResponse.ok) {
-      throw new Error(`Failed to start diarization: ${startResponse.status}`)
-    }
-    
-    const startData = await startResponse.json()
-    
     if (!startData.success) {
-      throw new Error(startData.error || 'Failed to start diarization')
+      throw new Error(startData.error || 'Failed to start segmentation')
     }
     
     if (startData.already_running) {
-      console.log('[Pipeline] Diarization already running, waiting for completion...')
+      console.log('[Pipeline] Segmentation already running, waiting for completion...')
     } else {
-      console.log(`[Pipeline] Diarization started in background (PID: ${startData.pid})`)
+      console.log(`[Pipeline] Segmentation started in background (PID: ${startData.pid})`)
     }
     
     let attempts = 0
@@ -246,68 +230,60 @@ window.transcriptmodule = (function() {
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 10000))
       
-      const statusResponse = await fetch('assets/php/check_diarization_status.php')
-      const statusData = await statusResponse.json()
-      
-      if (statusData.completed) {
-        console.log(`[Pipeline] Step 4 complete: diarizatedtext.txt saved, size: ${statusData.output_size}`)
-        return statusData.output_content
-      }
-      
-      if (statusData.error) {
-        throw new Error(`Diarization error: ${statusData.error}\nLog: ${statusData.log_tail || 'No log available'}`)
-      }
-      
-      if (!statusData.running && !statusData.completed) {
-        throw new Error('Diarization process stopped unexpectedly')
+      try {
+        const statusData = await fetchJSON('assets/php/check_segmentation_status.php')
+        
+        if (statusData.completed) {
+          console.log(`[Pipeline] Step 4 complete: segmentedtext.txt saved, size: ${statusData.output_size}`)
+          return statusData.output_content
+        }
+        
+        if (statusData.error) {
+          throw new Error(`Segmentation error: ${statusData.error}\nLog: ${statusData.log_tail || 'No log available'}`)
+        }
+        
+        if (!statusData.running && !statusData.completed) {
+          throw new Error('Segmentation process stopped unexpectedly')
+        }
+      } catch (e) {
+        console.error('[Pipeline] Error checking segmentation status:', e);
+        throw e;
       }
       
       attempts++
       if (attempts % 6 === 0) {
-        console.log(`[Pipeline] Still waiting for diarization... (${Math.round(attempts * 10 / 60)} minutes)`)
+        console.log(`[Pipeline] Still waiting for segmentation... (${Math.round(attempts * 10 / 60)} minutes)`)
       }
     }
     
-    throw new Error('Diarization timed out after 30 minutes')
+    throw new Error('Segmentation timed out after 30 minutes')
   }
 
-  async function readDiarizedText() {
-    console.log('[Pipeline] Verifying diarizatedtext.txt exists...')
-    const response = await fetch('assets/php/read_diarized_text.php')
-    
-    if (!response.ok) {
-      throw new Error(`Failed to read diarized text: ${response.status}`)
-    }
-    
-    const data = await response.json()
+  async function readSegmentedText() {
+    console.log('[Pipeline] Verifying segmentedtext.txt exists...')
+    const data = await fetchJSON('assets/php/read_segmented_text.php')
     
     if (!data.success || !data.content || data.content.trim().length === 0) {
-      throw new Error('Diarized text file is empty or missing - run diarization first')
+      throw new Error('Segmented text file is empty or missing - run segmentation first')
     }
     
-    console.log(`[Pipeline] diarizatedtext.txt verified, length: ${data.length}`)
+    console.log(`[Pipeline] segmentedtext.txt verified, length: ${data.length}`)
     return data.content
   }
 
-  async function saveDiarizatedText(diarizedText) {
-    console.log('[Pipeline] Saving diarized text backup...')
-    const response = await fetch('assets/php/save_diarizatedtext.php', {
+  async function saveSegmentedText(segmentText) {
+    console.log('[Pipeline] Saving segmented text backup...')
+    const data = await fetchJSON('assets/php/save_segmented_text.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcript: diarizedText })
+      body: JSON.stringify({ transcript: segmentText })
     })
     
-    if (!response.ok) {
-      throw new Error(`Failed to save diarized text: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    
     if (!data.success) {
-      throw new Error(data.error || 'Unknown error saving diarized text')
+      throw new Error(data.error || 'Unknown error saving segmented text')
     }
     
-    console.log(`[Pipeline] Diarized text backup saved. Size: ${data.size}`)
+    console.log(`[Pipeline] Segmented text backup saved. Size: ${data.size}`)
     return data
   }
 
@@ -431,39 +407,39 @@ window.transcriptmodule = (function() {
     console.log('[Pipeline] ==========================================')
     
     try {
-      // Step 1: Verify raw transcript exists (saved by Paste Transcript button)
+      // Step 1: Verify raw transcript exists
       await readRawTranscript()
       
-      // Step 2: Remove timestamps -> saves to sanstimestamps.txt
+      // Step 2: Remove timestamps -> sanstimestamps.txt
       await removeTimestamps()
       
-      // Step 3: Verify sanstimestamps.txt (should have disfluencies)
+      // Step 3: Verify sanstimestamps.txt
       await readSanstimestamps()
       
-      // Step 4: Clean disfluencies -> saves to sansdisfluencies.txt
+      // Step 4: Clean disfluencies -> sansdisfluencies.txt
       await cleanDisfluencies()
       
-      // Step 5: Verify sansdisfluencies.txt (should have no disfluencies)
+      // Step 5: Verify sansdisfluencies.txt
       await readSansdisfluencies()
       
-      // Step 6: Format text -> saves to formattedtext.txt
+      // Step 6: Format text -> formattedtext.txt
       await formatText()
       
       // Step 7: Verify formattedtext.txt
       await readFormattedText()
       
-      // Step 8: Run speaker diarization -> saves to diarizatedtext.txt
-      await performDiarizationWithPolling()
+      // Step 8: Run speaker segmentation -> segmentedtext.txt
+      await performSegmentationWithPolling()
       
-      // Step 9: Verify diarizatedtext.txt
-      const diarizedText = await readDiarizedText()
-      await saveDiarizatedText(diarizedText)
+      // Step 9: Verify segmentedtext.txt
+      const segmentText = await readSegmentedText()
+      await saveSegmentedText(segmentText)
       
       // Step 10: Load and run YAML pipeline stages
-      console.log(`[Pipeline] Step 5: Loading pipeline stages from transcript.yaml`)
+      console.log(`[Pipeline] Loading pipeline stages from transcript.yaml`)
       const stages = await loadPipelineConfig()
       
-      let current = diarizedText
+      let current = segmentText
       for (let i = 0; i < stages.length; i++) {
         const stage = stages[i]
         if (stage.enabled === false) {

@@ -1,7 +1,7 @@
-# assets/py/diarize_transcript.py
+# assets/py/segment_transcript.py
 """
-Speaker diarization module for transcript processing.
-Uses Ollama with deepseek-r1:7b to label each sentence as Interviewer: or Speaker:
+Speaker segmentation module for transcript processing.
+Uses Ollama with mistral model to label each sentence as Interviewer: or Speaker:
 Chunking respects sentence boundaries with overlap to maintain speaker identity.
 """
 
@@ -13,9 +13,9 @@ import json
 import time
 import signal
 
-SELECTED_MODEL = 'deepseek-r1:7b'
+SELECTED_MODEL = 'mistral:7b-instruct-v0.3-q4_0'
 MAX_CHUNK_SIZE = 2000
-OVERLAP_SENTENCES = 3  # Number of sentences to carry over for context
+OVERLAP_SENTENCES = 3
 
 def timeout_handler(signum, frame):
     raise Exception("Function timed out")
@@ -34,8 +34,8 @@ def ensure_ollama_running():
     print("Ollama service is not running", file=sys.stderr)
     return False
 
-def call_ollama_for_diarization(system_prompt, user_prompt, temperature=0.0, max_tokens=4096, timeout=90):
-    """Call Ollama API for speaker diarization with timeout."""
+def call_ollama_for_segmentation(system_prompt, user_prompt, temperature=0.0, max_tokens=4096, timeout=90):
+    """Call Ollama API for speaker segmentation with timeout."""
     ollama_url = 'http://localhost:11434/api/chat'
     
     payload = {
@@ -78,22 +78,13 @@ def call_ollama_for_diarization(system_prompt, user_prompt, temperature=0.0, max
     return data['message']['content'].strip()
 
 def extract_sentences(text):
-    """
-    Extract sentences from text using punctuation boundaries.
-    Returns list of sentences with their original formatting.
-    """
-    # Split on sentence boundaries: period, exclamation, question mark followed by space and capital letter
+    """Extract sentences from text using punctuation boundaries."""
     sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', text)
-    # Clean up each sentence
     sentences = [s.strip() for s in sentences if s.strip()]
     return sentences
 
 def chunk_with_overlap(text, max_chunk_size=MAX_CHUNK_SIZE, overlap_sentences=OVERLAP_SENTENCES):
-    """
-    Split text into chunks that respect sentence boundaries with overlap.
-    Each chunk includes overlap_sentences from the previous chunk for context.
-    Returns list of chunks with overlap metadata.
-    """
+    """Split text into chunks that respect sentence boundaries with overlap."""
     sentences = extract_sentences(text)
     
     if not sentences:
@@ -106,65 +97,56 @@ def chunk_with_overlap(text, max_chunk_size=MAX_CHUNK_SIZE, overlap_sentences=OV
     
     for i, sentence in enumerate(sentences):
         sentence_len = len(sentence)
-        estimated_chunk_size = chunk_size + sentence_len + 2  # +2 for space
+        estimated_chunk_size = chunk_size + sentence_len + 2
         
         if estimated_chunk_size > max_chunk_size and chunk_sentences:
-            # Save current chunk
             chunks.append({
                 'sentences': chunk_sentences.copy(),
                 'text': ' '.join(chunk_sentences),
-                'has_overlap': len(overlap_buffer) > 0
+                'has_overlap': len(overlap_buffer) > 0,
+                'overlap_count': len(overlap_buffer)
             })
             
-            # Prepare overlap for next chunk: keep last N sentences
             overlap_buffer = chunk_sentences[-overlap_sentences:] if len(chunk_sentences) >= overlap_sentences else chunk_sentences.copy()
             
-            # Start new chunk with overlap sentences
             chunk_sentences = overlap_buffer.copy()
             chunk_size = sum(len(s) for s in chunk_sentences) + (len(chunk_sentences) - 1) * 2 if chunk_sentences else 0
             
-            # Add current sentence
             chunk_sentences.append(sentence)
             chunk_size += sentence_len + 2 if len(chunk_sentences) > 1 else sentence_len
         else:
             chunk_sentences.append(sentence)
             chunk_size += sentence_len + 2 if len(chunk_sentences) > 1 else sentence_len
     
-    # Add the last chunk
     if chunk_sentences:
         chunks.append({
             'sentences': chunk_sentences.copy(),
             'text': ' '.join(chunk_sentences),
-            'has_overlap': len(chunks) > 0 and len(chunks[-1]['sentences']) > 0
+            'has_overlap': len(chunks) > 0 and len(chunks[-1]['sentences']) > 0,
+            'overlap_count': len(overlap_buffer) if len(chunks) > 0 else 0
         })
     
     return chunks
 
 def strip_overlap_from_output(output_text, chunk_info):
-    """
-    Remove the overlap sentences from the beginning of the output for all chunks except the first.
-    This ensures we don't duplicate content when merging.
-    """
+    """Remove overlap sentences from the beginning of the output."""
     if not chunk_info.get('has_overlap', False):
         return output_text
     
     lines = output_text.strip().split('\n')
-    overlap_removed = []
-    overlap_found = 0
-    target_overlap = OVERLAP_SENTENCES
     
-    for line in lines:
-        # Check if this line appears to be in the overlap (based on content)
-        # We'll remove lines until we've removed approximately the overlap count
-        if overlap_found < target_overlap:
-            overlap_found += 1
-            continue
-        overlap_removed.append(line)
+    if len(lines) <= chunk_info.get('overlap_count', OVERLAP_SENTENCES):
+        return output_text
+    
+    overlap_removed = lines[chunk_info.get('overlap_count', OVERLAP_SENTENCES):]
+    
+    if not overlap_removed:
+        return output_text
     
     return '\n'.join(overlap_removed)
 
-def clean_diarization_output(output_text):
-    """Clean and normalize diarization output."""
+def clean_segmentation_output(output_text):
+    """Clean and normalize segmentation output."""
     lines = output_text.split('\n')
     cleaned_lines = []
     
@@ -173,10 +155,8 @@ def clean_diarization_output(output_text):
         if not line:
             continue
         
-        # Ensure line starts with Interviewer: or Speaker:
         if not (line.startswith('Interviewer:') or line.startswith('Speaker:')):
-            # Try to infer speaker based on content
-            if '?' in line or any(word in line.lower() for word in ['what', 'how', 'why', 'when', 'where', 'could', 'would', 'can', 'please tell', 'can you']):
+            if '?' in line or any(word in line.lower() for word in ['what', 'how', 'why', 'when', 'where', 'could', 'would', 'can', 'please tell']):
                 line = 'Interviewer: ' + line
             else:
                 line = 'Speaker: ' + line
@@ -185,8 +165,35 @@ def clean_diarization_output(output_text):
     
     return '\n'.join(cleaned_lines)
 
-def diarize_transcript(transcript_text):
-    """Perform speaker diarization on transcript text using Ollama."""
+def update_status(completed=False, error=None):
+    """Update the segmentation status file."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    transcript_dir = os.path.dirname(script_dir) + '/data/transcripts'
+    status_file = transcript_dir + '/segmentation_status.json'
+    
+    status = {
+        'running': not completed,
+        'completed': completed,
+        'end_time': time.time() if completed else None,
+        'error': error
+    }
+    
+    try:
+        with open(status_file, 'w') as f:
+            json.dump(status, f)
+    except:
+        pass
+    
+    if completed and not error:
+        pid_file = transcript_dir + '/segmentation.pid'
+        if os.path.exists(pid_file):
+            try:
+                os.unlink(pid_file)
+            except:
+                pass
+
+def segment_transcript(transcript_text):
+    """Perform speaker segmentation on transcript text using Ollama."""
     if not transcript_text or not transcript_text.strip():
         raise ValueError("Input text is empty")
     
@@ -200,11 +207,10 @@ def diarize_transcript(transcript_text):
     if not ensure_ollama_running():
         raise Exception("Ollama service is not running")
     
-    # Split into overlapping sentence-respecting chunks
     chunks = chunk_with_overlap(transcript_text)
     print(f"Split into {len(chunks)} chunks with {OVERLAP_SENTENCES}-sentence overlap", file=sys.stderr)
     
-    system_prompt = """You are an expert conversation analyst. Perform speaker diarization on the transcript. The conversation is between exactly two people: "Interviewer" (asks questions) and "Speaker" (provides answers).
+    system_prompt = """You are an expert conversation analyst. Perform speaker segmentation on the transcript. The conversation is between exactly two people: "Interviewer" (asks questions) and "Speaker" (provides answers).
 
 RULES:
 - Label each sentence with either "Interviewer:" or "Speaker:"
@@ -226,7 +232,6 @@ RULES:
         if chunk_info['has_overlap'] and not is_first_chunk:
             print(f"  Includes {OVERLAP_SENTENCES} overlap sentences for context", file=sys.stderr)
         
-        # Add context note for overlapping chunks
         context_note = ""
         if chunk_info['has_overlap'] and not is_first_chunk:
             context_note = "\n\nNOTE: The first few sentences in this chunk repeat from the previous chunk for context. Maintain consistent speaker labeling with the previous labeling."
@@ -238,7 +243,7 @@ RULES:
         result = None
         for attempt in range(2):
             try:
-                result = call_ollama_for_diarization(system_prompt, user_prompt, timeout=90)
+                result = call_ollama_for_segmentation(system_prompt, user_prompt, timeout=90)
                 if result and len(result) > 10:
                     break
             except Exception as e:
@@ -248,7 +253,6 @@ RULES:
         
         if not result:
             print(f"  WARNING: Chunk {i+1} failed, using fallback heuristic", file=sys.stderr)
-            # Fallback: simple heuristic labeling on sentence boundaries
             sentences = extract_sentences(chunk_text)
             fallback_lines = []
             for sentence in sentences:
@@ -258,9 +262,11 @@ RULES:
                     fallback_lines.append('Speaker: ' + sentence)
             result = '\n'.join(fallback_lines)
         
-        # Remove overlap from non-first chunks to avoid duplication
         if not is_first_chunk and chunk_info['has_overlap']:
-            result = strip_overlap_from_output(result, chunk_info)
+            try:
+                result = strip_overlap_from_output(result, chunk_info)
+            except Exception as e:
+                print(f"  WARNING: Could not strip overlap: {e}", file=sys.stderr)
         
         elapsed = time.time() - start_time
         print(f"  Completed in {elapsed:.1f}s", file=sys.stderr)
@@ -270,7 +276,7 @@ RULES:
     
     print(f"\nMerging {len(labeled_chunks)} chunks...", file=sys.stderr)
     result = '\n\n'.join(labeled_chunks)
-    result = clean_diarization_output(result)
+    result = clean_segmentation_output(result)
     
     print(f"Total time: {total_elapsed:.1f}s", file=sys.stderr)
     print(f"Output size: {len(result)} characters", file=sys.stderr)
@@ -296,16 +302,20 @@ if __name__ == "__main__":
         
         if not input_text or not input_text.strip():
             print("Input file is empty", file=sys.stderr)
+            update_status(completed=True, error="Input file is empty")
             sys.exit(1)
         
-        result = diarize_transcript(input_text)
+        result = segment_transcript(input_text)
         
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(result)
         
         print(f"Success! Output length: {len(result)}", file=sys.stderr)
+        update_status(completed=True, error=None)
         sys.exit(0)
         
     except Exception as e:
-        print(f"Error: {str(e)}", file=sys.stderr)
+        error_msg = str(e)
+        print(f"Error: {error_msg}", file=sys.stderr)
+        update_status(completed=True, error=error_msg)
         sys.exit(1)

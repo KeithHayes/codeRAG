@@ -1,6 +1,6 @@
 <?php
-// assets/php/diarize_transcript.php
-// Start diarization as background process and return immediately
+// assets/php/segment_transcript.php
+// Start segmentation as background process and return immediately
 
 header('Content-Type: application/json');
 error_reporting(E_ALL);
@@ -8,21 +8,21 @@ ini_set('display_errors', 1);
 
 $transcript_dir = __DIR__ . '/../data/transcripts';
 $input_path = $transcript_dir . '/formattedtext.txt';
-$output_path = $transcript_dir . '/diarizatedtext.txt';
-$status_file = $transcript_dir . '/diarization_status.json';
-$pid_file = $transcript_dir . '/diarization.pid';
-$log_file = $transcript_dir . '/diarization.log';
+$output_path = $transcript_dir . '/segmentedtext.txt';
+$status_file = $transcript_dir . '/segmentation_status.json';
+$pid_file = $transcript_dir . '/segmentation.pid';
+$log_file = $transcript_dir . '/segmentation.log';
 
 // Check if already running
 if (file_exists($status_file)) {
     $status = json_decode(file_get_contents($status_file), true);
-    if ($status && $status['running'] === true) {
+    if ($status && isset($status['running']) && $status['running'] === true) {
         echo json_encode([
             'success' => true,
             'async' => true,
             'already_running' => true,
-            'message' => 'Diarization already in progress',
-            'status_endpoint' => 'assets/php/check_diarization_status.php'
+            'message' => 'Segmentation already in progress',
+            'status_endpoint' => 'assets/php/check_segmentation_status.php'
         ]);
         exit;
     }
@@ -59,12 +59,13 @@ if (!$python_binary) {
     exit;
 }
 
-$python_script = __DIR__ . '/../py/diarize_transcript.py';
+// Use absolute path with doomsteadRAG in the path
+$python_script = '/var/www/html/doomsteadRAG/assets/py/segment_transcript.py';
 
 if (!file_exists($python_script)) {
     echo json_encode([
         'success' => false,
-        'error' => 'Diarization script not found at: ' . $python_script
+        'error' => 'Segmentation script not found at: ' . $python_script
     ]);
     exit;
 }
@@ -89,14 +90,21 @@ $cmd = "nohup " . escapeshellcmd($python_binary) . " " .
 $pid = shell_exec($cmd);
 $pid = trim($pid);
 
-$status['pid'] = $pid;
+// Update status file with PID
+$status = [
+    'running' => true,
+    'completed' => false,
+    'start_time' => time(),
+    'pid' => $pid,
+    'error' => null
+];
 file_put_contents($status_file, json_encode($status));
 
 echo json_encode([
     'success' => true,
     'async' => true,
-    'message' => 'Diarization started in background',
+    'message' => 'Segmentation started in background',
     'pid' => $pid,
-    'status_endpoint' => 'assets/php/check_diarization_status.php'
+    'status_endpoint' => 'assets/php/check_segmentation_status.php'
 ]);
 ?>

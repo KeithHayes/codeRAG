@@ -24,7 +24,7 @@ stages:
     user_prompt_template: "Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{input}"
     temperature: 0.1
     max_tokens: 16384
-    enabled: false
+    enabled: true
 
   - name: 'clean_llm_json_artifacts'
     type: 'regex'

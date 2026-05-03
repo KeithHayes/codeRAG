@@ -1,12 +1,26 @@
 --- PROMPT START ---
 
-save_sanstimestamps.php needs to be added the sanstimestamps.txt file is not being saved 
+Failed to process transcript: Segmentation error: Process died unexpectedly
+Log: verlap sentences for context
+  Completed in 6.6s
+[22/24] Processing 1980 chars...
+  Includes 3 overlap sentences for context
+  Completed in 7.3s
+[23/24] Processing 1908 chars...
+  Includes 3 overlap sentences for context
+  Completed in 4.8s
+[24/24] Processing 1393 chars...
+  Includes 3 overlap sentences for context
+  Completed in 4.2s
 
-read_sanstimestamps.php is also a file we should have.  We want to pass the pipeline stages through files
+Merging 24 chunks...
+Total time: 142.2s
+Output size: 22636 characters
+============================================================
 
-save_sanstimestamps.php is the result of removing timestamps.  check that it is saved after timestampst are removed.
+Success! Output length: 22636
 
-read_sanstimestamps.php is used as the input to disfluency removal the output of which is saved as sansdisfluencies.txt
+The error happens because the end of chunk processing is reached and we need to fix this if you agree with the diagnosis.
 
 
 verify the above

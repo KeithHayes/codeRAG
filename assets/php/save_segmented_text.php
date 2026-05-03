@@ -1,6 +1,6 @@
 <?php
-// assets/php/save_diarizatedtext.php
-// Save diarizated transcript to diarizatedtext.txt
+// assets/php/save_segmented_text.php
+// Save diarizated transcript to segmentedtext.txt
 
 header('Content-Type: application/json');
 error_reporting(0);
@@ -29,7 +29,7 @@ if (!is_dir($transcript_dir)) {
     }
 }
 
-$file_path = $transcript_dir . '/diarizatedtext.txt';
+$file_path = $transcript_dir . '/segmentedtext.txt';
 $result = file_put_contents($file_path, $transcript);
 
 if ($result === false) {
