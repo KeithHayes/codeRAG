@@ -13,6 +13,16 @@ class BuildModal {
         this.creationTime = new Date().getTime()
         this.pollInterval = null
         this.lastProcessedLine = ''
+        this.lastProgressPercent = 0
+        this.progressSteps = {
+            'starting': 0,
+            'loading_documents': 5,
+            'splitting': 20,
+            'creating_chunks': 30,
+            'building_index': 50,
+            'saving': 90,
+            'complete': 100
+        }
         this.createModal()
     }
 
@@ -89,7 +99,7 @@ class BuildModal {
                 .then(res => res.json())
                 .then(config => {
                     const profile = config.filesetconfig || 'ragcode'
-                    return fetch('assets/php/show_log.php?profile=' + profile)
+                    return fetch('assets/php/show_log.php?profile=' + profile + '&_=' + Date.now())
                 })
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok')
@@ -105,7 +115,7 @@ class BuildModal {
                     }
                 })
                 .catch(() => {})
-        }, 1000)
+        }, 800)
     }
 
     parseLogTimestamp(logLine) {
@@ -125,8 +135,48 @@ class BuildModal {
         return date.getTime()
     }
 
+    getProgressFromLine(line) {
+        const lowerLine = line.toLowerCase()
+        
+        if (lowerLine.includes('splitting') || lowerLine.includes('splitter')) {
+            return { percent: this.progressSteps.splitting, status: 'Splitting documents into chunks...' }
+        }
+        
+        if (lowerLine.includes('chunk')) {
+            const chunkMatch = line.match(/(\d+)\s+chunks?/i)
+            if (chunkMatch) {
+                return { percent: this.progressSteps.creating_chunks, status: 'Creating ' + chunkMatch[1] + ' chunks...' }
+            }
+            return { percent: this.progressSteps.creating_chunks, status: 'Creating document chunks...' }
+        }
+        
+        if (lowerLine.includes('embedding') || lowerLine.includes('faiss')) {
+            return { percent: this.progressSteps.building_index, status: 'Building FAISS index with embeddings...' }
+        }
+        
+        if (lowerLine.includes('saving') || lowerLine.includes('save')) {
+            return { percent: this.progressSteps.saving, status: 'Saving FAISS index to disk...' }
+        }
+        
+        if (lowerLine.includes('batch')) {
+            const batchMatch = line.match(/batch\s+(\d+)\/(\d+)/i)
+            if (batchMatch) {
+                const current = parseInt(batchMatch[1])
+                const total = parseInt(batchMatch[2])
+                if (total > 0) {
+                    const batchPercent = Math.floor((current / total) * 60)
+                    const percent = Math.min(this.progressSteps.building_index + batchPercent, 89)
+                    return { percent: percent, status: 'Processing batch ' + current + ' of ' + total + '...' }
+                }
+            }
+        }
+        
+        return null
+    }
+
     processLogLine(line) {
         const lineTime = this.parseLogTimestamp(line)
+        const lowerLine = line.toLowerCase()
         
         if (this.currentState === 'initializing') {
             if (lineTime > this.creationTime) {
@@ -141,22 +191,26 @@ class BuildModal {
             this.statusText.textContent = infoMatch[1]
         }
 
-        const batchMatch = line.match(/Processed batch (\d+)\/(\d+)/)
-        if (batchMatch) {
-            const currentBatch = parseInt(batchMatch[1])
-            const totalBatches = parseInt(batchMatch[2])
-            const percent = Math.min(Math.ceil((currentBatch / totalBatches) * 100), 100)
-            this.updateProgress(percent, 'Processing batch ' + currentBatch + ' of ' + totalBatches)
+        const progressInfo = this.getProgressFromLine(line)
+        if (progressInfo) {
+            this.updateProgress(progressInfo.percent, progressInfo.status)
+        }
+
+        const createdMatch = lowerLine.match(/created\s+(\d+)\s+chunks?/)
+        if (createdMatch && !this.totalChunks) {
+            this.totalChunks = parseInt(createdMatch[1])
+            this.updateProgress(this.progressSteps.creating_chunks, 'Created ' + this.totalChunks + ' chunks, building FAISS index...')
         }
         
-        const chunkMatch = line.match(/Created (\d+) chunks/)
-        if (chunkMatch && !this.totalChunks) {
-            this.totalChunks = parseInt(chunkMatch[1])
-            this.updateProgress(0, 'Processing ' + this.totalChunks + ' chunks...')
+        if (lowerLine.includes('documents')) {
+            const docMatch = line.match(/(\d+)\s+documents?/i)
+            if (docMatch) {
+                this.updateProgress(this.progressSteps.starting, 'Loading ' + docMatch[1] + ' documents...')
+            }
         }
         
-        if (line.includes('Build completed successfully')) {
-            this.updateProgress(100, 'Build completed successfully')
+        if (lowerLine.includes('build completed successfully')) {
+            this.updateProgress(100, 'Build completed successfully!')
             this.currentState = 'complete'
             this.progressBar.style.backgroundColor = '#0f5e02'
             
@@ -165,9 +219,17 @@ class BuildModal {
             }, 3000)
         }
         
-        if (line.includes('ERROR') || line.includes('failed')) {
+        if (lowerLine.includes('loading') && lowerLine.includes('specification')) {
+            this.updateProgress(this.progressSteps.loading_documents, 'Loading specification documents...')
+        }
+        
+        if (lowerLine.includes('loading') && lowerLine.includes('pdf')) {
+            this.updateProgress(this.progressSteps.loading_documents, 'Loading PDF documents...')
+        }
+        
+        if (lowerLine.includes('error') || lowerLine.includes('failed')) {
             this.statusText.style.color = '#b90E0A'
-            this.updateProgress(0, 'Build failed - check logs')
+            this.updateProgress(0, 'Build failed - check server logs')
             setTimeout(() => {
                 this.close()
             }, 5000)
@@ -176,9 +238,17 @@ class BuildModal {
 
     updateProgress(percent, status) {
         let displayPercent = Math.min(Math.max(percent, 0), 100)
+        
+        if (displayPercent < this.lastProgressPercent && displayPercent < 90) {
+            displayPercent = Math.max(displayPercent, this.lastProgressPercent)
+        }
+        
+        this.lastProgressPercent = displayPercent
+        
         this.progressBar.style.width = displayPercent + '%'
         this.progressBar.textContent = displayPercent + '%'
-        this.progressText.textContent = displayPercent + '%'
+        this.progressText.textContent = displayPercent + '% complete'
+        
         if (status) {
             this.statusText.textContent = status
         }

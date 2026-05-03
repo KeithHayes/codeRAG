@@ -46,8 +46,8 @@ def create_report():
 
     # Paths to include in the report
     boilerplate_files = [
-        os.path.join(base_path, 'assets', 'docs', 'task.txt'),
-        #os.path.join(base_path, 'assets', 'docs', 'backannotate.txt'),
+        #os.path.join(base_path, 'assets', 'docs', 'task.txt'),
+        os.path.join(base_path, 'assets', 'docs', 'backannotate.txt'),
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
         os.path.join(base_path, 'assets','data','transcripts', 'rawtranscript.txt'),
@@ -55,7 +55,7 @@ def create_report():
         os.path.join(base_path, 'assets','data','transcripts', 'sansdisfluencies.txt'),
         os.path.join(base_path, 'assets','data','transcripts', 'formattedtext.txt'),
         os.path.join(base_path, 'assets','data','transcripts', 'segmentedtext.txt'),
-        #os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
+        os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
         os.path.join(base_path, 'assets', 'logs', 'php_errors.log'),
     ]
 

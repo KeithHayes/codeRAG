@@ -167,6 +167,14 @@
     statusDiv.textContent = message
   }
   
+  function enableChatInputs() {
+    const promptInput = document.getElementById('userInput')
+    const sendBtn = document.getElementById('sendButton')
+    if (promptInput) promptInput.disabled = false
+    if (sendBtn) sendBtn.disabled = false
+    if (promptInput) promptInput.focus()
+  }
+  
   function transitionTo(newState, data = {}) {
     clearAutoTransition()
     currentState = newState
@@ -182,6 +190,7 @@
       case StatusState.TRANSCRIPT_MODEL_READY:
       case StatusState.PLANTDISEASES_MODEL_READY:
       case StatusState.SOCIALISM_MODEL_READY:
+        enableChatInputs()
         autoTransitionTimeout = setTimeout(() => {
           transitionTo(StatusState.IDLE)
         }, 4000)
@@ -482,6 +491,7 @@
                 transitionTo(readyState, { modelName: modelName })
                 if (promptInput) promptInput.disabled = false
                 if (sendBtn) sendBtn.disabled = false
+                if (promptInput) promptInput.focus()
               } else if (loadData.status === 'loading') {
                 transitionTo(loadingState, { modelName: modelName })
                 if (promptInput) promptInput.disabled = true

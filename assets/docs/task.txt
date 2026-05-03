@@ -1,5 +1,185 @@
---- PROMPT START ---
+You must generate a **fully accurate as-built specification** of the current codebase by analyzing ALL provided files. The output must reflect the actual implementation — not assumptions, not prior documentation.  The code paths triggered from all the toolbar buttons will be described in detail.  Document all functions and who they call and how they are called.
 
-the PlantDiseases configuration 'Load Model' button never reports the model as loaded.
+---
 
---- PROMPT END ---
+## CORE RULE (NON-NEGOTIABLE)
+
+Only document behavior that is explicitly present in the code.
+
+* Do NOT infer
+* Do NOT generalize
+* Do NOT “improve” descriptions
+* If something is unclear, describe exactly what the code does, not what it “should” do
+
+---
+
+## ACCURACY REQUIREMENTS
+
+* All button behavior must match **actual event handlers in toolbar.js**
+* All API endpoints must match **exact PHP implementations**:
+
+  * rag.php
+  * ollama_api.php
+  * force_reload_model.php
+  * fullbuilder.php
+* Modal behavior must match:
+
+  * build_modal.js
+  * clipboard_modal.js
+  * model_modal.js
+* ALL status messages must be **verbatim strings copied from code**
+* ALL function names must match exactly as written in code
+* ALL timings (intervals, delays, polling rates) must match actual values
+
+---
+
+## COMPLETENESS REQUIREMENTS
+
+You MUST include and fully document ALL of the following:
+
+### Buttons (from toolbar.js)
+
+* fileload
+* homeserver
+* fullbuild
+* pastetranscript
+* loadmodel
+* runtask
+* choosemodel
+* stub
+* homepage
+* book
+
+For EACH button include:
+
+* Trigger (click / hover / etc.)
+* Function name handling it
+* API calls (exact endpoint + method)
+* Status messages (exact strings)
+* Success behavior
+* Failure behavior
+
+---
+
+### Systems that MUST be documented
+
+#### Toolbar visibility system
+
+* parseToolbarFromYaml
+* applyToolbarVisibility
+* YAML-driven behavior
+
+#### Stack system
+
+* checkStackStatus polling (3-second interval)
+* homeservershift class behavior
+* start/stop logic
+
+#### Model system
+
+* pollModelStatus
+* force_reload_model.php
+* model loading states
+
+#### Page load behavior
+
+* auto-load logic from rag.js
+
+#### RAG system
+
+* Vector search logic
+* Context building
+* Relevance scoring
+* Prompt construction
+* Ollama query structure
+
+#### FAISS builder
+
+* Document type handling
+* Boosting rules (.js, .php, .py, etc.)
+* Chunking behavior
+* Embedding model usage
+
+#### ModelModal (dropdown)
+
+* Hover behavior
+* Fetch logic
+* Selection handling
+* UI timing (delays, hide behavior)
+
+#### Python API server
+
+* api_server.py exists but is not primary
+* Clearly distinguish from PHP backend
+
+#### YAML configuration
+
+* Model selection
+* Prompts (system + user template)
+* Embedding configuration
+* Toolbar definitions
+
+---
+
+## TRACEABILITY REQUIREMENTS
+
+Every described behavior MUST include its source:
+
+Format:
+[implemented in <file> : <function> : lines X–Y]
+
+Example:
+
+* Sends GET request to ollama_api.php?action=start
+  [implemented in toolbar.js : handleStackButtonClick : lines 156–189]
+
+If line numbers are unavailable, still include file + function.
+
+---
+
+## STRUCTURE REQUIREMENTS
+
+* Use clear sections with ### headers
+* Group logically:
+
+  * Toolbar / Buttons
+  * State & Status System
+  * Modals
+  * RAG Backend
+  * FAISS System
+  * API Endpoints
+* Use bullet points ( - ) consistently
+* Keep descriptions precise and technical (developer-focused)
+
+---
+
+## OUTPUT REQUIREMENT (CRITICAL)
+
+* Output the ENTIRE specification in ONE single block
+* No explanations before or after
+* No commentary
+* No markdown headers outside the document
+* No placeholders
+* No TODOs
+* No missing sections
+
+The output must be directly savable as:
+
+as-built-specification.txt
+
+---
+
+## FINAL CHECK BEFORE OUTPUT
+
+Verify:
+
+* Every button is documented
+* Every system listed above is included
+* All strings match code exactly
+* No invented behavior exists
+* All descriptions are traceable to code
+
+Only output the final specification.
+
+Put the output in a download / copy box so I can cut and paste or download.
+

@@ -1,3 +1,4 @@
+// assets/php/rag.php
 <?php
 // assets/php/rag.php — Doomstead RAG Backend with FAISS + Ollama
 error_reporting(E_ALL);
@@ -45,10 +46,20 @@ class RAGSystem {
         }
         
         $content = file_get_contents($yaml_file);
+        
+        // Try simple format first (ragcode, plantdiseases, etc.)
         if (preg_match('/ollama_model:\s*["\']?([^"\'\n]+)["\']?/', $content, $matches)) {
             $this->current_model = trim($matches[1]);
-        } else {
-            throw new Exception("ollama_model not found in {$yaml_file}");
+            error_log("RAG System loaded model from simple YAML: {$this->current_model} for profile: {$this->current_profile}");
+        }
+        // Try nested format
+        else if (preg_match('/doomsteadRAG:\s*\n\s+ollama_model:\s*["\']?([^"\'\n]+)["\']?/', $content, $matches)) {
+            $this->current_model = trim($matches[1]);
+            error_log("RAG System loaded model from nested YAML: {$this->current_model} for profile: {$this->current_profile}");
+        }
+        else {
+            error_log("RAG System WARNING: ollama_model not found in {$yaml_file}, using default");
+            $this->current_model = 'deepseek-coder:6.7b';
         }
     }
     
@@ -60,16 +71,24 @@ class RAGSystem {
         
         $content = file_get_contents($yaml_file);
         
+        // Try simple format
         if (preg_match('/system_prompt:\s*"([^"]+)"/', $content, $matches)) {
             $this->system_prompt = $matches[1];
+        } else if (preg_match('/doomsteadRAG:\s*\n\s+system_prompt:\s*"([^"]+)"/', $content, $matches)) {
+            $this->system_prompt = $matches[1];
         } else {
-            throw new Exception("system_prompt not found in {$yaml_file}");
+            $this->system_prompt = "You are a helpful assistant. Answer based on the provided context.";
+            error_log("RAG System using default system_prompt for profile: {$this->current_profile}");
         }
         
+        // Try simple format for user_prompt_template
         if (preg_match('/user_prompt_template:\s*"([^"]+)"/', $content, $matches)) {
             $this->user_prompt_template = $matches[1];
+        } else if (preg_match('/doomsteadRAG:\s*\n\s+user_prompt_template:\s*"([^"]+)"/', $content, $matches)) {
+            $this->user_prompt_template = $matches[1];
         } else {
-            throw new Exception("user_prompt_template not found in {$yaml_file}");
+            $this->user_prompt_template = "Context:\n{context}\n\nQuestion: {question}\n\nAnswer:";
+            error_log("RAG System using default user_prompt_template for profile: {$this->current_profile}");
         }
     }
     
@@ -105,10 +124,12 @@ class RAGSystem {
         }
         
         if ($current_model === $this->current_model) {
+            error_log("Model {$this->current_model} already loaded and running");
             return;
         }
         
         if ($current_model) {
+            error_log("Stopping current model: {$current_model}");
             $ch = curl_init($this->ollama_url . '/api/generate');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
@@ -119,6 +140,7 @@ class RAGSystem {
             usleep(500000);
         }
         
+        error_log("Loading model: {$this->current_model}");
         $ch = curl_init($this->ollama_url . '/api/generate');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -143,12 +165,14 @@ class RAGSystem {
                 $data = json_decode($resp, true);
                 if (isset($data['models']) && !empty($data['models']) && $data['models'][0]['name'] === $this->current_model) {
                     $loaded = true;
+                    error_log("Model {$this->current_model} successfully loaded after " . ($i + 1) . " seconds");
                     break;
                 }
             }
         }
         
         if (!$loaded) {
+            error_log("Failed to load model: {$this->current_model}");
             throw new Exception("Failed to load model: {$this->current_model}");
         }
     }
@@ -762,6 +786,8 @@ try {
             if (file_exists($yaml_file)) {
                 $yaml_content = file_get_contents($yaml_file);
                 if (preg_match('/ollama_model:\s*["\']?([^"\'\n]+)["\']?/', $yaml_content, $matches)) {
+                    $model_name = trim($matches[1]);
+                } else if (preg_match('/doomsteadRAG:\s*\n\s+ollama_model:\s*["\']?([^"\'\n]+)["\']?/', $yaml_content, $matches)) {
                     $model_name = trim($matches[1]);
                 }
             }
