@@ -1,12 +1,12 @@
-# assets/py/disfluencies.py
+#!/usr/bin/env python3
 """
-Disfluency cleaning module for transcript processing.
-Uses regex and word-level logic to remove disfluencies line by line.
-Removes filler words, stutters, repeated words, and partial-word self-corrections.
+disfluencies.py - Remove disfluencies from transcript text.
+Reads input from file (argv[1]), writes cleaned output to file (argv[2]).
+No file I/O in this script - pure transformation.
 """
 
-import re
 import sys
+import re
 import os
 
 # Comprehensive list of filler words/phrases to remove
@@ -99,7 +99,7 @@ def remove_word_stutters(text):
     Also handles multi-word stutters like 'in the in the'.
     """
     # Single word repetitions
-    cleaned = re.sub(r'\b(\w+)\s+\1\b', r'\1', cleaned := text, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\b(\w+)\s+\1\b', r'\1', text, flags=re.IGNORECASE)
     # Run multiple times to catch chains like "the the the"
     for _ in range(3):
         cleaned = re.sub(r'\b(\w+)\s+\1\b', r'\1', cleaned, flags=re.IGNORECASE)
@@ -193,34 +193,54 @@ def remove_disfluencies(transcript_text):
     
     return result
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 3:
+        print("Error: Missing input or output file arguments", file=sys.stderr)
         print(f"Usage: {sys.argv[0]} <input_file> <output_file>", file=sys.stderr)
         sys.exit(1)
     
     input_file = sys.argv[1]
     output_file = sys.argv[2]
     
+    # Check input exists
     if not os.path.exists(input_file):
-        print(f"Input file not found: {input_file}", file=sys.stderr)
+        print(f"Error: Input file not found: {input_file}", file=sys.stderr)
         sys.exit(1)
     
+    # Read input
     try:
         with open(input_file, 'r', encoding='utf-8') as f:
             input_text = f.read()
-        
-        if not input_text or not input_text.strip():
-            print("Input file is empty", file=sys.stderr)
-            sys.exit(1)
-        
-        result = remove_disfluencies(input_text)
-        
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(result)
-        
-        print(f"Successfully cleaned transcript. Output length: {len(result)} chars, lines: {len(result.split(chr(10)))}", file=sys.stderr)
-        sys.exit(0)
-        
     except Exception as e:
-        print(f"Error: {str(e)}", file=sys.stderr)
+        print(f"Error reading input file: {str(e)}", file=sys.stderr)
         sys.exit(1)
+    
+    if not input_text or not input_text.strip():
+        print("Error: Input file is empty", file=sys.stderr)
+        sys.exit(1)
+    
+    # Process
+    try:
+        output_text = remove_disfluencies(input_text)
+    except Exception as e:
+        print(f"Error processing text: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+    
+    if not output_text or not output_text.strip():
+        print("Error: Output is empty", file=sys.stderr)
+        sys.exit(1)
+    
+    # Write output
+    try:
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(output_text)
+    except Exception as e:
+        print(f"Error writing output file: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Success message to stderr
+    print(f"Success: {len(output_text)} characters, {len(output_text.splitlines())} lines", file=sys.stderr)
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
