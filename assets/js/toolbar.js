@@ -8,163 +8,37 @@
   let isUpdatingStack = false
   let lastStatusCheck = 0
   let cachedStatus = false
+  let statusTimeout = null
   
-  // ========== STATE MACHINE ==========
+  // ========== SIMPLIFIED STATUS MANAGEMENT ==========
   
-  const StatusState = {
-    STACK_UNKNOWN: 'stack_unknown',
-    STACK_CHECKING: 'stack_checking',
-    STACK_RUNNING: 'stack_running',
-    STACK_NOT_RUNNING: 'stack_not_running',
-    STACK_STARTING: 'stack_starting',
-    STACK_STOPPING: 'stack_stopping',
-    MODEL_AUTO_LOADING: 'model_auto_loading',
-    MODEL_READY: 'model_ready',
-    MODEL_FAILED: 'model_failed',
-    RAGCODE_MODEL_LOADING: 'ragcode_model_loading',
-    RAGCODE_MODEL_READY: 'ragcode_model_ready',
-    RAGCODE_MODEL_FAILED: 'ragcode_model_failed',
-    RAGCODE_VECTORDB_BUILDING: 'ragcode_vectordb_building',
-    RAGCODE_VECTORDB_BUILT: 'ragcode_vectordb_built',
-    RAGCODE_VECTORDB_FAILED: 'ragcode_vectordb_failed',
-    DOOMSTEAD_MODEL_LOADING: 'doomstead_model_loading',
-    DOOMSTEAD_MODEL_READY: 'doomstead_model_ready',
-    DOOMSTEAD_MODEL_FAILED: 'doomstead_model_failed',
-    DOOMSTEAD_VECTORDB_BUILDING: 'doomstead_vectordb_building',
-    DOOMSTEAD_VECTORDB_BUILT: 'doomstead_vectordb_built',
-    DOOMSTEAD_VECTORDB_FAILED: 'doomstead_vectordb_failed',
-    MAINPAGE_MODEL_LOADING: 'mainpage_model_loading',
-    MAINPAGE_MODEL_READY: 'mainpage_model_ready',
-    MAINPAGE_MODEL_FAILED: 'mainpage_model_failed',
-    MAINPAGE_VECTORDB_BUILDING: 'mainpage_vectordb_building',
-    MAINPAGE_VECTORDB_BUILT: 'mainpage_vectordb_built',
-    MAINPAGE_VECTORDB_FAILED: 'mainpage_vectordb_failed',
-    RAGDOCS_MODEL_LOADING: 'ragdocs_model_loading',
-    RAGDOCS_MODEL_READY: 'ragdocs_model_ready',
-    RAGDOCS_MODEL_FAILED: 'ragdocs_model_failed',
-    RAGDOCS_VECTORDB_BUILDING: 'ragdocs_vectordb_building',
-    RAGDOCS_VECTORDB_BUILT: 'ragdocs_vectordb_built',
-    RAGDOCS_VECTORDB_FAILED: 'ragdocs_vectordb_failed',
-    TRANSCRIPT_MODEL_LOADING: 'transcript_model_loading',
-    TRANSCRIPT_MODEL_READY: 'transcript_model_ready',
-    TRANSCRIPT_MODEL_FAILED: 'transcript_model_failed',
-    TRANSCRIPT_SAVING: 'transcript_saving',
-    TRANSCRIPT_SAVED: 'transcript_saved',
-    TRANSCRIPT_FAILED: 'transcript_failed',
-    PLANTDISEASES_MODEL_LOADING: 'plantdiseases_model_loading',
-    PLANTDISEASES_MODEL_READY: 'plantdiseases_model_ready',
-    PLANTDISEASES_MODEL_FAILED: 'plantdiseases_model_failed',
-    PLANTDISEASES_VECTORDB_BUILDING: 'plantdiseases_vectordb_building',
-    PLANTDISEASES_VECTORDB_BUILT: 'plantdiseases_vectordb_built',
-    PLANTDISEASES_VECTORDB_FAILED: 'plantdiseases_vectordb_failed',
-    SOCIALISM_MODEL_LOADING: 'socialism_model_loading',
-    SOCIALISM_MODEL_READY: 'socialism_model_ready',
-    SOCIALISM_MODEL_FAILED: 'socialism_model_failed',
-    SOCIALISM_VECTORDB_BUILDING: 'socialism_vectordb_building',
-    SOCIALISM_VECTORDB_BUILT: 'socialism_vectordb_built',
-    SOCIALISM_VECTORDB_FAILED: 'socialism_vectordb_failed',
-    PROFILE_SWITCHING: 'profile_switching',
-    RUNNING_PIPELINE: 'running_pipeline',
-    IDLE: 'idle',
-    ERROR: 'error'
-  }
-  
-  const StateMessages = {
-    [StatusState.STACK_CHECKING]: 'Checking Ollama service...',
-    [StatusState.STACK_RUNNING]: '',
-    [StatusState.STACK_NOT_RUNNING]: 'Waiting for service...',
-    [StatusState.MODEL_AUTO_LOADING]: 'Loading model from config...',
-    [StatusState.MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.RAGCODE_MODEL_LOADING]: 'Loading model: {modelName}...',
-    [StatusState.RAGCODE_MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.RAGCODE_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.RAGCODE_VECTORDB_BUILDING]: 'Building RAGcode vector store...',
-    [StatusState.RAGCODE_VECTORDB_BUILT]: 'RAGcode vector store build completed',
-    [StatusState.RAGCODE_VECTORDB_FAILED]: 'RAGcode vector store build failed',
-    [StatusState.DOOMSTEAD_MODEL_LOADING]: 'Loading model: {modelName}...',
-    [StatusState.DOOMSTEAD_MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.DOOMSTEAD_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.DOOMSTEAD_VECTORDB_BUILDING]: 'Building Doomstead vector store...',
-    [StatusState.DOOMSTEAD_VECTORDB_BUILT]: 'Doomstead vector store build completed',
-    [StatusState.DOOMSTEAD_VECTORDB_FAILED]: 'Doomstead vector store build failed',
-    [StatusState.MAINPAGE_MODEL_LOADING]: 'Loading model: {modelName}...',
-    [StatusState.MAINPAGE_MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.MAINPAGE_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.MAINPAGE_VECTORDB_BUILDING]: 'Building Mainpage vector store...',
-    [StatusState.MAINPAGE_VECTORDB_BUILT]: 'Mainpage vector store build completed',
-    [StatusState.MAINPAGE_VECTORDB_FAILED]: 'Mainpage vector store build failed',
-    [StatusState.RAGDOCS_MODEL_LOADING]: 'Loading model: {modelName}...',
-    [StatusState.RAGDOCS_MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.RAGDOCS_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.RAGDOCS_VECTORDB_BUILDING]: 'Building RAGdocs vector store...',
-    [StatusState.RAGDOCS_VECTORDB_BUILT]: 'RAGdocs vector store build completed',
-    [StatusState.RAGDOCS_VECTORDB_FAILED]: 'RAGdocs vector store build failed',
-    [StatusState.TRANSCRIPT_MODEL_LOADING]: 'Loading model: {modelName}...',
-    [StatusState.TRANSCRIPT_MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.TRANSCRIPT_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.TRANSCRIPT_SAVING]: 'Saving transcript...',
-    [StatusState.TRANSCRIPT_SAVED]: 'Transcript saved successfully',
-    [StatusState.TRANSCRIPT_FAILED]: 'Transcript save failed',
-    [StatusState.PLANTDISEASES_MODEL_LOADING]: 'Loading model: {modelName}...',
-    [StatusState.PLANTDISEASES_MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.PLANTDISEASES_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.PLANTDISEASES_VECTORDB_BUILDING]: 'Building Plant Diseases vector store...',
-    [StatusState.PLANTDISEASES_VECTORDB_BUILT]: 'Plant Diseases vector store build completed',
-    [StatusState.PLANTDISEASES_VECTORDB_FAILED]: 'Plant Diseases vector store build failed',
-    [StatusState.SOCIALISM_MODEL_LOADING]: 'Loading model: {modelName}...',
-    [StatusState.SOCIALISM_MODEL_READY]: 'Model ready: {modelName}',
-    [StatusState.SOCIALISM_MODEL_FAILED]: 'Model load failed: {modelName} - {error}',
-    [StatusState.SOCIALISM_VECTORDB_BUILDING]: 'Building Socialism vector store...',
-    [StatusState.SOCIALISM_VECTORDB_BUILT]: 'Socialism vector store build completed',
-    [StatusState.SOCIALISM_VECTORDB_FAILED]: 'Socialism vector store build failed',
-    [StatusState.PROFILE_SWITCHING]: 'Switching to {profileName} profile...',
-    [StatusState.RUNNING_PIPELINE]: 'Running transcript pipeline...',
-    [StatusState.IDLE]: '',
-    [StatusState.ERROR]: 'Error: {errorMsg}'
-  }
-  
-  let currentState = StatusState.STACK_CHECKING
-  let autoTransitionTimeout = null
-  let currentStateData = {}
-  
-  function clearAutoTransition() {
-    if (autoTransitionTimeout) {
-      clearTimeout(autoTransitionTimeout)
-      autoTransitionTimeout = null
-    }
-  }
-  
-  function updateStatusDisplay() {
+  function setStatusMessage(message, duration = null) {
     if (!statusDiv) return
     
-    let message = StateMessages[currentState] || ''
-    
-    if (message.includes('{modelName}') && currentStateData.modelName) {
-      message = message.replace(/\{modelName\}/g, currentStateData.modelName)
-    }
-    if (message.includes('{error}') && currentStateData.error) {
-      message = message.replace(/\{error\}/g, currentStateData.error)
-    }
-    if (message.includes('{errorMsg}') && currentStateData.errorMsg) {
-      message = message.replace('{errorMsg}', currentStateData.errorMsg)
-    }
-    if (message.includes('{profileName}') && currentStateData.profileName) {
-      message = message.replace('{profileName}', currentStateData.profileName)
-    }
-    if (message.includes('{progress}') && currentStateData.progress !== undefined) {
-      message = message.replace('{progress}', currentStateData.progress)
-    }
-    
-    if (currentState === StatusState.IDLE) {
+    // Handle empty/IDLE states
+    if (!message) {
       if (stackRunning) {
-        message = ''
+        statusDiv.textContent = ''
       } else {
-        message = 'Waiting for service...'
+        statusDiv.textContent = 'Waiting for service...'
       }
+    } else {
+      statusDiv.textContent = message
     }
     
-    statusDiv.textContent = message
+    // Clear any existing timeout
+    if (statusTimeout) {
+      clearTimeout(statusTimeout)
+      statusTimeout = null
+    }
+    
+    // Auto-clear after duration if specified
+    if (duration) {
+      statusTimeout = setTimeout(() => {
+        setStatusMessage('')
+        statusTimeout = null
+      }, duration)
+    }
   }
   
   function enableChatInputs() {
@@ -175,103 +49,12 @@
     if (promptInput) promptInput.focus()
   }
   
-  function transitionTo(newState, data = {}) {
-    clearAutoTransition()
-    currentState = newState
-    currentStateData = data
-    updateStatusDisplay()
-    
-    switch (newState) {
-      case StatusState.MODEL_READY:
-      case StatusState.RAGCODE_MODEL_READY:
-      case StatusState.DOOMSTEAD_MODEL_READY:
-      case StatusState.MAINPAGE_MODEL_READY:
-      case StatusState.RAGDOCS_MODEL_READY:
-      case StatusState.TRANSCRIPT_MODEL_READY:
-      case StatusState.PLANTDISEASES_MODEL_READY:
-      case StatusState.SOCIALISM_MODEL_READY:
-        enableChatInputs()
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 4000)
-        break
-        
-      case StatusState.MODEL_FAILED:
-      case StatusState.RAGCODE_MODEL_FAILED:
-      case StatusState.DOOMSTEAD_MODEL_FAILED:
-      case StatusState.MAINPAGE_MODEL_FAILED:
-      case StatusState.RAGDOCS_MODEL_FAILED:
-      case StatusState.TRANSCRIPT_MODEL_FAILED:
-      case StatusState.PLANTDISEASES_MODEL_FAILED:
-      case StatusState.SOCIALISM_MODEL_FAILED:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 5000)
-        break
-        
-      case StatusState.RAGCODE_VECTORDB_BUILT:
-      case StatusState.DOOMSTEAD_VECTORDB_BUILT:
-      case StatusState.MAINPAGE_VECTORDB_BUILT:
-      case StatusState.RAGDOCS_VECTORDB_BUILT:
-      case StatusState.PLANTDISEASES_VECTORDB_BUILT:
-      case StatusState.SOCIALISM_VECTORDB_BUILT:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 3000)
-        break
-        
-      case StatusState.RAGCODE_VECTORDB_FAILED:
-      case StatusState.DOOMSTEAD_VECTORDB_FAILED:
-      case StatusState.MAINPAGE_VECTORDB_FAILED:
-      case StatusState.RAGDOCS_VECTORDB_FAILED:
-      case StatusState.PLANTDISEASES_VECTORDB_FAILED:
-      case StatusState.SOCIALISM_VECTORDB_FAILED:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 5000)
-        break
-        
-      case StatusState.TRANSCRIPT_SAVED:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 2000)
-        break
-        
-      case StatusState.TRANSCRIPT_FAILED:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 5000)
-        break
-        
-      case StatusState.RUNNING_PIPELINE:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 3000)
-        break
-        
-      case StatusState.ERROR:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 5000)
-        break
-        
-      case StatusState.STACK_RUNNING:
-      case StatusState.STACK_NOT_RUNNING:
-      case StatusState.PROFILE_SWITCHING:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 3000)
-        break
-        
-      case StatusState.MODEL_AUTO_LOADING:
-        autoTransitionTimeout = setTimeout(() => {
-          transitionTo(StatusState.IDLE)
-        }, 3000)
-        break
-    }
+  function disableChatInputs() {
+    const promptInput = document.getElementById('userInput')
+    const sendBtn = document.getElementById('sendButton')
+    if (promptInput) promptInput.disabled = true
+    if (sendBtn) sendBtn.disabled = true
   }
-  
-  window.transitionTo = transitionTo
   
   // ========== TOOLBAR BUTTON HANDLERS ==========
   
@@ -304,48 +87,8 @@
   }
   
   function rebuild_vectorstore() {
-    let buildingState = null
-    let builtState = null
-    let failedState = null
-    
-    switch (currentProfile) {
-      case 'ragcode':
-        buildingState = StatusState.RAGCODE_VECTORDB_BUILDING
-        builtState = StatusState.RAGCODE_VECTORDB_BUILT
-        failedState = StatusState.RAGCODE_VECTORDB_FAILED
-        break
-      case 'doomstead':
-        buildingState = StatusState.DOOMSTEAD_VECTORDB_BUILDING
-        builtState = StatusState.DOOMSTEAD_VECTORDB_BUILT
-        failedState = StatusState.DOOMSTEAD_VECTORDB_FAILED
-        break
-      case 'mainpage':
-        buildingState = StatusState.MAINPAGE_VECTORDB_BUILDING
-        builtState = StatusState.MAINPAGE_VECTORDB_BUILT
-        failedState = StatusState.MAINPAGE_VECTORDB_FAILED
-        break
-      case 'ragdocs':
-        buildingState = StatusState.RAGDOCS_VECTORDB_BUILDING
-        builtState = StatusState.RAGDOCS_VECTORDB_BUILT
-        failedState = StatusState.RAGDOCS_VECTORDB_FAILED
-        break
-      case 'plantdiseases':
-        buildingState = StatusState.PLANTDISEASES_VECTORDB_BUILDING
-        builtState = StatusState.PLANTDISEASES_VECTORDB_BUILT
-        failedState = StatusState.PLANTDISEASES_VECTORDB_FAILED
-        break
-      case 'socialism':
-        buildingState = StatusState.SOCIALISM_VECTORDB_BUILDING
-        builtState = StatusState.SOCIALISM_VECTORDB_BUILT
-        failedState = StatusState.SOCIALISM_VECTORDB_FAILED
-        break
-      default:
-        buildingState = StatusState.RAGCODE_VECTORDB_BUILDING
-        builtState = StatusState.RAGCODE_VECTORDB_BUILT
-        failedState = StatusState.RAGCODE_VECTORDB_FAILED
-    }
-    
-    transitionTo(buildingState)
+    let profileName = currentProfile.charAt(0).toUpperCase() + currentProfile.slice(1)
+    setStatusMessage(`Building ${profileName} vector store...`, null)
     
     if (typeof BuildModal !== 'undefined') {
       const modal = new BuildModal()
@@ -355,8 +98,7 @@
       modal.updateProgress = function(percent, status) {
         if (originalUpdateProgress) originalUpdateProgress.call(modal, percent, status)
         if (percent !== undefined) {
-          currentStateData = { progress: percent }
-          updateStatusDisplay()
+          setStatusMessage(`Building ${profileName} vector store... ${percent}%`)
         }
       }
       
@@ -370,30 +112,30 @@
       .then(response => response.json())
       .then(data => {
         if (!data.success) {
-          transitionTo(failedState)
+          setStatusMessage(`${profileName} vector store build failed`, 5000)
         } else {
-          transitionTo(builtState)
+          setStatusMessage(`${profileName} vector store build completed`, 3000)
         }
       })
       .catch(() => {
-        transitionTo(failedState)
+        setStatusMessage(`${profileName} vector store build failed`, 5000)
       })
     } else {
       console.error('BuildModal not loaded')
-      transitionTo(failedState)
+      setStatusMessage('BuildModal not loaded', 5000)
     }
   }
   
   function handlePasteTranscriptClick() {
     if (typeof ClipboardModal === 'undefined') {
       console.error('ClipboardModal not loaded')
-      transitionTo(StatusState.ERROR, { errorMsg: 'ClipboardModal not loaded' })
+      setStatusMessage('ClipboardModal not loaded', 5000)
       return
     }
     
     const modal = new ClipboardModal(
       function(transcript) {
-        transitionTo(StatusState.TRANSCRIPT_SAVING)
+        setStatusMessage('Saving transcript...', null)
         fetch(`assets/php/rag.php`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -405,19 +147,19 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            transitionTo(StatusState.TRANSCRIPT_SAVED)
+            setStatusMessage('Transcript saved successfully', 2000)
           } else {
-            transitionTo(StatusState.TRANSCRIPT_FAILED)
+            setStatusMessage('Transcript save failed', 5000)
             alert('Failed to save transcript: ' + (data.error || 'Unknown error'))
           }
         })
         .catch(() => {
-          transitionTo(StatusState.TRANSCRIPT_FAILED)
+          setStatusMessage('Transcript save failed', 5000)
           alert('Error saving transcript')
         })
       },
       function() {
-        transitionTo(StatusState.IDLE)
+        setStatusMessage('')
       }
     )
   }
@@ -425,52 +167,7 @@
   function loadModel() {
     const promptInput = document.getElementById('userInput')
     const sendBtn = document.getElementById('sendButton')
-    
-    let loadingState = null
-    let readyState = null
-    let failedState = null
-    
-    switch (currentProfile) {
-      case 'ragcode':
-        loadingState = StatusState.RAGCODE_MODEL_LOADING
-        readyState = StatusState.RAGCODE_MODEL_READY
-        failedState = StatusState.RAGCODE_MODEL_FAILED
-        break
-      case 'doomstead':
-        loadingState = StatusState.DOOMSTEAD_MODEL_LOADING
-        readyState = StatusState.DOOMSTEAD_MODEL_READY
-        failedState = StatusState.DOOMSTEAD_MODEL_FAILED
-        break
-      case 'mainpage':
-        loadingState = StatusState.MAINPAGE_MODEL_LOADING
-        readyState = StatusState.MAINPAGE_MODEL_READY
-        failedState = StatusState.MAINPAGE_MODEL_FAILED
-        break
-      case 'ragdocs':
-        loadingState = StatusState.RAGDOCS_MODEL_LOADING
-        readyState = StatusState.RAGDOCS_MODEL_READY
-        failedState = StatusState.RAGDOCS_MODEL_FAILED
-        break
-      case 'transcript':
-        loadingState = StatusState.TRANSCRIPT_MODEL_LOADING
-        readyState = StatusState.TRANSCRIPT_MODEL_READY
-        failedState = StatusState.TRANSCRIPT_MODEL_FAILED
-        break
-      case 'plantdiseases':
-        loadingState = StatusState.PLANTDISEASES_MODEL_LOADING
-        readyState = StatusState.PLANTDISEASES_MODEL_READY
-        failedState = StatusState.PLANTDISEASES_MODEL_FAILED
-        break
-      case 'socialism':
-        loadingState = StatusState.SOCIALISM_MODEL_LOADING
-        readyState = StatusState.SOCIALISM_MODEL_READY
-        failedState = StatusState.SOCIALISM_MODEL_FAILED
-        break
-      default:
-        loadingState = StatusState.RAGCODE_MODEL_LOADING
-        readyState = StatusState.RAGCODE_MODEL_READY
-        failedState = StatusState.RAGCODE_MODEL_FAILED
-    }
+    let profileName = currentProfile.charAt(0).toUpperCase() + currentProfile.slice(1)
     
     fetch(`assets/php/rag.php`, {
       method: 'POST',
@@ -481,45 +178,38 @@
       .then(nameData => {
         const modelName = nameData.model_name || 'unknown'
         
-        transitionTo(loadingState, { modelName: modelName })
+        setStatusMessage(`Loading model: ${modelName}...`, null)
+        disableChatInputs()
         
-        setTimeout(() => {
-          fetch(`assets/php/force_reload_model.php?_=${Date.now()}`)
-            .then(response => response.json())
-            .then(loadData => {
-              if (loadData.success && (loadData.status === 'loaded' || loadData.status === 'already_running')) {
-                transitionTo(readyState, { modelName: modelName })
-                if (promptInput) promptInput.disabled = false
-                if (sendBtn) sendBtn.disabled = false
-                if (promptInput) promptInput.focus()
-              } else if (loadData.status === 'loading') {
-                transitionTo(loadingState, { modelName: modelName })
-                if (promptInput) promptInput.disabled = true
-                if (sendBtn) sendBtn.disabled = true
-              } else {
-                transitionTo(failedState, { modelName: modelName, error: loadData.message || 'Failed to load model' })
-                if (loadData.message && loadData.message.includes('not running')) {
-                  alert('Stack not running.')
-                }
-                if (promptInput) promptInput.disabled = true
-                if (sendBtn) sendBtn.disabled = true
+        fetch(`assets/php/force_reload_model.php?_=${Date.now()}`)
+          .then(response => response.json())
+          .then(loadData => {
+            if (loadData.success && (loadData.status === 'loaded' || loadData.status === 'already_running')) {
+              setStatusMessage(`Model ready: ${modelName}`, 4000)
+              enableChatInputs()
+            } else if (loadData.status === 'loading') {
+              setStatusMessage(`Loading model: ${modelName}...`, null)
+              disableChatInputs()
+            } else {
+              setStatusMessage(`Model load failed: ${modelName} - ${loadData.message || 'Failed to load model'}`, 5000)
+              if (loadData.message && loadData.message.includes('not running')) {
+                alert('Stack not running.')
               }
-            })
-            .catch(error => {
-              console.error('Load model error:', error)
-              transitionTo(failedState, { modelName: modelName, error: error.message })
-              alert('Error: ' + error.message)
-              if (promptInput) promptInput.disabled = true
-              if (sendBtn) sendBtn.disabled = true
-            })
-        }, 50)
+              disableChatInputs()
+            }
+          })
+          .catch(error => {
+            console.error('Load model error:', error)
+            setStatusMessage(`Model load failed: ${modelName} - ${error.message}`, 5000)
+            alert('Error: ' + error.message)
+            disableChatInputs()
+          })
       })
       .catch(error => {
         console.error('Get model name error:', error)
-        transitionTo(failedState, { modelName: 'unknown', error: error.message })
+        setStatusMessage(`Model load failed: unknown - ${error.message}`, 5000)
         alert('Error getting model name: ' + error.message)
-        if (promptInput) promptInput.disabled = true
-        if (sendBtn) sendBtn.disabled = true
+        disableChatInputs()
       })
   }
   
@@ -535,7 +225,7 @@
   }
   
   async function handleruntasksClick() {
-    transitionTo(StatusState.RUNNING_PIPELINE)
+    setStatusMessage('Running transcript pipeline...', 3000)
     
     try {
       const currentProfileName = await getCurrentProfile()
@@ -556,12 +246,11 @@
         } else {
           throw new Error('Failed to fetch models')
         }
-        transitionTo(StatusState.IDLE)
+        setStatusMessage('')
         return
       }
       
-      // Only call the pipeline - no preprocessing here
-      transitionTo(StatusState.PROFILE_SWITCHING, { profileName: 'Processing transcript...' })
+      setStatusMessage('Processing transcript...', null)
       
       const result = await transcriptmodule.processtranscript()
       
@@ -574,7 +263,7 @@
         chatbox.appendChild(messageDiv)
       }
       
-      transitionTo(StatusState.IDLE)
+      setStatusMessage('')
       
     } catch (error) {
       console.error('handleruntasksClick error:', error)
@@ -590,16 +279,16 @@
         errorMessage = 'Failed to process transcript: ' + error.message
       }
       
-      transitionTo(StatusState.ERROR, { errorMsg: errorMessage })
+      setStatusMessage(`Error: ${errorMessage}`, 5000)
       alert(errorMessage)
     }
   }
   
   function handlechoosemodelClick() {
     if (stackRunning) {
-      transitionTo(StatusState.STACK_RUNNING)
+      setStatusMessage('', 3000)
     } else {
-      transitionTo(StatusState.STACK_NOT_RUNNING)
+      setStatusMessage('Waiting for service...', 3000)
     }
     
     if (typeof ModelModal !== 'undefined') {
@@ -608,15 +297,15 @@
   }
   
   function function_stub() {
-    transitionTo(StatusState.ERROR, { errorMsg: 'Refresh not implemented - use Full Build' })
+    setStatusMessage('Refresh not implemented - use Full Build', 5000)
   }
   
   function handleHomepageClick() {
     window.open('https://chasingthesquirrel.com/doomstead/index.php', '_blank', 'noopener,noreferrer')
     if (stackRunning) {
-      transitionTo(StatusState.STACK_RUNNING)
+      setStatusMessage('')
     } else {
-      transitionTo(StatusState.STACK_NOT_RUNNING)
+      setStatusMessage('Waiting for service...')
     }
   }
   
@@ -624,16 +313,16 @@
     const message = 'Example queries:\n\nWhat is the current implementation of the FAISS vector store builder, and how does the specification document describe the expected behavior of the state machine for model loading states?\n\nWhat are different kinds of plant diseases\n\nWhat is Stewart\'s wilt disease'
     alert(message)
     if (stackRunning) {
-      transitionTo(StatusState.STACK_RUNNING)
+      setStatusMessage('')
     } else {
-      transitionTo(StatusState.STACK_NOT_RUNNING)
+      setStatusMessage('Waiting for service...')
     }
   }
   
   // ========== PROFILE MANAGEMENT ==========
   
   function switchProfile(profileName, configValue, toolTitle) {
-    transitionTo(StatusState.PROFILE_SWITCHING, { profileName: profileName })
+    setStatusMessage(`Switching to ${profileName} profile...`, 3000)
     
     const chatbox = document.getElementById('chatbox')
     if (chatbox) chatbox.innerHTML = ''
@@ -673,9 +362,9 @@
       updatetooltitle(toolTitle)
       
       if (chatbox) chatbox.innerHTML = ''
-      transitionTo(StatusState.IDLE)
+      setStatusMessage('')
     }).catch(() => {
-      transitionTo(StatusState.ERROR, { errorMsg: 'Error switching profile' })
+      setStatusMessage('Error switching profile', 5000)
     })
   }
   
@@ -774,18 +463,14 @@
       }
       stackRunning = true
       cachedStatus = true
-      if (currentState === StatusState.IDLE || currentState === StatusState.STACK_NOT_RUNNING || currentState === StatusState.STACK_CHECKING) {
-        transitionTo(StatusState.STACK_RUNNING)
-      }
+      setStatusMessage('')
     } else {
       if (!homeserverBtn.classList.contains('homeservershift')) {
         homeserverBtn.classList.add('homeservershift')
       }
       stackRunning = false
       cachedStatus = false
-      if (currentState === StatusState.IDLE || currentState === StatusState.STACK_RUNNING || currentState === StatusState.STACK_CHECKING) {
-        transitionTo(StatusState.STACK_NOT_RUNNING)
-      }
+      setStatusMessage('Waiting for service...')
     }
   }
   
@@ -822,7 +507,7 @@
       clearInterval(stackCheckInterval)
     }
     
-    transitionTo(StatusState.STACK_CHECKING)
+    setStatusMessage('Checking Ollama service...')
     checkStackStatus()
     
     stackCheckInterval = setInterval(() => {
@@ -1005,7 +690,6 @@
     statusDiv.id = 'status'
     statusDiv.className = 'status'
     statusDiv.textContent = 'Checking Ollama service...'
-    currentState = StatusState.STACK_CHECKING
 
     statusLi.appendChild(statusDiv)
 
@@ -1045,9 +729,9 @@
         e.preventDefault()
         e.stopPropagation()
         if (stackRunning) {
-          transitionTo(StatusState.STACK_RUNNING)
+          setStatusMessage('')
         } else {
-          transitionTo(StatusState.STACK_NOT_RUNNING)
+          setStatusMessage('Waiting for service...')
         }
         return false
       }
@@ -1142,8 +826,8 @@
   
   window.addEventListener('beforeunload', function() {
     stopStackChecker()
-    if (autoTransitionTimeout) {
-      clearTimeout(autoTransitionTimeout)
+    if (statusTimeout) {
+      clearTimeout(statusTimeout)
     }
   })
   
@@ -1153,7 +837,6 @@
   window.updatestatus = function() {}
   window.rebuild_vectorstore = rebuild_vectorstore
   window.loadModel = loadModel
-  window.transitionTo = transitionTo
   
   // ========== AUTO-INITIALIZE ==========
   

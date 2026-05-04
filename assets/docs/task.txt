@@ -1,185 +1,142 @@
-You must generate a **fully accurate as-built specification** of the current codebase by analyzing ALL provided files. The output must reflect the actual implementation — not assumptions, not prior documentation.  The code paths triggered from all the toolbar buttons will be described in detail.  Document all functions and who they call and how they are called.
+The pipeline in the transcript configuration is being refined. 
 
----
+The steps up to the execution of these stages are not to be changed. 
 
-## CORE RULE (NON-NEGOTIABLE)
+stages:
+  - name: 'remove_extra_whitespace'
+    type: 'regex'
+    pattern: '\n\s*\n+'
+    replacement: '\n\n'
+    flags: 'g'
+    enabled: true
 
-Only document behavior that is explicitly present in the code.
+  - name: 'format_paragraphs'
+    type: 'llm'
+    model: 'deepseek-r1:7b'
+    system_prompt: "You are a transcript formatting assistant. Output ONLY the formatted text. No JSON, no markdown, no code blocks, no explanations."
+    user_prompt_template: "Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{input}"
+    temperature: 0.1
+    max_tokens: 32769
+    enabled: true
 
-* Do NOT infer
-* Do NOT generalize
-* Do NOT “improve” descriptions
-* If something is unclear, describe exactly what the code does, not what it “should” do
+  - name: 'clean_llm_json_artifacts'
+    type: 'regex'
+    pattern: '```[\s\S]*?```|```|`|\n{3,}'
+    replacement: ''
+    flags: 'g'
+    enabled: true
 
----
+Code for these stages will be rewritten so that the chunking 
+over input is repeated.  This allows transcripts of arbitrary length to be processes.  Files will be created to match the pattern of previous steps.
 
-## ACCURACY REQUIREMENTS
+to replace 
 
-* All button behavior must match **actual event handlers in toolbar.js**
-* All API endpoints must match **exact PHP implementations**:
+  - name: 'remove_extra_whitespace'
+    type: 'regex'
+    pattern: '\n\s*\n+'
+    replacement: '\n\n'
+    flags: 'g'
+    enabled: true 
 
-  * rag.php
-  * ollama_api.php
-  * force_reload_model.php
-  * fullbuilder.php
-* Modal behavior must match:
+save_remove_extra_labels.php 
 
-  * build_modal.js
-  * clipboard_modal.js
-  * model_modal.js
-* ALL status messages must be **verbatim strings copied from code**
-* ALL function names must match exactly as written in code
-* ALL timings (intervals, delays, polling rates) must match actual values
+is a new file that saves the file 
 
----
+sansextrasegments.txt in place of 
 
-## COMPLETENESS REQUIREMENTS
+stage_remove_extra_whitespace.txt 
 
-You MUST include and fully document ALL of the following:
+which will no longer be created.   
 
-### Buttons (from toolbar.js)
+a python file named remove_extra_labels.py will apply 
 
-* fileload
-* homeserver
-* fullbuild
-* pastetranscript
-* loadmodel
-* runtask
-* choosemodel
-* stub
-* homepage
-* book
+    type: 'regex'
+    pattern: '\n\s*\n+'
+    replacement: '\n\n'
 
-For EACH button include:
+over the chunked inputs and then assemble the cleaned output back from the chunks.  
 
-* Trigger (click / hover / etc.)
-* Function name handling it
-* API calls (exact endpoint + method)
-* Status messages (exact strings)
-* Success behavior
-* Failure behavior
+This python is called from processtranscript.js which uses save_remove_extra_labels.php to save the output.
 
----
+to replace  
 
-### Systems that MUST be documented
+ - name: 'format_paragraphs'
+    type: 'llm'
+    model: 'deepseek-r1:7b'
+    system_prompt: "You are a transcript formatting assistant. Output ONLY the formatted text. No JSON, no markdown, no code blocks, no explanations."
+    user_prompt_template: "Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{input}"
+    temperature: 0.1
+    max_tokens: 32769
+    enabled: true
 
-#### Toolbar visibility system
+save_format_paragraphs.php 
 
-* parseToolbarFromYaml
-* applyToolbarVisibility
-* YAML-driven behavior
+is a new file that saves the file 
 
-#### Stack system
+formattedparagraphs.txt in place of 
 
-* checkStackStatus polling (3-second interval)
-* homeservershift class behavior
-* start/stop logic
+stage_format_paragraphs.txt
 
-#### Model system
+which will no longer be created.   
 
-* pollModelStatus
-* force_reload_model.php
-* model loading states
+a python file named format_paragraphs.py will apply 
 
-#### Page load behavior
+ - name: 'format_paragraphs'
+    type: 'llm'
+    model: 'deepseek-r1:7b'
+    system_prompt: "You are a transcript formatting assistant. Output ONLY the formatted text. No JSON, no markdown, no code blocks, no explanations."
+    user_prompt_template: "Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{input}"
+    temperature: 0.1
+    max_tokens: 32769
+    enabled: true
 
-* auto-load logic from rag.js
+This python is called from processtranscript.js which uses save_format_paragraphs.php to save the output.
 
-#### RAG system
+to replace  
 
-* Vector search logic
-* Context building
-* Relevance scoring
-* Prompt construction
-* Ollama query structure
+  - name: 'clean_llm_json_artifacts'
+    type: 'regex'
+    pattern: '```[\s\S]*?```|```|`|\n{3,}'
+    replacement: ''
+    flags: 'g'
+    enabled: true
 
-#### FAISS builder
+save_cleaned_output.php 
 
-* Document type handling
-* Boosting rules (.js, .php, .py, etc.)
-* Chunking behavior
-* Embedding model usage
+is a new file that saves the file 
 
-#### ModelModal (dropdown)
+cleaned_output.txt in place of 
 
-* Hover behavior
-* Fetch logic
-* Selection handling
-* UI timing (delays, hide behavior)
+stage_clean_llm_json_artifacts.txt
 
-#### Python API server
+which will no longer be created.   
 
-* api_server.py exists but is not primary
-* Clearly distinguish from PHP backend
+a python file named clean_artifacts.py will apply 
 
-#### YAML configuration
+  - name: 'clean_llm_json_artifacts'
+    type: 'regex'
+    pattern: '```[\s\S]*?```|```|`|\n{3,}'
+    replacement: ''
+    flags: 'g'
+    enabled: true
 
-* Model selection
-* Prompts (system + user template)
-* Embedding configuration
-* Toolbar definitions
+This python is called from processtranscript.js which uses save_cleaned_output.php to save the output.
 
----
+Respect my choice of filenames even if the code in the python files doing the processing does not match the name.
 
-## TRACEABILITY REQUIREMENTS
 
-Every described behavior MUST include its source:
+the final yaml will be 
 
-Format:
-[implemented in <file> : <function> : lines X–Y]
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'pastetranscript'
+  - 'runtask'
+  - 'book'
+  - 'target'
 
-Example:
+ollama_model: "deepseek-r1:7b"
 
-* Sends GET request to ollama_api.php?action=start
-  [implemented in toolbar.js : handleStackButtonClick : lines 156–189]
+as the funtionalitiy of the stages is moved to code to match the pattern of the implemented pipeline which is not to be changed.
 
-If line numbers are unavailable, still include file + function.
-
----
-
-## STRUCTURE REQUIREMENTS
-
-* Use clear sections with ### headers
-* Group logically:
-
-  * Toolbar / Buttons
-  * State & Status System
-  * Modals
-  * RAG Backend
-  * FAISS System
-  * API Endpoints
-* Use bullet points ( - ) consistently
-* Keep descriptions precise and technical (developer-focused)
-
----
-
-## OUTPUT REQUIREMENT (CRITICAL)
-
-* Output the ENTIRE specification in ONE single block
-* No explanations before or after
-* No commentary
-* No markdown headers outside the document
-* No placeholders
-* No TODOs
-* No missing sections
-
-The output must be directly savable as:
-
-as-built-specification.txt
-
----
-
-## FINAL CHECK BEFORE OUTPUT
-
-Verify:
-
-* Every button is documented
-* Every system listed above is included
-* All strings match code exactly
-* No invented behavior exists
-* All descriptions are traceable to code
-
-Only output the final specification.
-
-Put the output in a download / copy box so I can cut and paste or download.
-
+all functionality is moved into .py files called by the javascript runner and files are saved by .php files.

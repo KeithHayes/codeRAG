@@ -8,26 +8,3 @@ toolbar:
 
 ollama_model: "deepseek-r1:7b"
 
-stages:
-  - name: 'remove_extra_whitespace'
-    type: 'regex'
-    pattern: '\n\s*\n+'
-    replacement: '\n\n'
-    flags: 'g'
-    enabled: true
-
-  - name: 'format_paragraphs'
-    type: 'llm'
-    model: 'deepseek-r1:7b'
-    system_prompt: "You are a transcript formatting assistant. Output ONLY the formatted text. No JSON, no markdown, no code blocks, no explanations."
-    user_prompt_template: "Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{input}"
-    temperature: 0.1
-    max_tokens: 32769
-    enabled: true
-
-  - name: 'clean_llm_json_artifacts'
-    type: 'regex'
-    pattern: '```[\s\S]*?```|```|`|\n{3,}'
-    replacement: ''
-    flags: 'g'
-    enabled: true

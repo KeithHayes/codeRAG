@@ -46,7 +46,6 @@ window.transcriptmodule = (function() {
     }
   }
 
-  // Debug wrapper for fetch JSON responses
   async function fetchJSON(url, options = {}) {
     console.log(`[DEBUG] Fetching: ${url}`);
     const response = await fetch(url, options);
@@ -287,118 +286,86 @@ window.transcriptmodule = (function() {
     return data
   }
 
-  function applyRegexStage(stage, input) {
-    const flags = stage.flags || 'g'
-    const regex = new RegExp(stage.pattern, flags)
-    return input.replace(regex, stage.replacement || '')
-  }
-
-  async function executeStage(stage, input, stageIndex) {
-    const stageName = stage.name
-    console.log(`[${new Date().toISOString()}] Stage ${stageIndex + 1}: ${stageName} (${stage.type})`)
-    const start = Date.now()
-    try {
-      let output
-      if (stage.type === 'regex') {
-        output = applyRegexStage(stage, input)
-        console.log(`[Stage ${stageName}] Regex applied, output length: ${output.length}`)
-      } else if (stage.type === 'llm') {
-        const userPrompt = stage.user_prompt_template.replace(/\{input\}/g, input)
-        console.log(`[Stage ${stageName}] Calling Ollama with model: ${stage.model}`)
-        output = await callOllama(
-          stage.model,
-          stage.system_prompt,
-          userPrompt,
-          stage.temperature ?? 0.0,
-          stage.max_tokens ?? 8192
-        )
-        console.log(`[Stage ${stageName}] LLM response length: ${output.length}`)
-      } else {
-        throw new Error(`Unknown stage type: ${stage.type}`)
-      }
-      const elapsed = ((Date.now() - start) / 1000).toFixed(1)
-      console.log(`[Stage ${stageName}] Completed in ${elapsed}s`)
-
-      await saveStageOutput(stageName, output)
-
-      return output
-    } catch (err) {
-      console.error(`[Stage ${stageName}] FAILED:`, err.message)
-      if (stage.type === 'llm' && stage.fallback_regex) {
-        console.log(`[Stage ${stageName}] Falling back to regex`)
-        const fallbackStage = {
-          type: 'regex',
-          pattern: stage.fallback_regex,
-          replacement: stage.fallback_replacement || '',
-          flags: stage.flags || 'g'
-        }
-        const fallbackOutput = applyRegexStage(fallbackStage, input)
-        await saveStageOutput(stageName + '_fallback', fallbackOutput)
-        return fallbackOutput
-      }
-      throw new Error(`Stage ${stageName} failed: ${err.message}`)
-    }
-  }
-
-  async function loadPipelineConfig() {
-    console.log('[Pipeline] Loading transcript.yaml configuration...')
-    const response = await fetch('assets/yaml/transcript.yaml?_=' + Date.now())
-    if (!response.ok) throw new Error(`Failed to load YAML: ${response.status}`)
-    const yamlText = await response.text()
-    
-    const config = { stages: [] }
-    const lines = yamlText.split('\n')
-    let inStages = false
-    let currentStage = null
-    
-    for (let i = 0; i < lines.length; i++) {
-      let line = lines[i]
-      const trimmed = line.trim()
-      
-      if (trimmed === 'stages:') {
-        inStages = true
-        continue
-      }
-      if (!inStages) continue
-      
-      const dashMatch = line.match(/^\s{2}-\s+name:\s*['"]([^'"]+)['"]/)
-      if (dashMatch) {
-        if (currentStage) config.stages.push(currentStage)
-        currentStage = { name: dashMatch[1] }
-        continue
-      }
-      
-      if (currentStage && trimmed !== '' && !trimmed.startsWith('-')) {
-        const kvMatch = line.match(/^\s{4}(\w+):\s*(.*)/)
-        if (kvMatch) {
-          let key = kvMatch[1]
-          let value = kvMatch[2].trim()
-          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1).replace(/\\n/g, '\n')
-          } else if (value === 'true') value = true
-          else if (value === 'false') value = false
-          else if (!isNaN(parseFloat(value)) && isFinite(value)) value = parseFloat(value)
-          currentStage[key] = value
-        }
-      }
-      
-      if (line.length > 0 && line[0] !== ' ' && line[0] !== '-' && trimmed !== 'stages:' && trimmed !== '') {
-        inStages = false
-        if (currentStage) {
-          config.stages.push(currentStage)
-          currentStage = null
-        }
-      }
-    }
-    if (currentStage) config.stages.push(currentStage)
-    
-    console.log(`[Pipeline] Loaded ${config.stages.length} stages from YAML`)
-    config.stages.forEach((stage, i) => {
-      console.log(`  Stage ${i + 1}: ${stage.name} (${stage.type}) - enabled: ${stage.enabled !== false}`)
+  // NEW: Python stage 1 - remove extra whitespace
+  async function removeExtraWhitespace() {
+    console.log('[Pipeline] Stage 5: Removing extra whitespace via remove_extra_labels.py...')
+    const data = await fetchJSON('assets/php/run_remove_extra_labels.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
     })
     
-    if (config.stages.length === 0) throw new Error('No stages found in YAML')
-    return config.stages
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to remove extra whitespace')
+    }
+    
+    console.log(`[Pipeline] Stage 5 complete: sansextrasegments.txt saved`)
+    return data
+  }
+
+  // NEW: Python stage 2 - format paragraphs with LLM
+  async function formatParagraphs() {
+    console.log('[Pipeline] Stage 6: Formatting paragraphs via format_paragraphs.py...')
+    const data = await fetchJSON('assets/php/run_format_paragraphs.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to format paragraphs')
+    }
+    
+    console.log(`[Pipeline] Stage 6 complete: formattedparagraphs.txt saved`)
+    return data
+  }
+
+  // NEW: Python stage 3 - clean LLM artifacts
+  async function cleanLLMArtifacts() {
+    console.log('[Pipeline] Stage 7: Cleaning LLM artifacts via clean_artifacts.py...')
+    const data = await fetchJSON('assets/php/run_clean_artifacts.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to clean LLM artifacts')
+    }
+    
+    console.log(`[Pipeline] Stage 7 complete: cleaned_output.txt saved`)
+    return data
+  }
+
+  async function readFinalOutput() {
+    console.log('[Pipeline] Reading final cleaned output...')
+    const path = 'assets/data/transcripts/cleaned_output.txt'
+    
+    let content = null
+    let retries = 5
+    while (retries > 0 && !content) {
+      const response = await fetch(path + '?_=' + Date.now(), {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      })
+      
+      if (response.ok) {
+        content = await response.text()
+        break
+      }
+      
+      retries--
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
+    
+    if (!content) {
+      throw new Error('cleaned_output.txt not found')
+    }
+    
+    console.log(`[Pipeline] Final output length: ${content.length}`)
+    return content
   }
 
   async function processtranscript() {
@@ -432,27 +399,24 @@ window.transcriptmodule = (function() {
       await performSegmentationWithPolling()
       
       // Step 9: Verify segmentedtext.txt
-      const segmentText = await readSegmentedText()
-      await saveSegmentedText(segmentText)
+      await readSegmentedText()
       
-      // Step 10: Load and run YAML pipeline stages
-      console.log(`[Pipeline] Loading pipeline stages from transcript.yaml`)
-      const stages = await loadPipelineConfig()
+      // Step 10: Remove extra whitespace (regex) -> sansextrasegments.txt
+      await removeExtraWhitespace()
       
-      let current = segmentText
-      for (let i = 0; i < stages.length; i++) {
-        const stage = stages[i]
-        if (stage.enabled === false) {
-          console.log(`[Pipeline] Skipping disabled stage: ${stage.name}`)
-          continue
-        }
-        current = await executeStage(stage, current, i)
-      }
+      // Step 11: Format paragraphs (LLM) -> formattedparagraphs.txt
+      await formatParagraphs()
+      
+      // Step 12: Clean LLM artifacts (regex) -> cleaned_output.txt
+      await cleanLLMArtifacts()
+      
+      // Step 13: Read final output
+      const finalOutput = await readFinalOutput()
       
       console.log(`[Pipeline] ==========================================`)
-      console.log(`[Pipeline] All pipeline stages completed, final output length: ${current.length}`)
+      console.log(`[Pipeline] All pipeline stages completed, final output length: ${finalOutput.length}`)
       console.log(`[Pipeline] ==========================================`)
-      return current
+      return finalOutput
       
     } catch (error) {
       console.error('[Pipeline] ERROR:', error)
