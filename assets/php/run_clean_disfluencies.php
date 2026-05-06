@@ -68,7 +68,7 @@ if (!$python_binary) {
 error_log("[run_clean_disfluencies] Using Python: " . $python_binary);
 
 // Path to Python script
-$python_script = __DIR__ . '/../py/disfluencies.py';
+$python_script = __DIR__ . '/../py/clean_disfluencies.py';
 
 if (!file_exists($python_script)) {
     echo json_encode([

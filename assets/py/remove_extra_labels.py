@@ -11,42 +11,38 @@ import os
 INPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/segmentedtext.txt'
 OUTPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/sansextrasegments.txt'
 
-def chunk_text(text, chunk_size=32000):
-    """Split text into chunks of approximately chunk_size characters."""
-    if len(text) <= chunk_size:
-        return [text]
+def clean_labels(text, labels):
+    # Pattern to match label at start of line (case-insensitive)
+    label_pattern = re.compile(rf"^({'|'.join(map(re.escape, labels))})\s*", re.IGNORECASE)
+    lines = text.splitlines()
+    result = []
     
-    chunks = []
-    lines = text.split('\n')
-    current_chunk = []
-    current_size = 0
+    # Track the last speaker seen
+    last_speaker = None
     
     for line in lines:
-        line_size = len(line) + 1
-        if current_size + line_size > chunk_size and current_chunk:
-            chunks.append('\n'.join(current_chunk))
-            current_chunk = [line]
-            current_size = line_size
+        match = label_pattern.match(line)
+        
+        if match:
+            current_speaker = match.group(1).lower()  # Normalize case
+            label_text = match.group(0)  # Get the full matched label text (including any whitespace)
+            
+            if current_speaker == last_speaker:
+                # Same speaker as last time → remove label and indent by label length
+                content = line[match.end():].lstrip()
+                indent = ' ' * len(label_text)  # Indent by the length of the removed label
+                line = indent + content
+            else:
+                # Different speaker → keep label, update state
+                last_speaker = current_speaker
+                # Keep the line as is (with label)
         else:
-            current_chunk.append(line)
-            current_size += line_size
+            # No label on this line, reset speaker tracking
+            last_speaker = None
+            
+        result.append(line)
     
-    if current_chunk:
-        chunks.append('\n'.join(current_chunk))
-    
-    return chunks
-
-def apply_regex(text):
-    """Apply regex pattern: '\n\s*\n+' replacement: '\n\n'"""
-    pattern = r'\n\s*\n+'
-    replacement = '\n\n'
-    
-    try:
-        regex = re.compile(pattern, re.MULTILINE | re.DOTALL)
-        return regex.sub(replacement, text)
-    except re.error as e:
-        print(f"Regex error: {e}", file=sys.stderr)
-        return text
+    return "\n".join(result)
 
 def main():
     if not os.path.exists(INPUT_FILE):
@@ -59,19 +55,10 @@ def main():
     if not input_text.strip():
         print("Input file is empty", file=sys.stderr)
         sys.exit(1)
+
+    words = ['speaker:', 'interviewer:']
+    output_text = clean_labels(input_text, words)
     
-    chunks = chunk_text(input_text)
-    print(f"Split into {len(chunks)} chunks", file=sys.stderr)
-    
-    processed_chunks = []
-    for i, chunk in enumerate(chunks):
-        processed = apply_regex(chunk)
-        processed_chunks.append(processed)
-        print(f"Processed chunk {i+1}/{len(chunks)}", file=sys.stderr)
-    
-    output_text = '\n'.join(processed_chunks)
-    
-    # Ensure directory exists
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:

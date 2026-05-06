@@ -1,0 +1,10 @@
+!SESSION 2026-05-05 15:37:42.760 -----------------------------------------------
+eclipse.buildId=4.36.0.20250605-1300
+java.version=21.0.8
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Framework arguments:  -product org.eclipse.epp.package.php.product
+Command-line arguments:  -os linux -ws gtk -arch x86_64 -product org.eclipse.epp.package.php.product -data /var/www/html/doomsteadRAG
+
+!ENTRY org.eclipse.wst.sse.ui 2 2 2026-05-05 15:37:50.032
+!MESSAGE Configuration element ConfigurationElementHandle [name: proposalComputerExtendedActivation, id: org.eclipse.wst.jsdt.web.ui.ContentAssistProposals, handle id: 10674, namespace: org.eclipse.php.ui] intented to extend an existing completion proposal computer specified an invalid completion proposal computer ID org.eclipse.wst.jsdt.web.ui.ContentAssistProposals
