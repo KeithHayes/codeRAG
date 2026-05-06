@@ -25,20 +25,30 @@ def clean_labels(text, labels):
         
         if match:
             current_speaker = match.group(1).lower()  # Normalize case
-            label_text = match.group(0)  # Get the full matched label text (including any whitespace)
+            label_text = match.group(0)  # Get the full matched label text
             
             if current_speaker == last_speaker:
-                # Same speaker as last time → remove label and indent by label length
+                # Same speaker as last time → remove label and indent
                 content = line[match.end():].lstrip()
-                indent = ' ' * len(label_text)  # Indent by the length of the removed label
+                indent = ' ' * len(label_text)
                 line = indent + content
             else:
                 # Different speaker → keep label, update state
                 last_speaker = current_speaker
                 # Keep the line as is (with label)
         else:
-            # No label on this line, reset speaker tracking
-            last_speaker = None
+            # No label on this line - it's a continuation of the current speaker
+            # Indent it to match the label length (if we have a current speaker)
+            if last_speaker is not None:
+                # Calculate indentation based on the label for current speaker
+                # We need to know how long the label would be
+                for label in labels:
+                    if last_speaker == label.lower().rstrip(':'):
+                        # Add a space after the colon for consistency
+                        indent = ' ' * (len(label) + 1)  # +1 for the space
+                        line = indent + line
+                        break
+            # If no current speaker, leave the line as is
             
         result.append(line)
     
@@ -64,7 +74,7 @@ def main():
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write(output_text)
     
-    print(f"Saved to {OUTPUT_FILE}, length: {len(output_text)}", file=sys.stderr)
+    print(f"Saved to {OUTPUT_FILE}", file=sys.stderr)
     sys.exit(0)
 
 if __name__ == "__main__":
