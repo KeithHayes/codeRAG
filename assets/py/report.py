@@ -63,7 +63,7 @@ def create_report():
     ]
 
     debug_files = [
-        os.path.join(base_path, 'assets', 'logs', 'php_errors.log'),
+        #os.path.join(base_path, 'assets', 'logs', 'php_errors.log'),
     ]
 
     css_files = [
@@ -74,43 +74,32 @@ def create_report():
     ]
 
     js_files = [
-        os.path.join(base_path, 'assets', 'js', 'build_modal.js'),
-        os.path.join(base_path, 'assets', 'js', 'clipboard_modal.js'),
-        os.path.join(base_path, 'assets', 'js', 'model_modal.js'),
+        #os.path.join(base_path, 'assets', 'js', 'build_modal.js'),
+        #os.path.join(base_path, 'assets', 'js', 'clipboard_modal.js'),
+        #os.path.join(base_path, 'assets', 'js', 'model_modal.js'),
         os.path.join(base_path, 'assets', 'js', 'rag.js'),
-        os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
+        #os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
         os.path.join(base_path, 'assets', 'js', 'processtranscript.js'),
     ]
 
     php_files = [
         os.path.join(base_path, 'index.php'),
-        os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
-        os.path.join(base_path, 'assets', 'php', 'check_segmentation_status.php'),
-        os.path.join(base_path, 'assets', 'php', 'clean_disfluencies.php'),
-        os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
+        #os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
+        #os.path.join(base_path, 'assets', 'php', 'check_segmentation_status.php'),
+        #os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
         os.path.join(base_path, 'assets', 'php', 'format_text.php'),
-        os.path.join(base_path, 'assets', 'php', 'fullbuilder.php'),
+        #os.path.join(base_path, 'assets', 'php', 'fullbuilder.php'),
         os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
         os.path.join(base_path, 'assets', 'php', 'process_transcript.php'),
         os.path.join(base_path, 'assets', 'php', 'rag.php'),
-        os.path.join(base_path, 'assets', 'php', 'read_formatted_text.php'),
-        os.path.join(base_path, 'assets', 'php', 'read_sanstimestamps.php'),
-        os.path.join(base_path, 'assets', 'php', 'read_segmented_text.php'),
-        os.path.join(base_path, 'assets', 'php', 'remove_timestamps.php'),
         os.path.join(base_path, 'assets', 'php', 'run_clean_artifacts.php'),
+        os.path.join(base_path, 'assets', 'php', 'run_clean_disfluencies.php'),
         os.path.join(base_path, 'assets', 'php', 'run_format_paragraphs.php'),
+        os.path.join(base_path, 'assets', 'php', 'run_format_text.php'),
         os.path.join(base_path, 'assets', 'php', 'run_remove_extra_labels.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_cleaned_output.php'),
+        os.path.join(base_path, 'assets', 'php', 'run_remove_timestamps.php'),
+        os.path.join(base_path, 'assets', 'php', 'run_segment_transcript.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_debug.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_disfluencies.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_format_paragraphs.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_remove_extra_labels.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_sanstimestamps.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_segmented_text.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_stage_output.php'),
-        os.path.join(base_path, 'assets', 'php', 'save_transcript_output.php'),
-        os.path.join(base_path, 'assets', 'php', 'segment_transcript.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'update_model.php'),
     ]
@@ -119,20 +108,21 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'api_server.py'),
         os.path.join(base_path, 'assets', 'py', 'chunker.py'),
         os.path.join(base_path, 'assets', 'py', 'clean_artifacts.py'),
-        os.path.join(base_path, 'assets', 'py', 'disfluencies.py'),
+        os.path.join(base_path, 'assets', 'py', 'clean_disfluencies.py'),
         os.path.join(base_path, 'assets', 'py', 'document_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'example_code.py'),
         os.path.join(base_path, 'assets', 'py', 'faiss_builder.py'),
-        os.path.join(base_path, 'assets', 'py', 'faiss_query_wrapper.py'),
         os.path.join(base_path, 'assets', 'py', 'faiss_query.py'),
+        os.path.join(base_path, 'assets', 'py', 'faiss_query_wrapper.py'),
         os.path.join(base_path, 'assets', 'py', 'format_paragraphs.py'),
+        os.path.join(base_path, 'assets', 'py', 'format_text.py'),
         os.path.join(base_path, 'assets', 'py', 'logger.py'),
         os.path.join(base_path, 'assets', 'py', 'remove_extra_labels.py'),
+        os.path.join(base_path, 'assets', 'py', 'remove_timestamps.py'),
         os.path.join(base_path, 'assets', 'py', 'report.py'),
         os.path.join(base_path, 'assets', 'py', 'segment_transcript.py'),
         os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'textformat.py'),
-        os.path.join(base_path, 'assets', 'py', 'requirements.txt'),
     ]
 
     yaml_files = [

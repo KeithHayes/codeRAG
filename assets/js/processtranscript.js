@@ -1,3 +1,4 @@
+// JS assets/js/processtranscript.js
 
 (function() {
   'use strict';
@@ -165,9 +166,9 @@
     throw new Error('Segmentation timed out after 30 minutes')
   }
 
-  // Stage 5: Remove extra whitespace using run_remove_extra_labels.php
-  async function stage5RemoveExtraWhitespace() {
-    console.log('[Pipeline] Stage 5: Removing extra whitespace via run_remove_extra_labels.php...')
+  // Stage 5: Remove extra labels using run_remove_extra_labels.php
+  async function stage5RemoveExtraLabels() {
+    console.log('[Pipeline] Stage 5: Removing extra labels via run_remove_extra_labels.php...')
     const data = await fetchJSON('assets/php/run_remove_extra_labels.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -175,16 +176,33 @@
     })
     
     if (!data.success) {
-      throw new Error(data.error || 'Failed to remove extra whitespace')
+      throw new Error(data.error || 'Failed to remove extra labels')
     }
     
     console.log(`[Pipeline] Stage 5 complete: sansextrasegments.txt saved`)
     return data
   }
 
-  // Stage 6: Format paragraphs using run_format_paragraphs.php
-  async function stage6FormatParagraphs() {
-    console.log('[Pipeline] Stage 6: Formatting paragraphs via run_format_paragraphs.php...')
+  // Stage 6: Identify speakers using run_identify_speakers.php
+  async function stage6IdentifySpeakers() {
+    console.log('[Pipeline] Stage 6: Identifying speakers via run_identify_speakers.php...')
+    const data = await fetchJSON('assets/php/run_identify_speakers.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to identify speakers')
+    }
+    
+    console.log(`[Pipeline] Stage 6 complete: identified_speakers.txt saved, length: ${data.output_length}`)
+    return data
+  }
+
+  // Stage 7: Format paragraphs using run_format_paragraphs.php
+  async function stage7FormatParagraphs() {
+    console.log('[Pipeline] Stage 7: Formatting paragraphs via run_format_paragraphs.php...')
     const data = await fetchJSON('assets/php/run_format_paragraphs.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -195,13 +213,13 @@
       throw new Error(data.error || 'Failed to format paragraphs')
     }
     
-    console.log(`[Pipeline] Stage 6 complete: formattedparagraphs.txt saved`)
+    console.log(`[Pipeline] Stage 7 complete: formattedparagraphs.txt saved`)
     return data
   }
 
-  // Stage 7: Clean LLM artifacts using run_clean_artifacts.php
-  async function stage7CleanArtifacts() {
-    console.log('[Pipeline] Stage 7: Cleaning LLM artifacts via run_clean_artifacts.php...')
+  // Stage 8: Clean LLM artifacts using run_clean_artifacts.php
+  async function stage8CleanArtifacts() {
+    console.log('[Pipeline] Stage 8: Cleaning LLM artifacts via run_clean_artifacts.php...')
     const data = await fetchJSON('assets/php/run_clean_artifacts.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -212,7 +230,7 @@
       throw new Error(data.error || 'Failed to clean LLM artifacts')
     }
     
-    console.log(`[Pipeline] Stage 7 complete: cleaned_output.txt saved`)
+    console.log(`[Pipeline] Stage 8 complete: cleaned_output.txt saved`)
     return data
   }
 
@@ -262,17 +280,20 @@
       // Stage 3: Format text -> formattedtext.txt
       await stage3FormatText()
       
-      // Stage 4: Run speaker segmentation -> segmentedtext.txt
+      // Stage 4: Speaker segmentation -> segmentedtext.txt
       await stage4SegmentTranscript()
       
-      // Stage 5: Remove extra whitespace (regex) -> sansextrasegments.txt
-      await stage5RemoveExtraWhitespace()
+      // Stage 5: Remove extra labels (regex) -> sansextrasegments.txt
+      await stage5RemoveExtraLabels()
+
+      // Stage 6: Identify speakers using LLM -> identified_speakers.txt
+      await stage6IdentifySpeakers()
       
-      // Stage 6: Format paragraphs (LLM) -> formattedparagraphs.txt
-      await stage6FormatParagraphs()
+      // Stage 7: Format paragraphs (LLM) -> formattedparagraphs.txt
+      await stage7FormatParagraphs()
       
-      // Stage 7: Clean LLM artifacts (regex) -> cleaned_output.txt
-      await stage7CleanArtifacts()
+      // Stage 8: Clean LLM artifacts (regex) -> cleaned_output.txt
+      await stage8CleanArtifacts()
       
       // Read final output
       const finalOutput = await readFinalOutput()
@@ -291,7 +312,7 @@
   // Expose the module globally
   window.transcriptmodule = { 
     processtranscript: processtranscript
-  };
+  }
   
-  console.log('[processtranscript.js] Module loaded successfully, window.transcriptmodule is now defined');
+  console.log('[processtranscript.js] Module loaded successfully, window.transcriptmodule is now defined')
 })();

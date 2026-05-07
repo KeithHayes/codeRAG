@@ -1,18 +1,6 @@
 The pipeline in the transcript configuration is being refined. 
 
-Verify that the data in each stage of the transcript pipeline processes the input using chunks.
+Inside processtranscript.js there are comments starting around line 270 that gives instructions to insert an new pipeline step.
 
-If this is correct then no new code is written at this time, otherwise chunking is added to the stagest that do not have it.
-
-Be sure and check that a .php or .py file does not already exist if you suspect a new function is needed.
-
-Desired code flow of transcript pipeline stages :
-
-Javascript calls php which reads the output of the previous stage as input.
-
-this php calls a py file that accomplishes the stage task
-
-returning the result to php the php then writes the output file.
-
-we only need run_xxx.php files and xxx.py files the save_xxx and read_xxx files can be eliminated when each stage has a proper run 
-file.
+This step uses an llm and the code base allready uses some models so pick from among them.  After processing by the llm the 
+actual input is modified with regex and a new file is written from which the next step in the pipeline reads.
