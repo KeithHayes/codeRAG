@@ -7,12 +7,20 @@ Handles chunking for arbitrarily long transcripts.
 
 import sys
 import os
-import json
 import requests
 import time
 import re
+import debugpy
 
-INPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/sansextrasegments.txt'
+debug = False
+if debug == True:
+    debugpy.listen(("0.0.0.0", 5678))
+    print("Waiting for debugger...", file=sys.stderr)
+    debugpy.wait_for_client()
+    print("Debugger attached! Continuing execution...", file=sys.stderr)
+    sys.stderr.flush() 
+
+INPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/identifiedspeakers.txt'
 OUTPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/formattedparagraphs.txt'
 
 OLLAMA_URL = "http://localhost:11434/api/chat"

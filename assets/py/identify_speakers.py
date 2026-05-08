@@ -13,10 +13,10 @@ import requests
 import time
 
 INPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/sansextrasegments.txt'
-OUTPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/identified_speakers.txt'
+OUTPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/identifiedspeakers.txt'
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL_NAME = "deepseek-r1:7b"
+MODEL_NAME = "qwen2.5:7b-instruct"
 SYSTEM_PROMPT = """You are a transcript analysis assistant. Analyze the conversation and identify:
 1. Who is the INTERVIEWER (the person asking questions)
 2. Who is the SPEAKER (the person answering questions, providing information)
