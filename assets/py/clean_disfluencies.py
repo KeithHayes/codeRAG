@@ -8,24 +8,30 @@ No file I/O in this script - pure transformation.
 import sys
 import re
 import os
+import yaml
 
-# Comprehensive list of filler words/phrases to remove
-FILLER_WORDS = [
-    'uh', 'um', 'er', 'ah', 'oh', 'eh',
-    'like', 'you know', 'i mean', 'you see', 'the thing is',
-    'so', 'well', 'actually', 'basically', 'literally',
-    'kind of', 'sort of', 'right', 'okay', 'ok',
-    'i guess', 'i think', 'you know what i mean',
-    'let me see', 'wait', 'go ahead', 'start over',
-]
+CONFIG_FILE = '/var/www/html/doomsteadRAG/assets/yaml/transcript.yaml'
 
-def remove_filler_words(text):
+def load_config():
+    """Load configuration from YAML file."""
+    if not os.path.exists(CONFIG_FILE):
+        raise FileNotFoundError(f"Config file not found: {CONFIG_FILE}")
+    
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    if 'clean_disfluencies' not in config:
+        raise KeyError("'clean_disfluencies' section not found in config file")
+    
+    return config['clean_disfluencies']
+
+def remove_filler_words(text, filler_words):
     """
     Remove common filler words and phrases from text.
     Handles words surrounded by spaces, punctuation, or at boundaries.
     """
     cleaned = text
-    for filler in FILLER_WORDS:
+    for filler in filler_words:
         # Create pattern that matches the filler as a whole word/phrase
         # Match case-insensitive, with optional surrounding punctuation
         pattern = r'\b' + re.escape(filler) + r'\b'
@@ -125,7 +131,7 @@ def remove_short_fragments(text):
     
     return ' '.join(cleaned_words)
 
-def clean_line(line):
+def clean_line(line, filler_words):
     """
     Apply all cleaning steps to a single line of text.
     """
@@ -133,7 +139,7 @@ def clean_line(line):
         return ''
     
     # Step 1: Remove filler words
-    cleaned = remove_filler_words(line)
+    cleaned = remove_filler_words(line, filler_words)
     
     # Step 2: Fix partial word corrections
     cleaned = fix_partial_word_corrections(cleaned)
@@ -155,12 +161,13 @@ def clean_line(line):
     
     return cleaned
 
-def remove_disfluencies(transcript_text):
+def remove_disfluencies(transcript_text, filler_words):
     """
     Process transcript text line by line to remove disfluencies.
     
     Args:
         transcript_text: Raw transcript text (sanstimestamps.txt content)
+        filler_words: List of filler words to remove
     
     Returns:
         Cleaned transcript with disfluencies removed
@@ -178,7 +185,7 @@ def remove_disfluencies(transcript_text):
             cleaned_lines.append('')
             continue
         
-        cleaned = clean_line(stripped)
+        cleaned = clean_line(stripped, filler_words)
         if cleaned:
             cleaned_lines.append(cleaned)
     
@@ -194,6 +201,12 @@ def remove_disfluencies(transcript_text):
     return result
 
 def main():
+    config = load_config()
+    filler_words = config.get('filler_words', [])
+    
+    if not filler_words:
+        raise ValueError("No filler_words found in clean_disfluencies config")
+    
     if len(sys.argv) < 3:
         print("Error: Missing input or output file arguments", file=sys.stderr)
         print(f"Usage: {sys.argv[0]} <input_file> <output_file>", file=sys.stderr)
@@ -221,7 +234,7 @@ def main():
     
     # Process
     try:
-        output_text = remove_disfluencies(input_text)
+        output_text = remove_disfluencies(input_text, filler_words)
     except Exception as e:
         print(f"Error processing text: {str(e)}", file=sys.stderr)
         sys.exit(1)

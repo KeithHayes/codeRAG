@@ -230,13 +230,13 @@
       throw new Error(data.error || 'Failed to clean LLM artifacts')
     }
     
-    console.log(`[Pipeline] Stage 8 complete: cleaned_output.txt saved`)
+    console.log(`[Pipeline] Stage 8 complete: cleanedoutput.txt saved`)
     return data
   }
 
   async function readFinalOutput() {
     console.log('[Pipeline] Reading final cleaned output...')
-    const path = 'assets/data/transcripts/cleaned_output.txt'
+    const path = 'assets/data/transcripts/cleanedoutput.txt'
     
     let content = null
     let retries = 5
@@ -258,7 +258,7 @@
     }
     
     if (!content) {
-      throw new Error('cleaned_output.txt not found')
+      throw new Error('cleanedoutput.txt not found')
     }
     
     console.log(`[Pipeline] Final output length: ${content.length}`)
@@ -292,7 +292,7 @@
       // Stage 7: Format paragraphs (LLM) -> formattedparagraphs.txt
       await stage7FormatParagraphs()
       
-      // Stage 8: Clean LLM artifacts (regex) -> cleaned_output.txt
+      // Stage 8: Clean LLM artifacts (regex) -> cleanedoutput.txt
       await stage8CleanArtifacts()
       
       // Read final output

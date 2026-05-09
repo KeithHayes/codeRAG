@@ -1,6 +1,6 @@
 <?php
 // assets/php/run_clean_artifacts.php
-// Execute clean_artifacts.py which reads formattedparagraphs.txt and writes cleaned_output.txt
+// Execute clean_artifacts.py which reads formattedparagraphs.txt and writes cleanedoutput.txt
 
 header('Content-Type: application/json');
 error_reporting(0);

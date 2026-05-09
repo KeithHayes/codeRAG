@@ -1,6 +1,51 @@
-The pipeline in the transcript configuration is being refined. 
+The pipeline in the transcript configuration is being refined.
 
-Inside processtranscript.js there are comments starting around line 270 that gives instructions to insert an new pipeline step.
+Currently the assets/yaml/transcript.yaml has no settings for:
 
-This step uses an llm and the code base allready uses some models so pick from among them.  After processing by the llm the 
-actual input is modified with regex and a new file is written from which the next step in the pipeline reads.
+    clean_artifacts.py
+
+    clean_disfluencies.py
+
+    format_paragraphs.py
+
+    format_text.py
+
+    identify_speakers.py
+
+    remove_extra_labels.py
+
+    remove_timestamps.py
+
+    segment_transcript.py
+
+All of these files are in assets/py/
+
+Requirements:
+
+    CREATE a new assets/yaml/transcript.yaml file with sections for EACH of the 8 Python files listed above.
+
+    ORDER the sections in the YAML file in the EXACT order the Python files are called in the pipeline (which is the order listed above).
+
+    MOVE settings that are currently hardcoded in each Python file into its corresponding YAML section:
+
+        For regex-based files (remove_timestamps.py, remove_extra_labels.py, clean_artifacts.py): move the regex patterns into the YAML
+
+        For LLM-based files (format_text.py, segment_transcript.py, identify_speakers.py, format_paragraphs.py): move the model type, system prompt, and user prompt template into the YAML
+
+        For clean_disfluencies.py: move the filler words list into the YAML
+
+    MODIFY each Python file to:
+
+        READ its configuration from transcript.yaml instead of using hardcoded values
+
+        PRESERVE all existing file I/O paths (the specific input and output files each script reads/writes)
+
+        PRESERVE all existing logic and functionality EXCEPT for the values now coming from YAML
+
+        DO NOT add fallbacks or default values - if a config value is missing, raise an error
+
+        DO NOT change the command-line interface or file handling of any script
+
+    DO NOT change the pipeline execution order or add new features.
+
+Critical: The only change to each Python file is to replace hardcoded strings/lists/dictionaries with values loaded from transcript.yaml. All file paths, input/output behavior, and core logic remain exactly as they were.

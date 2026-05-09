@@ -8,8 +8,24 @@ No file I/O in this script - pure transformation.
 import sys
 import re
 import os
+import yaml
 
-def remove_timestamps(text):
+CONFIG_FILE = '/var/www/html/doomsteadRAG/assets/yaml/transcript.yaml'
+
+def load_config():
+    """Load configuration from YAML file."""
+    if not os.path.exists(CONFIG_FILE):
+        raise FileNotFoundError(f"Config file not found: {CONFIG_FILE}")
+    
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    if 'remove_timestamps' not in config:
+        raise KeyError("'remove_timestamps' section not found in config file")
+    
+    return config['remove_timestamps']
+
+def remove_timestamps(text, patterns):
     """
     Remove timestamp patterns from transcript text.
     
@@ -24,21 +40,19 @@ def remove_timestamps(text):
     for line in lines:
         stripped = line.strip()
         
-        # Skip lines that contain only a timestamp (e.g., "0:13")
-        if re.match(r'^\d+:\d+$', stripped):
-            continue
+        # Apply each regex pattern
+        skip = False
+        for pattern in patterns:
+            if re.match(pattern, stripped):
+                skip = True
+                break
         
-        # Skip lines that contain only duration (e.g., "13 seconds", "1 minute, 1 second")
-        if re.match(r'^\d+\s+seconds?$', stripped, re.IGNORECASE):
-            continue
-        if re.match(r'^\d+\s+minutes?,\s+\d+\s+seconds?$', stripped, re.IGNORECASE):
+        if skip:
             continue
         
         # Remove timestamp prefix from beginning of line
-        # Pattern: "0:13 5 seconds " or "0:13 " or "0:13"
-        line = re.sub(r'^\d+:\d+\s+\d+\s+seconds?\s*', '', line)
-        line = re.sub(r'^\d+:\d+\s+', '', line)
-        line = re.sub(r'^\[\d+:\d+\]\s*', '', line)
+        for pattern in patterns:
+            line = re.sub(r'^' + pattern + r'\s*', '', line)
         
         # Remove any remaining standalone timestamps within the line
         line = re.sub(r'\b\d+:\d+\b', '', line)
@@ -54,6 +68,12 @@ def remove_timestamps(text):
     return result.strip()
 
 def main():
+    config = load_config()
+    patterns = config.get('regex_patterns', [])
+    
+    if not patterns:
+        raise ValueError("No regex_patterns found in remove_timestamps config")
+    
     if len(sys.argv) < 3:
         print("Error: Missing input or output file arguments", file=sys.stderr)
         print(f"Usage: {sys.argv[0]} <input_file> <output_file>", file=sys.stderr)
@@ -81,7 +101,7 @@ def main():
     
     # Process
     try:
-        output_text = remove_timestamps(input_text)
+        output_text = remove_timestamps(input_text, patterns)
     except Exception as e:
         print(f"Error processing text: {str(e)}", file=sys.stderr)
         sys.exit(1)

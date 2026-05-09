@@ -11,32 +11,45 @@ import requests
 import time
 import json
 import subprocess
+import yaml
 
-SELECTED_MODEL = 'qwen2.5:7b'
-MAX_CHUNK_SIZE = 2000
+CONFIG_FILE = '/var/www/html/doomsteadRAG/assets/yaml/transcript.yaml'
 
-def pull_model_if_needed():
+def load_config():
+    """Load configuration from YAML file."""
+    if not os.path.exists(CONFIG_FILE):
+        raise FileNotFoundError(f"Config file not found: {CONFIG_FILE}")
+    
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    if 'format_text' not in config:
+        raise KeyError("'format_text' section not found in config file")
+    
+    return config['format_text']
+
+def pull_model_if_needed(model):
     """Pull the selected model if not already present."""
-    print(f"Checking if model {SELECTED_MODEL} is available...", file=sys.stderr)
+    print(f"Checking if model {model} is available...", file=sys.stderr)
     
     try:
         resp = requests.get('http://localhost:11434/api/tags', timeout=5)
         if resp.status_code == 200:
             data = resp.json()
             models = data.get('models', [])
-            for model in models:
-                if model.get('name', '') == SELECTED_MODEL:
-                    print(f"Model {SELECTED_MODEL} is already available", file=sys.stderr)
+            for m in models:
+                if m.get('name', '') == model:
+                    print(f"Model {model} is already available", file=sys.stderr)
                     return True
     except Exception as e:
         print(f"Could not check models: {e}", file=sys.stderr)
     
-    print(f"Pulling model {SELECTED_MODEL}...", file=sys.stderr)
+    print(f"Pulling model {model}...", file=sys.stderr)
     print("This may take several minutes...", file=sys.stderr)
     
     try:
         result = subprocess.run(
-            ['ollama', 'pull', SELECTED_MODEL],
+            ['ollama', 'pull', model],
             capture_output=True,
             text=True,
             timeout=600
@@ -46,7 +59,7 @@ def pull_model_if_needed():
             print(f"Failed to pull model: {result.stderr}", file=sys.stderr)
             return False
         
-        print(f"Successfully pulled model {SELECTED_MODEL}", file=sys.stderr)
+        print(f"Successfully pulled model {model}", file=sys.stderr)
         return True
         
     except subprocess.TimeoutExpired:
@@ -88,12 +101,12 @@ def ensure_ollama_running():
     
     return False
 
-def call_ollama(system_prompt, user_prompt, temperature=0.1, max_tokens=4096):
+def call_ollama(system_prompt, user_prompt, model, temperature, max_tokens):
     """Call Ollama API for text formatting."""
     ollama_url = 'http://localhost:11434/api/chat'
     
     payload = {
-        'model': SELECTED_MODEL,
+        'model': model,
         'messages': [
             {'role': 'system', 'content': system_prompt},
             {'role': 'user', 'content': user_prompt}
@@ -130,22 +143,36 @@ def call_ollama(system_prompt, user_prompt, temperature=0.1, max_tokens=4096):
     
     return result
 
-def format_transcript(transcript_text):
+def format_transcript(transcript_text, config):
     """Format transcript text into complete sentences and paragraphs using Ollama."""
     if not transcript_text or not transcript_text.strip():
         raise ValueError("Input text is empty")
     
+    model = config.get('model')
+    system_prompt = config.get('system_prompt')
+    user_prompt_template = config.get('user_prompt_template')
+    max_chunk_size = config.get('max_chunk_size', 2000)
+    temperature = config.get('temperature', 0.1)
+    max_tokens = config.get('max_tokens', 4096)
+    
+    if not model:
+        raise ValueError("No model specified in format_text config")
+    if not system_prompt:
+        raise ValueError("No system_prompt specified in format_text config")
+    if not user_prompt_template:
+        raise ValueError("No user_prompt_template specified in format_text config")
+    
     print(f"\n{'='*60}", file=sys.stderr)
     print(f"STARTING FORMATTING WITH OLLAMA", file=sys.stderr)
-    print(f"Model: {SELECTED_MODEL}", file=sys.stderr)
+    print(f"Model: {model}", file=sys.stderr)
     print(f"Input size: {len(transcript_text)} characters", file=sys.stderr)
     print(f"{'='*60}\n", file=sys.stderr)
     
     if not ensure_ollama_running():
         raise Exception("Cannot start Ollama service")
     
-    if not pull_model_if_needed():
-        raise Exception(f"Failed to pull model {SELECTED_MODEL}")
+    if not pull_model_if_needed(model):
+        raise Exception(f"Failed to pull model {model}")
     
     text = ' '.join(transcript_text.splitlines())
     text = re.sub(r'\s+', ' ', text)
@@ -153,35 +180,27 @@ def format_transcript(transcript_text):
     print(f"After normalization: {len(text)} characters", file=sys.stderr)
     
     chunks = []
-    for i in range(0, len(text), MAX_CHUNK_SIZE):
-        chunk = text[i:i + MAX_CHUNK_SIZE]
+    for i in range(0, len(text), max_chunk_size):
+        chunk = text[i:i + max_chunk_size]
         chunks.append(chunk)
     
-    print(f"Split into {len(chunks)} chunks of max {MAX_CHUNK_SIZE} chars", file=sys.stderr)
+    print(f"Split into {len(chunks)} chunks of max {max_chunk_size} chars", file=sys.stderr)
     print(f"{'='*60}\n", file=sys.stderr)
     
-    system_prompt = """You are a text formatting assistant. Your ONLY job is to add proper punctuation and capitalization to the text.
-Rules:
-- Add periods at the end of sentences that lack them
-- Capitalize the first letter of each sentence
-- Do not change any words, only add punctuation and fix capitalization
-- Do not add any explanations, commentary, or extra text
-- Output ONLY the formatted text"""
-
     formatted_chunks = []
     total_start = time.time()
     
     for i, chunk in enumerate(chunks):
         print(f"[CHUNK {i+1}/{len(chunks)}] Processing {len(chunk)} chars...", file=sys.stderr)
         
-        user_prompt = f"Add proper punctuation and capitalization to this text. Output ONLY the formatted text:\n\n{chunk}"
+        user_prompt = user_prompt_template.replace('{input}', chunk)
         
         start_time = time.time()
         
         result = None
         for attempt in range(3):
             try:
-                result = call_ollama(system_prompt, user_prompt)
+                result = call_ollama(system_prompt, user_prompt, model, temperature, max_tokens)
                 if result:
                     break
             except Exception as e:
@@ -217,6 +236,8 @@ Rules:
     return result
 
 def main():
+    config = load_config()
+    
     if len(sys.argv) < 3:
         print(f"Usage: {sys.argv[0]} <input_file> <output_file>", file=sys.stderr)
         sys.exit(1)
@@ -236,7 +257,7 @@ def main():
             print("Input file is empty", file=sys.stderr)
             sys.exit(1)
         
-        result = format_transcript(input_text)
+        result = format_transcript(input_text, config)
         
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(result)

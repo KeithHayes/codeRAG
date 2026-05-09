@@ -12,10 +12,22 @@ import requests
 import json
 import time
 import signal
+import yaml
 
-SELECTED_MODEL = 'mistral:7b-instruct-v0.3-q4_0'
-MAX_CHUNK_SIZE = 2000
-OVERLAP_SENTENCES = 3
+CONFIG_FILE = '/var/www/html/doomsteadRAG/assets/yaml/transcript.yaml'
+
+def load_config():
+    """Load configuration from YAML file."""
+    if not os.path.exists(CONFIG_FILE):
+        raise FileNotFoundError(f"Config file not found: {CONFIG_FILE}")
+    
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    if 'segment_transcript' not in config:
+        raise KeyError("'segment_transcript' section not found in config file")
+    
+    return config['segment_transcript']
 
 def timeout_handler(signum, frame):
     raise Exception("Function timed out")
@@ -34,12 +46,12 @@ def ensure_ollama_running():
     print("Ollama service is not running", file=sys.stderr)
     return False
 
-def call_ollama_for_segmentation(system_prompt, user_prompt, temperature=0.0, max_tokens=4096, timeout=90):
+def call_ollama_for_segmentation(system_prompt, user_prompt, model, temperature, max_tokens, timeout_seconds):
     """Call Ollama API for speaker segmentation with timeout."""
     ollama_url = 'http://localhost:11434/api/chat'
     
     payload = {
-        'model': SELECTED_MODEL,
+        'model': model,
         'messages': [
             {'role': 'system', 'content': system_prompt},
             {'role': 'user', 'content': user_prompt}
@@ -53,14 +65,14 @@ def call_ollama_for_segmentation(system_prompt, user_prompt, temperature=0.0, ma
     
     try:
         signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(timeout)
+        signal.alarm(timeout_seconds)
         
-        response = requests.post(ollama_url, json=payload, timeout=timeout)
+        response = requests.post(ollama_url, json=payload, timeout=timeout_seconds)
         
         signal.alarm(0)
         
     except requests.exceptions.Timeout:
-        raise Exception(f"Request timed out after {timeout} seconds")
+        raise Exception(f"Request timed out after {timeout_seconds} seconds")
     except requests.exceptions.RequestException as e:
         raise Exception(f"Request failed: {e}")
     
@@ -83,7 +95,7 @@ def extract_sentences(text):
     sentences = [s.strip() for s in sentences if s.strip()]
     return sentences
 
-def chunk_with_overlap(text, max_chunk_size=MAX_CHUNK_SIZE, overlap_sentences=OVERLAP_SENTENCES):
+def chunk_with_overlap(text, max_chunk_size, overlap_sentences):
     """Split text into chunks that respect sentence boundaries with overlap."""
     sentences = extract_sentences(text)
     
@@ -128,17 +140,17 @@ def chunk_with_overlap(text, max_chunk_size=MAX_CHUNK_SIZE, overlap_sentences=OV
     
     return chunks
 
-def strip_overlap_from_output(output_text, chunk_info):
+def strip_overlap_from_output(output_text, chunk_info, overlap_sentences):
     """Remove overlap sentences from the beginning of the output."""
     if not chunk_info.get('has_overlap', False):
         return output_text
     
     lines = output_text.strip().split('\n')
     
-    if len(lines) <= chunk_info.get('overlap_count', OVERLAP_SENTENCES):
+    if len(lines) <= chunk_info.get('overlap_count', overlap_sentences):
         return output_text
     
-    overlap_removed = lines[chunk_info.get('overlap_count', OVERLAP_SENTENCES):]
+    overlap_removed = lines[chunk_info.get('overlap_count', overlap_sentences):]
     
     if not overlap_removed:
         return output_text
@@ -192,34 +204,39 @@ def update_status(completed=False, error=None):
             except:
                 pass
 
-def segment_transcript(transcript_text):
+def segment_transcript(transcript_text, config):
     """Perform speaker segmentation on transcript text using Ollama."""
     if not transcript_text or not transcript_text.strip():
         raise ValueError("Input text is empty")
     
+    model = config.get('model')
+    system_prompt = config.get('system_prompt')
+    user_prompt_template = config.get('user_prompt_template')
+    max_chunk_size = config.get('max_chunk_size', 2000)
+    overlap_sentences = config.get('overlap_sentences', 3)
+    temperature = config.get('temperature', 0.0)
+    max_tokens = config.get('max_tokens', 4096)
+    timeout_seconds = config.get('timeout_seconds', 90)
+    
+    if not model:
+        raise ValueError("No model specified in segment_transcript config")
+    if not system_prompt:
+        raise ValueError("No system_prompt specified in segment_transcript config")
+    if not user_prompt_template:
+        raise ValueError("No user_prompt_template specified in segment_transcript config")
+    
     print(f"\n{'='*60}", file=sys.stderr)
     print(f"STARTING SPEAKER DIARIZATION", file=sys.stderr)
-    print(f"Model: {SELECTED_MODEL}", file=sys.stderr)
+    print(f"Model: {model}", file=sys.stderr)
     print(f"Input size: {len(transcript_text)} characters", file=sys.stderr)
-    print(f"Overlap: {OVERLAP_SENTENCES} sentences", file=sys.stderr)
+    print(f"Overlap: {overlap_sentences} sentences", file=sys.stderr)
     print(f"{'='*60}\n", file=sys.stderr)
     
     if not ensure_ollama_running():
         raise Exception("Ollama service is not running")
     
-    chunks = chunk_with_overlap(transcript_text)
-    print(f"Split into {len(chunks)} chunks with {OVERLAP_SENTENCES}-sentence overlap", file=sys.stderr)
-    
-    system_prompt = """You are an expert conversation analyst. Perform speaker segmentation on the transcript. The conversation is between exactly two people: "Interviewer" (asks questions) and "Speaker" (provides answers).
-
-RULES:
-- Label each sentence with either "Interviewer:" or "Speaker:"
-- Interviewer typically asks questions
-- Speaker provides answers and explanations
-- Maintain consistent speaker identity across the entire transcript
-- Output ONLY the labeled text, no extra words
-- Preserve all original text exactly as given
-- Put each labeled sentence on a new line"""
+    chunks = chunk_with_overlap(transcript_text, max_chunk_size, overlap_sentences)
+    print(f"Split into {len(chunks)} chunks with {overlap_sentences}-sentence overlap", file=sys.stderr)
     
     labeled_chunks = []
     total_start = time.time()
@@ -230,20 +247,20 @@ RULES:
         
         print(f"[{i+1}/{len(chunks)}] Processing {len(chunk_text)} chars...", file=sys.stderr)
         if chunk_info['has_overlap'] and not is_first_chunk:
-            print(f"  Includes {OVERLAP_SENTENCES} overlap sentences for context", file=sys.stderr)
+            print(f"  Includes {overlap_sentences} overlap sentences for context", file=sys.stderr)
         
         context_note = ""
         if chunk_info['has_overlap'] and not is_first_chunk:
             context_note = "\n\nNOTE: The first few sentences in this chunk repeat from the previous chunk for context. Maintain consistent speaker labeling with the previous labeling."
         
-        user_prompt = f"Label each sentence with Interviewer: or Speaker:. Output only the labeled text:{context_note}\n\n{chunk_text}"
+        user_prompt = user_prompt_template.replace('{input}', chunk_text).replace('{context_note}', context_note)
         
         start_time = time.time()
         
         result = None
         for attempt in range(2):
             try:
-                result = call_ollama_for_segmentation(system_prompt, user_prompt, timeout=90)
+                result = call_ollama_for_segmentation(system_prompt, user_prompt, model, temperature, max_tokens, timeout_seconds)
                 if result and len(result) > 10:
                     break
             except Exception as e:
@@ -264,7 +281,7 @@ RULES:
         
         if not is_first_chunk and chunk_info['has_overlap']:
             try:
-                result = strip_overlap_from_output(result, chunk_info)
+                result = strip_overlap_from_output(result, chunk_info, overlap_sentences)
             except Exception as e:
                 print(f"  WARNING: Could not strip overlap: {e}", file=sys.stderr)
         
@@ -285,6 +302,8 @@ RULES:
     return result
 
 if __name__ == "__main__":
+    config = load_config()
+    
     if len(sys.argv) < 3:
         print(f"Usage: {sys.argv[0]} <input_file> <output_file>", file=sys.stderr)
         sys.exit(1)
@@ -305,7 +324,7 @@ if __name__ == "__main__":
             update_status(completed=True, error="Input file is empty")
             sys.exit(1)
         
-        result = segment_transcript(input_text)
+        result = segment_transcript(input_text, config)
         
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(result)

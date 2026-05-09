@@ -50,7 +50,7 @@ def create_report():
         #os.path.join(base_path, 'assets', 'docs', 'backannotate.txt'),
         os.path.join(base_path, 'assets', 'docs', 'boilerplate.txt'),
         #os.path.join(base_path, 'assets', 'docs', 'as-built-specification.txt'),
-        #os.path.join(base_path, 'assets','data','transcripts', 'cleaned_output.txt'),
+        #os.path.join(base_path, 'assets','data','transcripts', 'cleanedoutput.txt'),
         #os.path.join(base_path, 'assets','data','transcripts', 'formattedparagraphs.txt'),
         #os.path.join(base_path, 'assets','data','transcripts', 'formattedtext.txt'),
         #os.path.join(base_path, 'assets','data','transcripts', 'rawtranscript.txt'),

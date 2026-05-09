@@ -1,46 +1,34 @@
 #!/usr/bin/env python3
 """
-identify_speakers.py - Use LLM to identify interviewer and speaker names, then replace placeholders.
+identify_speakers.py - Use Ollama LLM to identify speakers in transcript.
 Reads from sansextrasegments.txt, writes to identified_speakers.txt
-Handles chunking for arbitrarily long transcripts.
 """
 
 import sys
 import os
-import re
-import json
 import requests
 import time
+import yaml
 
+CONFIG_FILE = '/var/www/html/doomsteadRAG/assets/yaml/transcript.yaml'
 INPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/sansextrasegments.txt'
 OUTPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/identifiedspeakers.txt'
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL_NAME = "qwen2.5:7b-instruct"
-SYSTEM_PROMPT = """You are a transcript analysis assistant. Analyze the conversation and identify:
-1. Who is the INTERVIEWER (the person asking questions)
-2. Who is the SPEAKER (the person answering questions, providing information)
+def load_config():
+    """Load configuration from YAML file."""
+    if not os.path.exists(CONFIG_FILE):
+        raise FileNotFoundError(f"Config file not found: {CONFIG_FILE}")
+    
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    if 'identify_speakers' not in config:
+        raise KeyError("'identify_speakers' section not found in config file")
+    
+    return config['identify_speakers']
 
-Look for patterns like:
-- Questions come from interviewer
-- Answers and explanations come from speaker
-- Formal introductions like "I'm [name]" or "My name is [name]"
-- References like "as I mentioned earlier" or "like I said"
-
-Output ONLY valid JSON in this exact format:
-{
-    "interviewer_name": "Actual name found or 'Interviewer' if unknown",
-    "speaker_name": "Actual name found or 'Speaker' if unknown"
-}
-
-No markdown, no code blocks, no explanation, only the JSON object."""
-
-TEMPERATURE = 0.1
-MAX_TOKENS = 500
-CHUNK_SIZE = 8000
-
-def chunk_text(text, chunk_size=CHUNK_SIZE):
-    """Split text into chunks for sampling."""
+def chunk_text(text, chunk_size):
+    """Split text into chunks that respect line boundaries."""
     if len(text) <= chunk_size:
         return [text]
     
@@ -65,108 +53,73 @@ def chunk_text(text, chunk_size=CHUNK_SIZE):
     return chunks
 
 def ensure_ollama_running():
-    """Ensure Ollama service is running."""
-    for attempt in range(3):
-        try:
-            resp = requests.get('http://localhost:11434/api/tags', timeout=3)
-            if resp.status_code == 200:
-                return True
-        except:
-            pass
-        time.sleep(2)
-    
-    print("Ollama service is not running", file=sys.stderr)
-    return False
+    """Check if Ollama is running."""
+    try:
+        resp = requests.get('http://localhost:11434/api/tags', timeout=3)
+        return resp.status_code == 200
+    except:
+        return False
 
-def call_ollama_for_identification(text, attempt=1):
+def call_ollama(text, config, attempt=1):
     """Call Ollama API to identify speakers."""
+    model = config.get('model')
+    system_prompt = config.get('system_prompt')
+    user_prompt_template = config.get('user_prompt_template')
+    temperature = config.get('temperature', 0.1)
+    max_tokens = config.get('max_tokens', 4096)
+    
+    ollama_url = "http://localhost:11434/api/chat"
+    
+    user_prompt = user_prompt_template.replace('{input}', text)
+    
     payload = {
-        'model': MODEL_NAME,
+        'model': model,
         'messages': [
-            {'role': 'system', 'content': SYSTEM_PROMPT},
-            {'role': 'user', 'content': f"Analyze this transcript excerpt and identify the interviewer and speaker:\n\n{text[:6000]}"}
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt}
         ],
         'stream': False,
         'options': {
-            'temperature': TEMPERATURE,
-            'num_predict': MAX_TOKENS
+            'temperature': temperature,
+            'num_predict': max_tokens
         }
     }
     
     try:
-        # Use longer timeout for first attempt to allow model loading
-        timeout = 120 if attempt == 1 else 60
-        response = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
-        
+        response = requests.post(ollama_url, json=payload, timeout=180)
         if response.status_code != 200:
             print(f"Ollama returned {response.status_code}", file=sys.stderr)
             return None
         
         data = response.json()
         if data.get('message') and data['message'].get('content'):
-            content = data['message']['content'].strip()
-            
-            # Extract JSON from response (in case model adds markdown)
-            json_match = re.search(r'\{[^{}]*"interviewer_name"[^{}]*"speaker_name"[^{}]*\}', content, re.DOTALL)
-            if json_match:
-                content = json_match.group(0)
-            
-            return content
-        return None
-    except requests.exceptions.Timeout:
-        if attempt == 1:
-            print("First request timed out - model may be loading. Will retry...", file=sys.stderr)
-        else:
-            print(f"Ollama timeout (attempt {attempt})", file=sys.stderr)
+            return data['message']['content'].strip()
         return None
     except Exception as e:
         print(f"Ollama error (attempt {attempt}): {e}", file=sys.stderr)
         return None
 
-def parse_llm_response(response_text):
-    """Parse LLM response to extract interviewer and speaker names."""
-    try:
-        data = json.loads(response_text)
-        interviewer = data.get('interviewer_name', 'Interviewer')
-        speaker = data.get('speaker_name', 'Speaker')
-        
-        # Clean up names - remove extra quotes, whitespace
-        interviewer = interviewer.strip().strip('"').strip("'")
-        speaker = speaker.strip().strip('"').strip("'")
-        
-        # Use defaults if empty
-        if not interviewer:
-            interviewer = 'Interviewer'
-        if not speaker:
-            speaker = 'Speaker'
-        
-        return interviewer, speaker
-    except json.JSONDecodeError:
-        print(f"Failed to parse JSON: {response_text[:200]}", file=sys.stderr)
-        return 'Interviewer', 'Speaker'
-
-def replace_speaker_labels(text, interviewer_name, speaker_name):
-    """
-    Replace 'Interviewer:' and 'Speaker:' placeholders with actual names.
-    Also handles variations in capitalization and spacing.
-    """
-    # Replace interviewer label (case insensitive, with optional colon)
-    text = re.sub(r'(?i)^interviewer\s*:\s*', f'{interviewer_name}: ', text, flags=re.MULTILINE)
-    text = re.sub(r'(?i)\ninterviewer\s*:\s*', f'\n{interviewer_name}: ', text, flags=re.MULTILINE)
+def post_process(text):
+    """Clean up any remaining artifacts."""
+    lines = text.split('\n')
+    cleaned_lines = []
     
-    # Replace speaker label (case insensitive, with optional colon)
-    text = re.sub(r'(?i)^speaker\s*:\s*', f'{speaker_name}: ', text, flags=re.MULTILINE)
-    text = re.sub(r'(?i)\nspeaker\s*:\s*', f'\n{speaker_name}: ', text, flags=re.MULTILINE)
+    for line in lines:
+        line = line.strip()
+        if line:
+            cleaned_lines.append(line)
     
-    # Also handle the case where there's no space before colon
-    text = re.sub(r'(?i)^interviewer\s*:', f'{interviewer_name}:', text, flags=re.MULTILINE)
-    text = re.sub(r'(?i)\ninterviewer\s*:', f'\n{interviewer_name}:', text, flags=re.MULTILINE)
-    text = re.sub(r'(?i)^speaker\s*:', f'{speaker_name}:', text, flags=re.MULTILINE)
-    text = re.sub(r'(?i)\nspeaker\s*:', f'\n{speaker_name}:', text, flags=re.MULTILINE)
-    
-    return text
+    return '\n'.join(cleaned_lines)
 
 def main():
+    config = load_config()
+    
+    model = config.get('model')
+    chunk_size = config.get('max_chunk_size', 15000)
+    
+    if not model:
+        raise ValueError("No model specified in identify_speakers config")
+    
     if not os.path.exists(INPUT_FILE):
         print(f"Input file not found: {INPUT_FILE}", file=sys.stderr)
         sys.exit(1)
@@ -179,37 +132,33 @@ def main():
         sys.exit(1)
     
     if not ensure_ollama_running():
+        print("Ollama service is not running", file=sys.stderr)
         sys.exit(1)
     
-    print(f"Analyzing transcript to identify speakers...", file=sys.stderr)
-    print(f"Input size: {len(input_text)} characters", file=sys.stderr)
+    chunks = chunk_text(input_text, chunk_size)
+    print(f"Split into {len(chunks)} chunks", file=sys.stderr)
     
-    # Get first chunk and last chunk for context (beginning and end of conversation)
-    chunks = chunk_text(input_text)
-    sample_text = chunks[0] if chunks else input_text
-    if len(chunks) > 1:
-        sample_text = sample_text + "\n\n... (middle omitted) ...\n\n" + chunks[-1]
+    processed_chunks = []
+    for i, chunk in enumerate(chunks):
+        print(f"Processing chunk {i+1}/{len(chunks)} ({len(chunk)} chars)...", file=sys.stderr)
+        
+        result = None
+        for attempt in range(3):
+            result = call_ollama(chunk, config, attempt+1)
+            if result:
+                break
+            time.sleep(3)
+        
+        if not result:
+            print(f"Failed to process chunk {i+1} after 3 attempts", file=sys.stderr)
+            sys.exit(1)
+        
+        processed_chunks.append(result)
+        print(f"  Completed, output length: {len(result)}", file=sys.stderr)
     
-    # Call LLM to identify speakers
-    llm_response = None
-    for attempt in range(3):
-        llm_response = call_ollama_for_identification(sample_text, attempt + 1)
-        if llm_response:
-            break
-        time.sleep(3)
+    output_text = '\n'.join(processed_chunks)
+    output_text = post_process(output_text)
     
-    if not llm_response:
-        print("Failed to get response from Ollama after 3 attempts, using defaults", file=sys.stderr)
-        interviewer_name = 'Interviewer'
-        speaker_name = 'Speaker'
-    else:
-        interviewer_name, speaker_name = parse_llm_response(llm_response)
-        print(f"Identified - Interviewer: {interviewer_name}, Speaker: {speaker_name}", file=sys.stderr)
-    
-    # Replace placeholders in the full text
-    output_text = replace_speaker_labels(input_text, interviewer_name, speaker_name)
-    
-    # Ensure output directory exists
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:

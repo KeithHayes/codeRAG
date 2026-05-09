@@ -10,7 +10,12 @@ import os
 import requests
 import time
 import re
+import yaml
 import debugpy
+
+CONFIG_FILE = '/var/www/html/doomsteadRAG/assets/yaml/transcript.yaml'
+INPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/identifiedspeakers.txt'
+OUTPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/formattedparagraphs.txt'
 
 debug = False
 if debug == True:
@@ -20,17 +25,20 @@ if debug == True:
     print("Debugger attached! Continuing execution...", file=sys.stderr)
     sys.stderr.flush() 
 
-INPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/identifiedspeakers.txt'
-OUTPUT_FILE = '/var/www/html/doomsteadRAG/assets/data/transcripts/formattedparagraphs.txt'
+def load_config():
+    """Load configuration from YAML file."""
+    if not os.path.exists(CONFIG_FILE):
+        raise FileNotFoundError(f"Config file not found: {CONFIG_FILE}")
+    
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    if 'format_paragraphs' not in config:
+        raise KeyError("'format_paragraphs' section not found in config file")
+    
+    return config['format_paragraphs']
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL_NAME = "deepseek-r1:7b"
-SYSTEM_PROMPT = "You are a transcript formatting assistant. Output ONLY the formatted text. No JSON, no markdown, no code blocks, no explanations."
-TEMPERATURE = 0.1
-MAX_TOKENS = 32769
-CHUNK_SIZE = 15000
-
-def chunk_text(text, chunk_size=CHUNK_SIZE):
+def chunk_text(text, chunk_size):
     """Split text into chunks that respect paragraph boundaries."""
     if len(text) <= chunk_size:
         return [text]
@@ -63,23 +71,33 @@ def ensure_ollama_running():
     except:
         return False
 
-def call_ollama(text, attempt=1):
+def call_ollama(text, config, attempt=1):
     """Call Ollama API to format text."""
+    model = config.get('model')
+    system_prompt = config.get('system_prompt')
+    user_prompt_template = config.get('user_prompt_template')
+    temperature = config.get('temperature', 0.1)
+    max_tokens = config.get('max_tokens', 32769)
+    
+    ollama_url = "http://localhost:11434/api/chat"
+    
+    user_prompt = user_prompt_template.replace('{input}', text)
+    
     payload = {
-        'model': MODEL_NAME,
+        'model': model,
         'messages': [
-            {'role': 'system', 'content': SYSTEM_PROMPT},
-            {'role': 'user', 'content': f"Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{text}"}
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt}
         ],
         'stream': False,
         'options': {
-            'temperature': TEMPERATURE,
-            'num_predict': MAX_TOKENS
+            'temperature': temperature,
+            'num_predict': max_tokens
         }
     }
     
     try:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=180)
+        response = requests.post(ollama_url, json=payload, timeout=180)
         if response.status_code != 200:
             print(f"Ollama returned {response.status_code}", file=sys.stderr)
             return None
@@ -99,6 +117,16 @@ def post_process(text):
     return text
 
 def main():
+    config = load_config()
+    
+    model = config.get('model')
+    chunk_size = config.get('max_chunk_size', 15000)
+    temperature = config.get('temperature', 0.1)
+    max_tokens = config.get('max_tokens', 32769)
+    
+    if not model:
+        raise ValueError("No model specified in format_paragraphs config")
+    
     if not os.path.exists(INPUT_FILE):
         print(f"Input file not found: {INPUT_FILE}", file=sys.stderr)
         sys.exit(1)
@@ -114,7 +142,7 @@ def main():
         print("Ollama service is not running", file=sys.stderr)
         sys.exit(1)
     
-    chunks = chunk_text(input_text)
+    chunks = chunk_text(input_text, chunk_size)
     print(f"Split into {len(chunks)} chunks", file=sys.stderr)
     
     processed_chunks = []
@@ -123,7 +151,7 @@ def main():
         
         result = None
         for attempt in range(3):
-            result = call_ollama(chunk, attempt+1)
+            result = call_ollama(chunk, config, attempt+1)
             if result:
                 break
             time.sleep(3)
