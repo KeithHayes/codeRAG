@@ -74,6 +74,10 @@
     switchProfile('RAGdocs', 'ragdocs', 'Retrieval Argumentation Generation for Code')
   }
 
+  function interview() {
+    switchProfile('Interview', 'interview', 'Interview Processor')
+  }
+
   function transcripts() {
     switchProfile('Transcripts', 'transcript', 'Transcript Processor')
   }
@@ -230,7 +234,7 @@
     try {
       const currentProfileName = await getCurrentProfile()
       
-      if (currentProfileName !== 'transcript') {
+      if (currentProfileName !== 'transcript' && currentProfileName !== 'interview') {
         const response = await fetch('assets/php/ollama_api.php?action=list&_=' + Date.now())
         const data = await response.json()
         
@@ -252,7 +256,22 @@
       
       setStatusMessage('Processing transcript...', null)
       
-      const result = await transcriptmodule.processtranscript()
+      let result
+      if (currentProfileName === 'interview') {
+        if (window.interviewmodule && window.interviewmodule.processinterview) {
+          result = await window.interviewmodule.processinterview()
+        } else {
+          throw new Error('interviewmodule not loaded. Make sure processinterview.js is included in the page.')
+        }
+      } else if (currentProfileName === 'transcript') {
+        if (window.transcriptmodule && window.transcriptmodule.processtranscript) {
+          result = await window.transcriptmodule.processtranscript()
+        } else {
+          throw new Error('transcriptmodule not loaded. Make sure processtranscript.js is included in the page.')
+        }
+      } else {
+        throw new Error('Pipeline module not available for this profile')
+      }
       
       const chatbox = document.getElementById('chatbox')
       if (chatbox) {
@@ -350,7 +369,7 @@
       const fullBuildBtn = document.getElementById('button_fullbuild')
       const pasteBtn = document.getElementById('button_pastetranscript')
       
-      if (configValue === 'transcript') {
+      if (configValue === 'transcript' || configValue === 'interview') {
         if (fullBuildBtn) fullBuildBtn.style.display = 'none'
         if (pasteBtn) pasteBtn.style.display = ''
       } else {
@@ -587,6 +606,7 @@
       Doomstead: doomsteadcode,
       Mainpage: mainpagecode,
       RAGdocs: ragdocs,
+      Interview: interview,
       Transcripts: transcripts,
       PlantDiseases: plantdiseases,
       Socialism: socialism
@@ -671,7 +691,7 @@
     buttonlist.id = 'coderag_menu_buttons'
     buttonlist.classList.add('coderag-menu')
 
-    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode', 'Doomstead', 'Mainpage', 'RAGdocs', 'Transcripts', 'PlantDiseases', 'Socialism']))
+    buttonlist.appendChild(addbuttondropdown('fileload', 'fileloadBTN', 'left', ['RAGcode', 'Doomstead', 'Mainpage', 'RAGdocs', 'Interview', 'Transcripts', 'PlantDiseases', 'Socialism']))
     buttonlist.appendChild(addbutton('line1', 'dividerBTN', 'left', true))
     buttonlist.appendChild(addbutton('homeserver', 'homeserverBTN', 'left', false))
     buttonlist.appendChild(addbutton('fullbuild', 'dbuploadBTN', 'left', false))

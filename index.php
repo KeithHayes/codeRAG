@@ -36,6 +36,7 @@
 <script src="assets/js/clipboard_modal.js"></script>
 <script src="assets/js/model_modal.js"></script>
 <script src="assets/js/processtranscript.js"></script>
+<script src="assets/js/processinterview.js"></script>
 <script src="assets/js/toolbar.js"></script>
 </body>
 </html>

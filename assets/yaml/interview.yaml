@@ -1,0 +1,101 @@
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'pastetranscript'
+  - 'runtask'
+  - 'book'
+  - 'target'
+
+ollama_model: "deepseek-r1:7b"
+
+remove_timestamps:
+  regex_patterns:
+    - "^\\d+:\\d+$"
+    - "^\\d+\\s+seconds?$"
+    - "^\\d+\\s+minutes?,\\s+\\d+\\s+seconds?$"
+    - "^\\d+:\\d+\\s+\\d+\\s+seconds?\\s*"
+    - "^\\d+:\\d+\\s+"
+    - "^\\[\\d+:\\d+\\]\\s*"
+    - "\\b\\d+:\\d+\\b"
+
+clean_disfluencies:
+  filler_words:
+    - 'uh'
+    - 'um'
+    - 'er'
+    - 'ah'
+    - 'oh'
+    - 'eh'
+    - 'like'
+    - 'you know'
+    - 'i mean'
+    - 'you see'
+    - 'the thing is'
+    - 'so'
+    - 'well'
+    - 'actually'
+    - 'basically'
+    - 'literally'
+    - 'kind of'
+    - 'sort of'
+    - 'right'
+    - 'okay'
+    - 'ok'
+    - 'i guess'
+    - 'i think'
+    - 'you know what i mean'
+    - 'let me see'
+    - 'wait'
+    - 'go ahead'
+    - 'start over'
+
+format_text:
+  model: "qwen2.5:7b"
+  system_prompt: "You are a text formatting assistant. Your ONLY job is to add proper punctuation and capitalization to the text.\nRules:\n- Add periods at the end of sentences that lack them\n- Capitalize the first letter of each sentence\n- Do not change any words, only add punctuation and fix capitalization\n- Do not add any explanations, commentary, or extra text\n- Output ONLY the formatted text"
+  user_prompt_template: "Add proper punctuation and capitalization to this text. Output ONLY the formatted text:\n\n{input}"
+  max_chunk_size: 2000
+  temperature: 0.1
+  max_tokens: 4096
+
+segment_transcript:
+  model: "mistral:7b-instruct-v0.3-q4_0"
+  system_prompt: "You are an expert conversation analyst. Perform speaker segmentation on the transcript. The conversation is between exactly two people: \"Interviewer\" (asks questions) and \"Speaker\" (provides answers).\n\nRULES:\n- Label each sentence with either \"Interviewer:\" or \"Speaker:\"\n- Interviewer typically asks questions\n- Speaker provides answers and explanations\n- Maintain consistent speaker identity across the entire transcript\n- Output ONLY the labeled text, no extra words\n- Preserve all original text exactly as given\n- Put each labeled sentence on a new line"
+  user_prompt_template: "Label each sentence with Interviewer: or Speaker:. Output only the labeled text:{context_note}\n\n{input}"
+  max_chunk_size: 2000
+  overlap_sentences: 3
+  temperature: 0.0
+  max_tokens: 4096
+  timeout_seconds: 90
+
+identify_speakers:
+  model: "llama3.2:1b"
+  system_prompt: "You are a transcript analysis assistant. Identify and label speakers in the transcript. The conversation is between exactly two people: Interviewer (who asks questions) and Speaker (who provides answers).\n\nOutput format: Each line should start with either 'Interviewer:' or 'Speaker:' followed by the spoken text.\n\nDo not add any extra text, explanations, or formatting. Output only the labeled transcript."
+  user_prompt_template: "Identify speakers in this transcript. Label each statement as either Interviewer: or Speaker:\n\n{input}"
+  max_chunk_size: 15000
+  temperature: 0.1
+  max_tokens: 4096
+
+remove_extra_labels:
+  regex_labels:
+    - 'speaker:'
+    - 'interviewer:'
+
+format_paragraphs:
+  model: "deepseek-r1:7b"
+  system_prompt: "You are a transcript formatting assistant. Output ONLY the formatted text. No JSON, no markdown, no code blocks, no explanations."
+  user_prompt_template: "Format this transcript into clean paragraphs. Output ONLY plain text:\n\n{input}"
+  max_chunk_size: 15000
+  temperature: 0.1
+  max_tokens: 32769
+
+clean_artifacts:
+  regex_patterns:
+    - pattern: "```[\\s\\S]*?```"
+      flags: "DOTALL"
+    - pattern: "```"
+      flags: ""
+    - pattern: "`"
+      flags: ""
+    - pattern: "\\n{3,}"
+      flags: ""
+      replacement: "\n\n"
