@@ -1,16 +1,7 @@
-The pipeline in the 'transcript' configuration is being copied.
-
-The new configuration will be named 'interview' and it will be placed on top of 'transcript' in the dropdoen.
-
-Both configuations will do exactly the same thing.
-
-Make no other changes other than that needed to clone this new parallel configuration.  The new javascript file for this interview configuration will call the same php functions that the transcript configuration javascript does.
-
-The new js file for the configuration is named assets/js/processinterview.js
-
-assets/yaml/interview.yaml is also created.  Other files are shared.  ???  does that need new .py files if we 
-require duplicating the yaml if so then we need new files.
-
-
-
-PRESERVE all existing logic and functionality EXCEPT that needed to implement the clone.  In time the configurations can be seperatly modified.  Stay on task.
+Failed to process transcript: HTTP 504 from assets/php/run_format_text.php: <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>504 Gateway Timeout</title>
+</head><body>
+<h1>Gateway Timeout</h1>
+<p>The gateway did not receive a timely response
+from the upst

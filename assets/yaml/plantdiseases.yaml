@@ -6,6 +6,10 @@ toolbar:
   - 'choosemodel'
   - 'book'
   - 'target'
+  
+controls:
+  - 'userinput'
+  - 'sendbutton'
 
 ollama_model: "qwen2.5:7b"
 

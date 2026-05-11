@@ -59,6 +59,51 @@
     return rawTranscript
   }
 
+  async function waitForAsyncProcess(statusEndpoint, processName, maxAttempts = 180, intervalSeconds = 5) {
+    console.log(`[Pipeline] Waiting for ${processName} to complete...`)
+    
+    let attempts = 0
+    
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000))
+      
+      try {
+        const statusData = await fetchJSON(statusEndpoint)
+        
+        if (statusData.completed) {
+          if (statusData.error) {
+            throw new Error(`${processName} failed: ${statusData.error}`)
+          }
+          console.log(`[Pipeline] ${processName} completed successfully`)
+          return statusData
+        }
+        
+        if (statusData.error) {
+          throw new Error(`${processName} error: ${statusData.error}\nLog: ${statusData.log_tail || 'No log available'}`)
+        }
+        
+        if (!statusData.running && !statusData.completed) {
+          throw new Error(`${processName} stopped unexpectedly`)
+        }
+        
+        if (attempts % 12 === 0 && attempts > 0) {
+          console.log(`[Pipeline] Still waiting for ${processName}... (${Math.round(attempts * intervalSeconds / 60)} minutes)`)
+          if (statusData.log_tail) {
+            console.log(`[Pipeline] Last log line: ${statusData.log_tail.split('\n').pop()}`)
+          }
+        }
+      } catch (e) {
+        console.error(`[Pipeline] Error checking ${processName} status:`, e);
+        throw e;
+      }
+      
+      attempts++
+    }
+    
+    throw new Error(`${processName} timed out after ${Math.round(maxAttempts * intervalSeconds / 60)} minutes`)
+  }
+
+  // Stage 1: Remove timestamps using run_remove_timestamps.php
   async function stage1RemoveTimestamps() {
     console.log('[Pipeline] Stage 1: Removing timestamps via run_remove_timestamps.php...')
     const data = await fetchJSON('assets/php/run_remove_timestamps.php', {
@@ -75,6 +120,7 @@
     return data
   }
 
+  // Stage 2: Clean disfluencies using run_clean_disfluencies.php
   async function stage2CleanDisfluencies() {
     console.log('[Pipeline] Stage 2: Cleaning disfluencies via run_clean_disfluencies.php...')
     const data = await fetchJSON('assets/php/run_clean_disfluencies.php', {
@@ -91,22 +137,34 @@
     return data
   }
 
+  // Stage 3: Format text using run_format_text.php (ASYNC)
   async function stage3FormatText() {
-    console.log('[Pipeline] Stage 3: Formatting text via run_format_text.php...')
-    const data = await fetchJSON('assets/php/run_format_text.php', {
+    console.log('[Pipeline] Stage 3: Starting text formatting (async)...')
+    
+    const startData = await fetchJSON('assets/php/run_format_text.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
     })
     
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to format text')
+    if (!startData.success) {
+      throw new Error(startData.error || 'Failed to start text formatting')
     }
     
-    console.log(`[Pipeline] Stage 3 complete: formattedtext.txt saved, length: ${data.formatted_length}`)
-    return data
+    if (startData.already_running) {
+      console.log('[Pipeline] Formatting already running, waiting for completion...')
+    } else {
+      console.log(`[Pipeline] Text formatting started in background (PID: ${startData.pid})`)
+    }
+    
+    // Wait for completion - longer timeout for LLM processing
+    const result = await waitForAsyncProcess('assets/php/check_format_status.php', 'Text formatting', 120, 10)
+    
+    console.log(`[Pipeline] Stage 3 complete: formattedtext.txt saved`)
+    return result
   }
 
+  // Stage 4: Segment transcript using run_segment_transcript.php (background with polling)
   async function stage4SegmentTranscript() {
     console.log('[Pipeline] Stage 4: Starting speaker segmentation (background)...')
     
@@ -161,6 +219,7 @@
     throw new Error('Segmentation timed out after 30 minutes')
   }
 
+  // Stage 5: Remove extra labels using run_remove_extra_labels.php
   async function stage5RemoveExtraLabels() {
     console.log('[Pipeline] Stage 5: Removing extra labels via run_remove_extra_labels.php...')
     const data = await fetchJSON('assets/php/run_remove_extra_labels.php', {
@@ -177,6 +236,7 @@
     return data
   }
 
+  // Stage 6: Identify speakers using run_identify_speakers.php
   async function stage6IdentifySpeakers() {
     console.log('[Pipeline] Stage 6: Identifying speakers via run_identify_speakers.php...')
     const data = await fetchJSON('assets/php/run_identify_speakers.php', {
@@ -193,6 +253,7 @@
     return data
   }
 
+  // Stage 7: Format paragraphs using run_format_paragraphs.php
   async function stage7FormatParagraphs() {
     console.log('[Pipeline] Stage 7: Formatting paragraphs via run_format_paragraphs.php...')
     const data = await fetchJSON('assets/php/run_format_paragraphs.php', {
@@ -209,6 +270,7 @@
     return data
   }
 
+  // Stage 8: Clean LLM artifacts using run_clean_artifacts.php
   async function stage8CleanArtifacts() {
     console.log('[Pipeline] Stage 8: Cleaning LLM artifacts via run_clean_artifacts.php...')
     const data = await fetchJSON('assets/php/run_clean_artifacts.php', {
@@ -262,22 +324,31 @@
     console.log('[Pipeline] ==========================================')
     
     try {
+      // Stage 1: Remove timestamps -> sanstimestamps.txt
       await stage1RemoveTimestamps()
       
+      // Stage 2: Clean disfluencies -> sansdisfluencies.txt
       await stage2CleanDisfluencies()
       
+      // Stage 3: Format text -> formattedtext.txt (ASYNC with wait)
       await stage3FormatText()
       
+      // Stage 4: Speaker segmentation -> segmentedtext.txt
       await stage4SegmentTranscript()
       
+      // Stage 5: Remove extra labels (regex) -> sansextrasegments.txt
       await stage5RemoveExtraLabels()
 
+      // Stage 6: Identify speakers using LLM -> identified_speakers.txt
       await stage6IdentifySpeakers()
       
+      // Stage 7: Format paragraphs (LLM) -> formattedparagraphs.txt
       await stage7FormatParagraphs()
       
+      // Stage 8: Clean LLM artifacts (regex) -> cleanedoutput.txt
       await stage8CleanArtifacts()
       
+      // Read final output
       const finalOutput = await readFinalOutput()
       
       console.log(`[Pipeline] ==========================================`)
@@ -291,6 +362,7 @@
     }
   }
 
+  // Expose the module globally
   window.interviewmodule = { 
     processinterview: processinterview
   }

@@ -405,11 +405,15 @@
           .then(yamlText => {
             const toolbarItems = parseToolbarFromYaml(yamlText)
             applyToolbarVisibility(toolbarItems)
+            const controlitems = parsecontrolsfromyaml(yamlText)
+            applycontrolsvisibility(controlitems)
           })
       })
       .catch(() => {
-        const defaultItems = ['fileload', 'homeserver', 'fullbuild', 'loadmodel', 'choosemodel', 'book', 'target']
-        applyToolbarVisibility(defaultItems)
+        const defaulttoolbar = ['fileload', 'homeserver', 'fullbuild', 'loadmodel', 'choosemodel', 'book', 'target']
+        applyToolbarVisibility(defaulttoolbar)
+        const defaultcontrols = ['userInput', 'sendButton']
+        applycontrolsvisibility(defaultcontrols)
       })
   }
   
@@ -437,7 +441,30 @@
         }
       }
     }
-    
+    return items
+  }
+
+  function parsecontrolsfromyaml(yamlText) {
+    const lines = yamlText.split('\n')
+    let display = false
+    const items = []
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (line.trim() === 'controls:') {
+        display = true
+        continue
+      }
+      if (display) {
+        if (line.match(/^\s*-\s+/)) {
+          const match = line.match(/^\s*-\s+['"]?([^"'\n]+)['"]?/)
+          if (match) {
+            items.push(match[1].trim())
+          }
+        } else if (line.trim() !== '' && !line.match(/^\s/)) {
+          break
+        }
+      }
+    }
     return items
   }
   
@@ -455,7 +482,6 @@
       'target': 'button_homepage',
       'book': 'button_book'
     }
-    
     for (const [buttonClass, elementId] of Object.entries(buttonMappings)) {
       const buttonElement = document.getElementById(elementId)
       if (buttonElement) {
@@ -465,6 +491,25 @@
         } else {
           buttonElement.style.display = 'none'
           buttonElement.style.visibility = 'hidden'
+        }
+      }
+    }
+  }
+
+  function applycontrolsvisibility(visibleControls) {
+    const controlMappings = {
+      'userinput': 'userInput',
+      'sendbutton': 'sendButton'
+    }
+    for (const [controlclass, elementId] of Object.entries(controlMappings)) {
+      const controlelement = document.getElementById(elementId)
+      if (controlelement) {
+        if (visibleControls.includes(controlclass)) {
+          controlelement.style.display = ''
+          controlelement.style.visibility = 'visible'
+        } else {
+          controlelement.style.display = 'none'
+          controlelement.style.visibility = 'hidden'
         }
       }
     }

@@ -7,6 +7,10 @@ toolbar:
   - 'book'
   - 'target'
 
+controls:
+  - 'userinput'
+  - 'sendbutton'
+
 ollama_model: "deepseek-coder:6.7b"
 
 system_prompt: "You are a helpful coding assistant. Answer based on the provided code context. Be specific and reference the actual code when possible."
