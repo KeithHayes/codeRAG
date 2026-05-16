@@ -1,3 +1,18 @@
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'fullbuild'
+  - 'loadmodel'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
+
+controls:
+  - 'userinput'
+  - 'sendbutton'
+
+ollama_model: "deepseek-r1:7b"
+
 doomsteadRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"

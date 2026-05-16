@@ -1,3 +1,4 @@
+# assets/py/faiss_builder.py
 import os
 import sys
 import json
@@ -11,7 +12,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
+from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
 
 PROJECT_ROOT = Path("/var/www/html/doomsteadRAG")
 DATA_DIR = PROJECT_ROOT / "assets/data"
@@ -80,7 +81,11 @@ class FAISSBuilder:
             raise FileNotFoundError(f"Config not found: {config_path}")
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
-        return config.get('doomsteadRAG', {})
+        
+        if self.profile == 'ragdocs':
+            return config.get('ramRAG', {})
+        else:
+            return config.get('doomsteadRAG', {})
     
     def _resolve_path(self, path_str: str) -> Path:
         path = Path(path_str)
@@ -99,7 +104,8 @@ class FAISSBuilder:
             'css': ['.css', '.scss', '.less'],
             'html': ['.html', '.htm', '.xhtml'],
             'txt': ['.txt', '.md', '.rst'],
-            'pdf': ['.pdf']
+            'pdf': ['.pdf'],
+            'json': ['.json']
         }
         return extension_map.get(file_type.lower(), [])
     
@@ -236,10 +242,31 @@ class FAISSBuilder:
     
     def _load_specification_documents(self) -> List[Document]:
         documents = []
-        spec_files = self.config.get('specification_files', [])
         
-        if not spec_files:
-            return documents
+        if self.profile == 'ragdocs':
+            ragdocs_dir = PROJECT_ROOT / "assets/data/ragdocs"
+            ramlist_path = ragdocs_dir / "ramlist.json"
+            if ramlist_path.exists():
+                self.logger.info(f"Loading RAM specification: {ramlist_path}")
+                try:
+                    with open(ramlist_path, 'r', encoding='utf-8') as f:
+                        ram_data = json.load(f)
+                    
+                    content = json.dumps(ram_data, indent=2)
+                    doc = Document(
+                        page_content=content,
+                        metadata={
+                            'source': str(ramlist_path),
+                            'file_type': 'specification',
+                            'embedding_type': 'text'
+                        }
+                    )
+                    documents.append(doc)
+                    self.logger.info(f"Loaded RAM specification with {len(ram_data)} modules")
+                except Exception as e:
+                    self.logger.error(f"Error loading RAM specification: {e}")
+        
+        spec_files = self.config.get('specification_files', [])
         
         for spec_path_str in spec_files:
             spec_path = self._resolve_path(spec_path_str)
@@ -266,33 +293,95 @@ class FAISSBuilder:
         
         return documents
     
+    def _load_ragdocs_files(self) -> List[Document]:
+        documents = []
+        
+        ragdocs_dir = PROJECT_ROOT / "assets/data/ragdocs"
+        if not ragdocs_dir.exists():
+            return documents
+        
+        self.logger.info(f"Loading files from {ragdocs_dir}")
+        
+        json_files = list(ragdocs_dir.glob("*.json"))
+        txt_files = list(ragdocs_dir.glob("*.txt"))
+        
+        for json_file in json_files:
+            self.logger.info(f"Loading JSON: {json_file}")
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                doc = Document(
+                    page_content=content,
+                    metadata={
+                        'source': str(json_file),
+                        'file_type': 'json',
+                        'embedding_type': 'text'
+                    }
+                )
+                documents.append(doc)
+            except Exception as e:
+                self.logger.error(f"Error loading {json_file}: {e}")
+        
+        for txt_file in txt_files:
+            self.logger.info(f"Loading TXT: {txt_file}")
+            try:
+                with open(txt_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                doc = Document(
+                    page_content=content,
+                    metadata={
+                        'source': str(txt_file),
+                        'file_type': 'text',
+                        'embedding_type': 'text'
+                    }
+                )
+                documents.append(doc)
+            except Exception as e:
+                self.logger.error(f"Error loading {txt_file}: {e}")
+        
+        return documents
+    
     def build_index(self):
         try:
             code_documents = []
             text_documents = []
             
-            # Load specification documents (always text)
+            self.logger.info(f"Building index for profile: {self.profile}")
+            
+            if self.profile == 'ragdocs':
+                ragdocs_files = self._load_ragdocs_files()
+                if ragdocs_files:
+                    text_documents.extend(ragdocs_files)
+                    self.logger.info(f"Loaded {len(ragdocs_files)} files from ragdocs directory")
+            
             spec_docs = self._load_specification_documents()
             if spec_docs:
                 text_documents.extend(spec_docs)
                 self.logger.info(f"Loaded {len(spec_docs)} specification documents")
             
-            # Load documents from code_dirs
             if self.config.get('code_dirs'):
                 code_docs, text_docs = self._load_code_documents_by_type()
                 code_documents.extend(code_docs)
                 text_documents.extend(text_docs)
                 self.logger.info(f"Loaded {len(code_documents)} code documents and {len(text_documents)} text documents from code_dirs")
             
-            # Load PDF documents (always text)
             if self.config.get('pdf'):
                 pdf_docs = self._load_pdf_documents()
                 text_documents.extend(pdf_docs)
                 self.logger.info(f"Loaded {len(pdf_docs)} PDF documents")
             
-            # Build separate indexes for code and text
-            code_success = self._build_code_index(code_documents)
-            text_success = self._build_text_index(text_documents)
+            code_success = False
+            text_success = False
+            
+            if code_documents:
+                code_success = self._build_code_index(code_documents)
+            else:
+                self.logger.info("No code documents to index")
+            
+            if text_documents:
+                text_success = self._build_text_index(text_documents)
+            else:
+                self.logger.info("No text documents to index")
             
             if not code_success and not text_success:
                 self.logger.error("No indexes were built successfully")
@@ -323,6 +412,16 @@ class FAISSBuilder:
         self.logger.info(f"Saving code index to {self.code_index_dir}")
         vectorstore.save_local(str(self.code_index_dir))
         
+        metadata = {
+            'profile': self.profile,
+            'embedding_model': self.code_model_name,
+            'total_chunks': len(chunks),
+            'chunk_size': self.config.get('chunk_size', 800),
+            'chunk_overlap': self.config.get('chunk_overlap', 150)
+        }
+        with open(self.code_index_dir / 'build_info.json', 'w') as f:
+            json.dump(metadata, f, indent=2)
+        
         return True
     
     def _build_text_index(self, documents: List[Document]) -> bool:
@@ -343,7 +442,6 @@ class FAISSBuilder:
         self.logger.info(f"Saving text index to {self.text_index_dir}")
         vectorstore.save_local(str(self.text_index_dir))
         
-        # Save metadata
         metadata = {
             'profile': self.profile,
             'embedding_model': self.text_model_name,

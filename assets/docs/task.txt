@@ -1,7 +1,4 @@
-Failed to process transcript: HTTP 504 from assets/php/run_format_text.php: <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>504 Gateway Timeout</title>
-</head><body>
-<h1>Gateway Timeout</h1>
-<p>The gateway did not receive a timely response
-from the upst
+the 'Build Vecto Store' is not building thee vecot store for Ragdocs.
+
+It fails with an error message.  "No indexes were built successfully.
+

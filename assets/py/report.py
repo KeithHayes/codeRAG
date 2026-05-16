@@ -58,7 +58,7 @@ def create_report():
         #os.path.join(base_path, 'assets','data','transcripts', 'sansextrasegments.txt'),
         #os.path.join(base_path, 'assets','data','transcripts', 'sanstimestamps.txt'),
         #os.path.join(base_path, 'assets','data','transcripts', 'segmentedtext.txt'),
-        #os.path.join(base_path, 'assets','data','transcripts', 'transcriptoutput.txt'),
+        os.path.join(base_path, 'assets','data','ragdocs', 'ramlist.json'),
         #os.path.join(base_path, 'assets', 'logs', 'php_errors.log'),
     ]
 
@@ -99,6 +99,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'php', 'run_remove_extra_labels.php'),
         os.path.join(base_path, 'assets', 'php', 'run_remove_timestamps.php'),
         os.path.join(base_path, 'assets', 'php', 'run_segment_transcript.php'),
+        os.path.join(base_path, 'assets', 'php', 'run_ragdocs.php'),
         os.path.join(base_path, 'assets', 'php', 'save_config.php'),
         os.path.join(base_path, 'assets', 'php', 'show_log.php'),
         os.path.join(base_path, 'assets', 'php', 'update_model.php'),
@@ -123,6 +124,7 @@ def create_report():
         os.path.join(base_path, 'assets', 'py', 'segment_transcript.py'),
         os.path.join(base_path, 'assets', 'py', 'simple_text_loader.py'),
         os.path.join(base_path, 'assets', 'py', 'textformat.py'),
+        os.path.join(base_path, 'assets', 'py', 'ragdocs.py'),
     ]
 
     yaml_files = [

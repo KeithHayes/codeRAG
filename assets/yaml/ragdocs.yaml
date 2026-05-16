@@ -1,36 +1,70 @@
-doomsteadRAG:
+toolbar:
+  - 'fileload'
+  - 'homeserver'
+  - 'fullbuild'
+  - 'loadmodel'
+  - 'choosemodel'
+  - 'book'
+  - 'target'
+  
+controls:
+  - 'userinput'
+  - 'sendbutton'
+
+ollama_model: "qwen2.5:7b"
+
+system_prompt: "You are a hardware compatibility specialist focusing on DDR5 RAM modules. Answer based on the provided compatibility database. Be specific about speeds, timings, voltages, and chip manufacturers. Include part numbers when relevant. Warn about mismatched ranks or voltages if the user asks about mixing modules. Use the code context if relevant."
+
+user_prompt_template: "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
+
+ramRAG:
   embedding_model: "sentence-transformers/all-mpnet-base-v2"
   text_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
-  chunk_size: 800
-  chunk_overlap: 150
-  vector_db_type: "faiss"
-  text_parsing:
-    strategy: "semantic"
-    preserve_comments: true
-    detect_paragraphs: true
-    min_chunk_size: 200
-    separators:
-      - "\n\n"
-      - "\n"
-      - ". "
-      - "! "
-      - "? "
-      - " "
-  code_dirs:
-    txt:
-      - "assets/docs"
-  pdf: []
-  vector_db_path: "assets/data/ragdocs/faiss_index"
-  collection_name: "ragdocs"
-  min_score: "0.25"
-  ollama_model: "deepseek-coder:6.7b"
-  system_prompt: "You are a helpful documentation assistant. Answer based on the provided context. Focus on documentation content, specifications, and textual information."
-  user_prompt_template: "Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the documentation context above."
-  toolbar:
-    - "fileload"
-    - "homeserver"
-    - "fullbuild"
-    - "loadmodel"
-    - "choosemodel"
-    - "book"
-    - "target"
+  chunk_size: 500
+  chunk_overlap: 100
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - "! "
+    - "? "
+    - " "
+  code_dirs: {}
+  json:
+    - "assets/data/ragdocs/ramlist.json"
+  specification_files:
+    - "assets/data/yaml/ragdocs.yaml"
+  
+  # RAM-specific chunking strategy
+  chunk_strategy: "per_module"
+  fields_to_index:
+    - "supplier"
+    - "capacity"
+    - "speed_mhz"
+    - "timing"
+    - "voltage_v"
+    - "chip_brand"
+    - "module_pn"
+    - "rank"
+  
+  # Query enhancement
+  synonym_mapping:
+    - ["MHz", "speed", "frequency", "MT/s"]
+    - ["CL", "CAS", "latency", "timing"]
+    - ["1Rx8", "single rank", "1 rank"]
+    - ["2Rx8", "dual rank", "2 ranks"]
+    - ["XMP", "overclock", "OC"]
+    - ["EXPO", "AMD overclock", "DOCP"]
+    - ["Hynix A", "Hynix A-die", "A-die"]
+    - ["Hynix M", "Hynix M-die", "M-die"]
+  
+  # Filtering defaults
+  default_filters:
+    min_speed_mhz: 4800
+    max_speed_mhz: 8000
+    supported_types: ["DDR5"]
+  
+  # Response formatting
+  include_part_numbers: true
+  include_voltage_warnings: true
+  rank_compatibility_warning: "Warning: Mixing different ranks (e.g., 1Rx8 with 2Rx8) may cause instability. Verify motherboard QVL."
