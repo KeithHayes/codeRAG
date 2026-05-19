@@ -1,6 +1,7 @@
 <?php
 // assets/php/ollama_api.php - Ollama REST API handler
 header('Content-Type: application/json');
+error_log("=== ollama_api.php called with action: " . ($_GET['action'] ?? 'none'));
 
 function ollama_api_request($endpoint, $method = 'GET', $data = null) {
     $url = "http://localhost:11434/api/" . $endpoint;
@@ -22,6 +23,9 @@ function ollama_api_request($endpoint, $method = 'GET', $data = null) {
     
     if ($http_code !== 200) {
         error_log("Ollama API error: HTTP $http_code - $error");
+        if ($response) {
+            error_log("Response: " . substr($response, 0, 500));
+        }
         return null;
     }
     
@@ -36,6 +40,7 @@ function is_ollama_running() {
     curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    error_log("is_ollama_running() returned: " . ($http_code === 200 ? "true" : "false"));
     return ($http_code === 200);
 }
 
@@ -60,7 +65,7 @@ function load_model($model) {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
         'model' => $model,
-        'prompt' => 'Hello',
+        'prompt' => '',
         'stream' => false,
         'keep_alive' => 3600
     ]));
@@ -118,14 +123,20 @@ if ($action === 'list') {
 
 if ($action === 'running_model') {
     if (!is_ollama_running()) {
-        echo json_encode(['success' => false, 'running' => false]);
+        error_log("running_model: Ollama not running");
+        echo json_encode(['success' => false, 'running' => false, 'model' => null]);
         exit;
     }
     
     $ps_data = ollama_api_request('ps');
+    error_log("running_model ps_data: " . json_encode($ps_data));
+    
     if ($ps_data && isset($ps_data['models']) && !empty($ps_data['models'])) {
-        echo json_encode(['success' => true, 'model' => $ps_data['models'][0]['name']]);
+        $model_name = $ps_data['models'][0]['name'];
+        error_log("running_model found: " . $model_name);
+        echo json_encode(['success' => true, 'model' => $model_name]);
     } else {
+        error_log("running_model found no running model");
         echo json_encode(['success' => true, 'model' => null]);
     }
     exit;

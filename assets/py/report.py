@@ -74,21 +74,21 @@ def create_report():
     ]
 
     js_files = [
-        #os.path.join(base_path, 'assets', 'js', 'build_modal.js'),
-        #os.path.join(base_path, 'assets', 'js', 'clipboard_modal.js'),
-        #os.path.join(base_path, 'assets', 'js', 'model_modal.js'),
+        os.path.join(base_path, 'assets', 'js', 'build_modal.js'),
+        os.path.join(base_path, 'assets', 'js', 'clipboard_modal.js'),
+        os.path.join(base_path, 'assets', 'js', 'model_modal.js'),
         os.path.join(base_path, 'assets', 'js', 'rag.js'),
-        #os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
+        os.path.join(base_path, 'assets', 'js', 'toolbar.js'),
         os.path.join(base_path, 'assets', 'js', 'processtranscript.js'),
     ]
 
     php_files = [
         os.path.join(base_path, 'index.php'),
-        #os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
-        #os.path.join(base_path, 'assets', 'php', 'check_segmentation_status.php'),
-        #os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'auto_load_model.php'),
+        os.path.join(base_path, 'assets', 'php', 'check_segmentation_status.php'),
+        os.path.join(base_path, 'assets', 'php', 'force_reload_model.php'),
         os.path.join(base_path, 'assets', 'php', 'format_text.php'),
-        #os.path.join(base_path, 'assets', 'php', 'fullbuilder.php'),
+        os.path.join(base_path, 'assets', 'php', 'fullbuilder.php'),
         os.path.join(base_path, 'assets', 'php', 'ollama_api.php'),
         os.path.join(base_path, 'assets', 'php', 'process_transcript.php'),
         os.path.join(base_path, 'assets', 'php', 'rag.php'),

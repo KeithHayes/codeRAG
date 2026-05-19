@@ -9,11 +9,17 @@
   let lastStatusCheck = 0
   let cachedStatus = false
   let statusTimeout = null
+  let persistentMessageActive = false
   
   // ========== SIMPLIFIED STATUS MANAGEMENT ==========
   
   function setStatusMessage(message, duration = null) {
     if (!statusDiv) return
+    
+    // If a persistent message is active, don't allow other messages to clear it
+    if (persistentMessageActive && message !== null) {
+      return
+    }
     
     // Handle empty/IDLE states
     if (!message) {
@@ -39,6 +45,21 @@
         statusTimeout = null
       }, duration)
     }
+  }
+  
+  function setPersistentStatusMessage(message) {
+    if (!statusDiv) return
+    persistentMessageActive = true
+    statusDiv.textContent = message
+    // Clear any existing timeout
+    if (statusTimeout) {
+      clearTimeout(statusTimeout)
+      statusTimeout = null
+    }
+  }
+  
+  function clearPersistentStatusMessage() {
+    persistentMessageActive = false
   }
   
   function enableChatInputs() {
@@ -169,52 +190,82 @@
   }
   
   function loadModel() {
-    const promptInput = document.getElementById('userInput')
-    const sendBtn = document.getElementById('sendButton')
-    let profileName = currentProfile.charAt(0).toUpperCase() + currentProfile.slice(1)
-    
-    fetch(`assets/php/rag.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_model_name' })
-    })
-      .then(response => response.json())
-      .then(nameData => {
-        const modelName = nameData.model_name || 'unknown'
-        
-        setStatusMessage(`Loading model: ${modelName}...`, null)
-        disableChatInputs()
-        
-        fetch(`assets/php/force_reload_model.php?_=${Date.now()}`)
-          .then(response => response.json())
-          .then(loadData => {
-            if (loadData.success && (loadData.status === 'loaded' || loadData.status === 'already_running')) {
-              setStatusMessage(`Model ready: ${modelName}`, 4000)
-              enableChatInputs()
-            } else if (loadData.status === 'loading') {
-              setStatusMessage(`Loading model: ${modelName}...`, null)
-              disableChatInputs()
-            } else {
-              setStatusMessage(`Model load failed: ${modelName} - ${loadData.message || 'Failed to load model'}`, 5000)
-              if (loadData.message && loadData.message.includes('not running')) {
-                alert('Stack not running.')
+      const promptInput = document.getElementById('userInput')
+      const sendBtn = document.getElementById('sendButton')
+      
+      // Disable inputs immediately
+      disableChatInputs()
+      
+      // Set persistent loading message - THIS WILL NEVER CLEAR
+      setPersistentStatusMessage('Loading model...')
+      
+      // Get the model name
+      fetch(`assets/php/rag.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_model_name' })
+      })
+        .then(response => response.json())
+        .then(nameData => {
+          const modelName = nameData.model_name || 'unknown'
+          setPersistentStatusMessage(`Loading model: ${modelName}...`)
+          
+          return fetch(`assets/php/force_reload_model.php?_=${Date.now()}`)
+            .then(response => response.json())
+            .then(loadData => {
+              if (loadData.success && loadData.status === 'already_running') {
+                clearPersistentStatusMessage()
+                setStatusMessage(`Model ready: ${modelName}`, 4000)
+                enableChatInputs()
+                return
               }
-              disableChatInputs()
-            }
-          })
-          .catch(error => {
-            console.error('Load model error:', error)
-            setStatusMessage(`Model load failed: ${modelName} - ${error.message}`, 5000)
-            alert('Error: ' + error.message)
-            disableChatInputs()
-          })
-      })
-      .catch(error => {
-        console.error('Get model name error:', error)
-        setStatusMessage(`Model load failed: unknown - ${error.message}`, 5000)
-        alert('Error getting model name: ' + error.message)
-        disableChatInputs()
-      })
+              
+              if (loadData.success && (loadData.status === 'loaded' || loadData.status === 'loading')) {
+                // Start polling via PHP endpoint only - NO DIRECT OLLAMA CALLS
+                let pollAttempts = 0
+                const maxPollAttempts = 120 // 2 minutes
+                
+                const pollInterval = setInterval(() => {
+                  pollAttempts++
+                  
+                  fetch(`assets/php/ollama_api.php?action=running_model&_=${Date.now()}`)
+                    .then(res => res.json())
+                    .then(statusData => {
+                      if (statusData.success && statusData.model === modelName) {
+                        clearInterval(pollInterval)
+                        clearPersistentStatusMessage()
+                        setStatusMessage(`Model ready: ${modelName}`, 4000)
+                        enableChatInputs()
+                      } else if (pollAttempts >= maxPollAttempts) {
+                        clearInterval(pollInterval)
+                        clearPersistentStatusMessage()
+                        setStatusMessage(`Model load timeout: ${modelName}`, 5000)
+                        disableChatInputs()
+                      }
+                    })
+                    .catch((err) => {
+                      console.error('Polling error:', err)
+                      if (pollAttempts >= maxPollAttempts) {
+                        clearInterval(pollInterval)
+                        clearPersistentStatusMessage()
+                        setStatusMessage(`Model load failed: ${modelName}`, 5000)
+                        disableChatInputs()
+                      }
+                    })
+                }, 1000)
+              } else {
+                clearPersistentStatusMessage()
+                setStatusMessage(`Model load failed: ${modelName}`, 5000)
+                disableChatInputs()
+              }
+            })
+        })
+        .catch(error => {
+          console.error('Load model error:', error)
+          clearPersistentStatusMessage()
+          setStatusMessage(`Model load failed: unknown`, 5000)
+          disableChatInputs()
+        })
   }
   
   async function getCurrentProfile() {

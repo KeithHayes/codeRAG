@@ -1,4 +1,3 @@
-the 'Build Vecto Store' is not building thee vecot store for Ragdocs.
 
-It fails with an error message.  "No indexes were built successfully.
 
+The load model 'Load Model' toolbar button in toolbar.js has a few problems.  It should show the loading model message until the model is fully loaded.  There should not be a timeout.  The loading is also unreliable.
